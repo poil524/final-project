@@ -260,38 +260,18 @@ const TeacherTestCreateView = () => {
                                                     />
                                                 ))}
                                             </div>
+
                                         )}
-                                        {/*                                     
-                                        <div>
-                                            <input
-                                                type="text"
-                                                placeholder="Correct Answer"
-                                                value={q.answers?.find(a => a.index === item.index)?.value || ""}
-                                                onChange={(e) => {
-                                                    const updatedAnswers = q.answers ? [...q.answers] : [];
-                                                    const existing = updatedAnswers.find(a => a.index === item.index);
-                                                    if (existing) {
-                                                        existing.value = e.target.value;
-                                                    } else {
-                                                        updatedAnswers.push({ index: item.index, value: e.target.value });
-                                                    }
-                                                    const updatedQ = { ...q, answers: updatedAnswers };
-                                                    const updatedQuestions = [...section.questions];
-                                                    updatedQuestions[qIdx] = updatedQ;
-                                                    updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                }}
-                                            />
-                                        </div>
-                                        */}
                                         {/* Correct Answer Selection */}
                                         {q.type === "matching_heading" && (
+                                            <>
                                             <select
                                                 value={q.answers?.find(a => a.index === item.index)?.value || ""}
                                                 onChange={(e) => {
                                                     const updatedAnswers = q.answers ? [...q.answers] : [];
                                                     const existing = updatedAnswers.find(a => a.index === item.index);
                                                     if (existing) existing.value = e.target.value;
-                                                    else updatedAnswers.push({ index: item.index, value: e.target.value });
+                                                    else updatedAnswers.push({ index: item.index, value: e.target.value, sourceText: "" });
                                                     const updatedQ = { ...q, answers: updatedAnswers };
                                                     const updatedQuestions = [...section.questions];
                                                     updatedQuestions[qIdx] = updatedQ;
@@ -305,50 +285,69 @@ const TeacherTestCreateView = () => {
                                                     </option>
                                                 ))}
                                             </select>
-                                        )}
+                                            
+                                            {/* New sourceText input */}
+                                        <input
+                                            type="text"
+                                            placeholder="Answer comes from..."
+                                            value={q.answers?.find(a => a.index === item.index)?.sourceText || ""}
+                                            onChange={(e) => {
+                                                const updatedAnswers = q.answers ? [...q.answers] : [];
+                                                const existing = updatedAnswers.find(a => a.index === item.index);
+                                                if (existing) existing.sourceText = e.target.value;
+                                                else updatedAnswers.push({ index: item.index, value: "", sourceText: e.target.value });
+                                                const updatedQ = { ...q, answers: updatedAnswers };
+                                                const updatedQuestions = [...section.questions];
+                                                updatedQuestions[qIdx] = updatedQ;
+                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                            }}
+                                        />
+                                    </>
+                                )}
 
-                                        {q.type === "multiple_choice" && (
-                                            <div>
-                                                <label>Select Correct Answer: </label>
-                                                {item.options.map((opt, optIdx) => (
-                                                    <label key={optIdx}>
-                                                        <input
-                                                            type="radio"
-                                                            name={`correct_${secIdx}_${qIdx}_${item.index}`}
-                                                            value={opt}
-                                                            checked={q.answers?.find(a => a.index === item.index)?.value === opt}
-                                                            onChange={(e) => {
-                                                                const updatedAnswers = q.answers ? [...q.answers] : [];
-                                                                const existing = updatedAnswers.find(a => a.index === item.index);
-                                                                if (existing) existing.value = e.target.value;
-                                                                else updatedAnswers.push({ index: item.index, value: e.target.value });
-                                                                const updatedQ = { ...q, answers: updatedAnswers };
-                                                                const updatedQuestions = [...section.questions];
-                                                                updatedQuestions[qIdx] = updatedQ;
-                                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                            }}
-                                                        />
-                                                        {opt || `Option ${optIdx + 1}`}
-                                                    </label>
-                                                ))}
-                                            </div>
-                                        )}
-
+                                {q.type === "multiple_choice" && (
+                                    <div>
+                                        <label>Select Correct Answer: </label>
+                                        {item.options.map((opt, optIdx) => (
+                                            <label key={optIdx}>
+                                                <input
+                                                    type="radio"
+                                                    name={`correct_${secIdx}_${qIdx}_${item.index}`}
+                                                    value={opt}
+                                                    checked={q.answers?.find(a => a.index === item.index)?.value === opt}
+                                                    onChange={(e) => {
+                                                        const updatedAnswers = q.answers ? [...q.answers] : [];
+                                                        const existing = updatedAnswers.find(a => a.index === item.index);
+                                                        if (existing) existing.value = e.target.value;
+                                                        else updatedAnswers.push({ index: item.index, value: e.target.value });
+                                                        const updatedQ = { ...q, answers: updatedAnswers };
+                                                        const updatedQuestions = [...section.questions];
+                                                        updatedQuestions[qIdx] = updatedQ;
+                                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                    }}
+                                                />
+                                                {opt || `Option ${optIdx + 1}`}
+                                            </label>
+                                        ))}
                                     </div>
-                                ))}
+                                )}
+
                             </div>
                         ))}
-                        <button type="button" onClick={() => addQuestion(secIdx)}>
-                            Add Question
-                        </button>
-
                     </div>
                 ))}
+                <button type="button" onClick={() => addQuestion(secIdx)}>
+                    Add Question
+                </button>
+
+        </div>
+    ))
+}
 
                 <br />
                 <button type="submit">Save Test</button>
-            </form>
-        </div>
+            </form >
+        </div >
     );
 };
 

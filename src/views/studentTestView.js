@@ -11,6 +11,8 @@ const StudentTestView = () => {
   const [answers, setAnswers] = useState({});
   const [result, setResult] = useState(null);
   const [showAnswers, setShowAnswers] = useState(false);
+  const [highlightText, setHighlightText] = useState(null);
+
   const BASE_URL = "http://localhost:5000";
 
   useEffect(() => {
@@ -74,7 +76,24 @@ const StudentTestView = () => {
           {section.passages.map((passage, idx) => (
             <div key={idx}>
               <h3>Paragraph {passage.header}</h3>
-              <p>{passage.text}</p>
+              {/* Highlight where does the answer from in the paragraph when hover on answer */}
+              <p>
+                {highlightText && passage.text.includes(highlightText)
+                  ? passage.text.split(highlightText).map((part, i, arr) =>
+                    i < arr.length - 1 ? (
+                      <React.Fragment key={i}>
+                        {part}
+                        <span className={highlightText ? "highlight-active" : ""}>
+                          {highlightText}
+                        </span>
+                      </React.Fragment>
+                    ) : (
+                      part
+                    )
+                  )
+                  : passage.text}
+              </p>
+
             </div>
           ))}
           {section.images?.map((img, idx) => (
@@ -164,7 +183,17 @@ const StudentTestView = () => {
                         <span style={{ color: isCorrect ? "green" : "red" }}>
                           {studentAns}
                         </span>{" "}
-                        | Correct: <span style={{ color: "green" }}>{correctAns}</span>
+                        | Correct: <span
+                          style={{ color: "green", cursor: "pointer" }}
+                          onMouseEnter={() =>
+                            setHighlightText(
+                              q.answers?.find((a) => a.index === item.index)?.sourceText || null
+                            )
+                          }
+                          onMouseLeave={() => setHighlightText(null)}
+                        >
+                          {correctAns}
+                        </span>
                       </p>
                     );
                   })}

@@ -10,7 +10,11 @@ const questionSchema = new mongoose.Schema({
     type: String,            
     requirement: String,
     questionItems: [questionItemSchema],
-    answers: [{ index: Number, value: String }]
+    answers: [{ 
+        index: Number, 
+        value: String,
+        sourceText: String // teacher marks the paragraph part 
+    }]
 });
 const passageSchema = new mongoose.Schema({
     header: String,

@@ -272,6 +272,22 @@ const TeacherTestEditView = () => {
                                                 ))}
                                             </select>
                                         )}
+                                          {/* New sourceText input */}
+                                        <input
+                                            type="text"
+                                            placeholder="Answer comes from..."
+                                            value={q.answers?.find(a => a.index === item.index)?.sourceText || ""}
+                                            onChange={(e) => {
+                                                const updatedAnswers = q.answers ? [...q.answers] : [];
+                                                const existing = updatedAnswers.find(a => a.index === item.index);
+                                                if (existing) existing.sourceText = e.target.value;
+                                                else updatedAnswers.push({ index: item.index, value: "", sourceText: e.target.value });
+                                                const updatedQ = { ...q, answers: updatedAnswers };
+                                                const updatedQuestions = [...section.questions];
+                                                updatedQuestions[qIdx] = updatedQ;
+                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                            }}
+                                        />
 
                                         {q.type === "multiple_choice" && (
                                             <div>
