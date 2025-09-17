@@ -1,25 +1,44 @@
-import logo from './logo.svg';
-import './App.css';
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import StudentTestView from "./views/studentTestView";
+import TeacherTestCreateView from "./views/teacherTestCreateView"; 
+import TestListView from "./views/testListView";
+import EditTestView from "./views/editTestView";
 
-function App() {
+const App = () => {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Router>
+      <div style={{ padding: "20px" }}>
+        <Routes>
+          {/* Home */}
+          <Route
+            path="/"
+            element={
+              <div>
+                <h1>Welcome</h1>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <Link to="/tests"><button>View Test</button></Link>
+                  <Link to="/create"><button>Create Test</button></Link>
+                </div>
+              </div>
+            }
+          />
+
+          {/* List of tests */}
+          <Route path="/tests" element={<TestListView />} />
+
+          {/* Single test by ID */}
+          <Route path="/tests/:id" element={<StudentTestView />} />
+
+          {/* Create test*/}
+          <Route path="/create" element={<TeacherTestCreateView />} />
+
+          {/* Edit test */}
+          <Route path="/edit/:id" element={<EditTestView />} />
+        </Routes>
+      </div>
+    </Router>
   );
-}
+};
 
 export default App;
