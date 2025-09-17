@@ -1,0 +1,250 @@
+import React, { useState } from "react";
+import axios from "axios";
+
+const TeacherTestCreateView = () => {
+    const [testData, setTestData] = useState({
+        type: "reading",
+        name: "",
+        reading: { sections: [] },
+    });
+
+    const BASE_URL = "http://localhost:5000";
+
+    // Helpers
+    const addSection = () => {
+        const sectionIndex = testData.reading.sections.length + 1;
+        setTestData((prev) => ({
+            ...prev,
+            reading: {
+                sections: [
+                    ...prev.reading.sections,
+                    {
+                        sectionTitle: `Section ${sectionIndex}`,
+                        passages: [],
+                        questions: [],
+                    },
+                ],
+            },
+        }));
+    };
+
+    const addPassage = (secIdx) => {
+        const section = testData.reading.sections[secIdx];
+        const nextHeader = String.fromCharCode(65 + section.passages.length);
+        section.passages.push({ header: nextHeader, text: "" });
+
+        updateSection(secIdx, section);
+    };
+
+    const addQuestion = (secIdx) => {
+        const section = testData.reading.sections[secIdx];
+        section.questions.push({
+            type: "matching_heading",
+            requirement: "",
+            questionItems: [],
+        });
+        updateSection(secIdx, section);
+    };
+
+    const addQuestionItem = (secIdx, qIdx) => {
+        const section = testData.reading.sections[secIdx];
+        const question = section.questions[qIdx];
+        const nextIndex = question.questionItems.length + 1;
+        question.questionItems.push({
+            index: nextIndex,
+            text: "",
+            options: ["", "", "", ""],
+            answer: "",
+        });
+        section.questions[qIdx] = question;
+        updateSection(secIdx, section);
+    };
+
+    const updateSection = (secIdx, updatedSection) => {
+        setTestData((prev) => {
+            const sections = [...prev.reading.sections];
+            sections[secIdx] = updatedSection;
+            return { ...prev, reading: { sections } };
+        });
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const res = await axios.post(`${BASE_URL}/api/tests`, testData);
+            alert("Test created successfully!");
+            console.log("Created test:", res.data);
+        } catch (err) {
+            console.error("Error creating test:", err);
+            alert("Error creating test");
+        }
+    };
+
+    return (
+        <div>
+            <h1>Create New Test</h1>
+            <form onSubmit={handleSubmit}>
+                <label>Test Type: </label>
+                <select value={testData.type} disabled>
+                    <option value="reading">Reading</option>
+                </select>
+                <br />
+
+                <label>Test Name: </label>
+                <input
+                    type="text"
+                    value={testData.name}
+                    onChange={(e) => setTestData({ ...testData, name: e.target.value })}
+                />
+                <br />
+
+                <button type="button" onClick={addSection}>
+                    Add Section
+                </button>
+
+                {testData.reading.sections.map((section, secIdx) => (
+                    <div
+                        key={secIdx}
+                        style={{ border: "1px solid gray", padding: "10px", margin: "10px" }}
+                    >
+                        <h2>{section.sectionTitle}</h2>
+                        <label>Section Title: </label>
+                        <input
+                            type="text"
+                            value={section.sectionTitle}
+                            onChange={(e) => {
+                                const updatedSection = { ...section, sectionTitle: e.target.value };
+                                updateSection(secIdx, updatedSection);
+                            }}
+                        />
+                        <br />
+
+                        <h3>Passages</h3>
+
+                        {section.passages.map((p, pIdx) => (
+                            <div key={pIdx}>
+                                <b> {p.header}</b>
+                                <textarea
+                                    value={p.text}
+                                    onChange={(e) => {
+                                        const updatedPassages = [...section.passages];
+                                        updatedPassages[pIdx] = { ...p, text: e.target.value };
+                                        updateSection(secIdx, { ...section, passages: updatedPassages });
+                                    }}
+                                />
+                            </div>
+                        ))}
+                        <button type="button" onClick={() => addPassage(secIdx)}>
+                            Add Passage
+                        </button>
+
+                        <h3>Questions</h3>
+                        {section.questions.map((q, qIdx) => (
+                            <div
+                                key={qIdx}
+                                style={{
+                                    border: "1px dashed gray",
+                                    margin: "5px",
+                                    padding: "5px",
+                                }}
+                            >
+                                <label>Type: </label>
+                                <select
+                                    value={q.type}
+                                    onChange={(e) => {
+                                        const updatedQ = { ...q, type: e.target.value };
+                                        const updatedQuestions = [...section.questions];
+                                        updatedQuestions[qIdx] = updatedQ;
+                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                    }}
+                                >
+                                    <option value="matching_heading">Matching Heading</option>
+                                    <option value="multiple_choice">Multiple Choice</option>
+                                </select>
+                                <br />
+
+                                <label>Requirement: </label>
+                                <input
+                                    type="text"
+                                    value={q.requirement}
+                                    onChange={(e) => {
+                                        const updatedQ = { ...q, requirement: e.target.value };
+                                        const updatedQuestions = [...section.questions];
+                                        updatedQuestions[qIdx] = updatedQ;
+                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                    }}
+                                />
+                                <br />
+
+                                <button type="button" onClick={() => addQuestionItem(secIdx, qIdx)}>
+                                    Add Question Item
+                                </button>
+
+                                {q.questionItems.map((item, itemIdx) => (
+                                    <div key={itemIdx} style={{ marginLeft: "15px" }}>
+                                        <b>{item.index}. </b>
+                                        <input
+                                            type="text"
+                                            placeholder="Question text"
+                                            value={item.text}
+                                            onChange={(e) => {
+                                                const updatedItems = [...q.questionItems];
+                                                updatedItems[itemIdx] = {
+                                                    ...item,
+                                                    text: e.target.value,
+                                                };
+                                                const updatedQ = { ...q, questionItems: updatedItems };
+                                                const updatedQuestions = [...section.questions];
+                                                updatedQuestions[qIdx] = updatedQ;
+                                                updateSection(secIdx, {
+                                                    ...section,
+                                                    questions: updatedQuestions,
+                                                });
+                                            }}
+                                        />
+                                        {q.type === "multiple_choice" && (
+                                            <div>
+                                                {item.options.map((opt, optIdx) => (
+                                                    <input
+                                                        key={optIdx}
+                                                        type="text"
+                                                        placeholder={`Option ${optIdx + 1}`}
+                                                        value={opt}
+                                                        onChange={(e) => {
+                                                            const updatedOptions = [...item.options];
+                                                            updatedOptions[optIdx] = e.target.value;
+                                                            const updatedItems = [...q.questionItems];
+                                                            updatedItems[itemIdx] = {
+                                                                ...item,
+                                                                options: updatedOptions,
+                                                            };
+                                                            const updatedQ = { ...q, questionItems: updatedItems };
+                                                            const updatedQuestions = [...section.questions];
+                                                            updatedQuestions[qIdx] = updatedQ;
+                                                            updateSection(secIdx, {
+                                                                ...section,
+                                                                questions: updatedQuestions,
+                                                            });
+                                                        }}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        ))}
+                                                <button type="button" onClick={() => addQuestion(secIdx)}>
+                            Add Question
+                        </button>
+                    </div>
+                ))}
+
+                <br />
+                <button type="submit">Save Test</button>
+            </form>
+        </div>
+    );
+};
+
+export default TeacherTestCreateView;
