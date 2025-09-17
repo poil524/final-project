@@ -53,7 +53,7 @@ const TeacherTestCreateView = () => {
         question.questionItems.push({
             index: nextIndex,
             text: "",
-            options: ["", "", "", ""],
+            options: [],
             answer: "",
         });
         section.questions[qIdx] = question;
@@ -233,79 +233,78 @@ const TeacherTestCreateView = () => {
                                                 });
                                             }}
                                         />
-                                        {q.type === "multiple_choice" && (
-                                            <div>
-                                                {item.options.map((opt, optIdx) => (
-                                                    <input
-                                                        key={optIdx}
-                                                        type="text"
-                                                        placeholder={`Option ${optIdx + 1}`}
-                                                        value={opt}
-                                                        onChange={(e) => {
-                                                            const updatedOptions = [...item.options];
-                                                            updatedOptions[optIdx] = e.target.value;
-                                                            const updatedItems = [...q.questionItems];
-                                                            updatedItems[itemIdx] = {
-                                                                ...item,
-                                                                options: updatedOptions,
-                                                            };
-                                                            const updatedQ = { ...q, questionItems: updatedItems };
-                                                            const updatedQuestions = [...section.questions];
-                                                            updatedQuestions[qIdx] = updatedQ;
-                                                            updateSection(secIdx, {
-                                                                ...section,
-                                                                questions: updatedQuestions,
-                                                            });
-                                                        }}
-                                                    />
-                                                ))}
-                                            </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const updatedItems = q.questionItems.filter((_, i) => i !== itemIdx);
+                                                const updatedQ = { ...q, questionItems: updatedItems };
 
-                                        )}
-                                        {/* Correct Answer Selection */}
-                                        {q.type === "matching_heading" && (
-                                            <>
-                                            <select
-                                                value={q.answers?.find(a => a.index === item.index)?.value || ""}
-                                                onChange={(e) => {
-                                                    const updatedAnswers = q.answers ? [...q.answers] : [];
-                                                    const existing = updatedAnswers.find(a => a.index === item.index);
-                                                    if (existing) existing.value = e.target.value;
-                                                    else updatedAnswers.push({ index: item.index, value: e.target.value, sourceText: "" });
-                                                    const updatedQ = { ...q, answers: updatedAnswers };
-                                                    const updatedQuestions = [...section.questions];
-                                                    updatedQuestions[qIdx] = updatedQ;
-                                                    updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                }}
-                                            >
-                                                <option value="">Select Correct Paragraph</option>
-                                                {section.passages.map((p) => (
-                                                    <option key={p.header} value={p.header}>
-                                                        {p.header}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            
-                                            {/* New sourceText input */}
-                                        <input
-                                            type="text"
-                                            placeholder="Answer comes from..."
-                                            value={q.answers?.find(a => a.index === item.index)?.sourceText || ""}
-                                            onChange={(e) => {
-                                                const updatedAnswers = q.answers ? [...q.answers] : [];
-                                                const existing = updatedAnswers.find(a => a.index === item.index);
-                                                if (existing) existing.sourceText = e.target.value;
-                                                else updatedAnswers.push({ index: item.index, value: "", sourceText: e.target.value });
-                                                const updatedQ = { ...q, answers: updatedAnswers };
+                                                // also filter out its answer if one exists
+                                                const updatedAnswers = (q.answers || []).filter(a => a.index !== item.index);
+                                                updatedQ.answers = updatedAnswers;
+
                                                 const updatedQuestions = [...section.questions];
                                                 updatedQuestions[qIdx] = updatedQ;
                                                 updateSection(secIdx, { ...section, questions: updatedQuestions });
                                             }}
-                                        />
-                                    </>
-                                )}
+                                        >
+                                            Remove Item
+                                        </button>
 
-                                {q.type === "multiple_choice" && (
+                                        {q.type === "multiple_choice" && (
+                                            <div>
+                                                {item.options.map((opt, optIdx) => (
+                                                    <div key={optIdx}>
+                                                        <input
+                                                            type="text"
+                                                            placeholder={`Option ${optIdx + 1}`}
+                                                            value={opt}
+                                                            onChange={(e) => {
+                                                                const updatedOptions = [...item.options];
+                                                                updatedOptions[optIdx] = e.target.value;
+                                                                const updatedItems = [...q.questionItems];
+                                                                updatedItems[itemIdx] = { ...item, options: updatedOptions };
+                                                                const updatedQ = { ...q, questionItems: updatedItems };
+                                                                const updatedQuestions = [...section.questions];
+                                                                updatedQuestions[qIdx] = updatedQ;
+                                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                            }}
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const updatedOptions = item.options.filter((_, i) => i !== optIdx);
+                                                                const updatedItems = [...q.questionItems];
+                                                                updatedItems[itemIdx] = { ...item, options: updatedOptions };
+                                                                const updatedQ = { ...q, questionItems: updatedItems };
+                                                                const updatedQuestions = [...section.questions];
+                                                                updatedQuestions[qIdx] = updatedQ;
+                                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                            }}
+                                                        >
+                                                            Remove
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const updatedItems = [...q.questionItems];
+                                                        updatedItems[itemIdx] = {
+                                                            ...item,
+                                                            options: [...item.options, ""],
+                                                        };
+                                                        const updatedQ = { ...q, questionItems: updatedItems };
+                                                        const updatedQuestions = [...section.questions];
+                                                        updatedQuestions[qIdx] = updatedQ;
+                                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                    }}
+                                                >
+                                                    Add Option
+                                                </button>
+                                            </div>
+                                        )}
+                                        {q.type === "multiple_choice" && (
                                     <div>
                                         <label>Select Correct Answer: </label>
                                         {item.options.map((opt, optIdx) => (
@@ -332,17 +331,59 @@ const TeacherTestCreateView = () => {
                                     </div>
                                 )}
 
+                                        
+                                        {q.type === "matching_heading" && (
+                                            <>
+                                                <select
+                                                    value={q.answers?.find(a => a.index === item.index)?.value || ""}
+                                                    onChange={(e) => {
+                                                        const updatedAnswers = q.answers ? [...q.answers] : [];
+                                                        const existing = updatedAnswers.find(a => a.index === item.index);
+                                                        if (existing) existing.value = e.target.value;
+                                                        else updatedAnswers.push({ index: item.index, value: e.target.value, sourceText: "" });
+                                                        const updatedQ = { ...q, answers: updatedAnswers };
+                                                        const updatedQuestions = [...section.questions];
+                                                        updatedQuestions[qIdx] = updatedQ;
+                                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                    }}
+                                                >
+                                                    <option value="">Select Correct Paragraph</option>
+                                                    {section.passages.map((p) => (
+                                                        <option key={p.header} value={p.header}>
+                                                            {p.header}
+                                                        </option>
+                                                    ))}
+                                                </select>
+
+                                                {/* New sourceText input */}
+                                                <input
+                                                    type="text"
+                                                    placeholder="Answer comes from..."
+                                                    value={q.answers?.find(a => a.index === item.index)?.sourceText || ""}
+                                                    onChange={(e) => {
+                                                        const updatedAnswers = q.answers ? [...q.answers] : [];
+                                                        const existing = updatedAnswers.find(a => a.index === item.index);
+                                                        if (existing) existing.sourceText = e.target.value;
+                                                        else updatedAnswers.push({ index: item.index, value: "", sourceText: e.target.value });
+                                                        const updatedQ = { ...q, answers: updatedAnswers };
+                                                        const updatedQuestions = [...section.questions];
+                                                        updatedQuestions[qIdx] = updatedQ;
+                                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                    }}
+                                                />
+                                            </>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
                         ))}
-                    </div>
-                ))}
-                <button type="button" onClick={() => addQuestion(secIdx)}>
-                    Add Question
-                </button>
+                        <button type="button" onClick={() => addQuestion(secIdx)}>
+                            Add Question
+                        </button>
 
-        </div>
-    ))
-}
+                    </div>
+                ))
+                }
 
                 <br />
                 <button type="submit">Save Test</button>

@@ -73,7 +73,7 @@ const TeacherTestEditView = () => {
         const section = testData.reading.sections[secIdx];
         const question = section.questions[qIdx];
         const nextIndex = question.questionItems.length + 1;
-        question.questionItems.push({ index: nextIndex, text: "", options: ["", "", "", ""], answer: "" });
+        question.questionItems.push({ index: nextIndex, text: "", options: [], answer: "" });
         section.questions[qIdx] = question;
         updateSection(secIdx, section);
     };
@@ -222,6 +222,24 @@ const TeacherTestEditView = () => {
                                                 updateSection(secIdx, { ...section, questions: updatedQuestions });
                                             }}
                                         />
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const updatedItems = q.questionItems.filter((_, i) => i !== itemIdx);
+                                                const updatedQ = { ...q, questionItems: updatedItems };
+
+                                                // also filter out its answer if one exists
+                                                const updatedAnswers = (q.answers || []).filter(a => a.index !== item.index);
+                                                updatedQ.answers = updatedAnswers;
+
+                                                const updatedQuestions = [...section.questions];
+                                                updatedQuestions[qIdx] = updatedQ;
+                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                            }}
+                                        >
+                                            Remove Item
+                                        </button>
+
                                         {q.type === "multiple_choice" && (
                                             <div>
                                                 {item.options.map((opt, optIdx) => (
@@ -245,10 +263,41 @@ const TeacherTestEditView = () => {
                                                                 });
                                                             }}
                                                         />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const updatedOptions = item.options.filter((_, i) => i !== optIdx);
+                                                                const updatedItems = [...q.questionItems];
+                                                                updatedItems[itemIdx] = { ...item, options: updatedOptions };
+                                                                const updatedQ = { ...q, questionItems: updatedItems };
+                                                                const updatedQuestions = [...section.questions];
+                                                                updatedQuestions[qIdx] = updatedQ;
+                                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                            }}
+                                                        >
+                                                            Remove
+                                                        </button>
                                                     </div>
                                                 ))}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const updatedItems = [...q.questionItems];
+                                                        updatedItems[itemIdx] = {
+                                                            ...item,
+                                                            options: [...item.options, ""],
+                                                        };
+                                                        const updatedQ = { ...q, questionItems: updatedItems };
+                                                        const updatedQuestions = [...section.questions];
+                                                        updatedQuestions[qIdx] = updatedQ;
+                                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                    }}
+                                                >
+                                                    Add Option
+                                                </button>
                                             </div>
                                         )}
+
                                         {/* Correct Answer Selection */}
                                         {q.type === "matching_heading" && (
                                             <select
@@ -272,7 +321,7 @@ const TeacherTestEditView = () => {
                                                 ))}
                                             </select>
                                         )}
-                                          {/* New sourceText input */}
+                                        {/* New sourceText input */}
                                         <input
                                             type="text"
                                             placeholder="Answer comes from..."
@@ -288,7 +337,6 @@ const TeacherTestEditView = () => {
                                                 updateSection(secIdx, { ...section, questions: updatedQuestions });
                                             }}
                                         />
-
                                         {q.type === "multiple_choice" && (
                                             <div>
                                                 <label>Select Correct Answer: </label>
