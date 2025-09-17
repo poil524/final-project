@@ -3,13 +3,13 @@ import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 
 const StudentTestView = () => {
-  const { id: testId } = useParams(); // ✅ get testId from route /view/:id
+  const { id: testId } = useParams(); // get testId from route /view/:id
   const navigate = useNavigate();
 
   const [test, setTest] = useState(null);
   const [error, setError] = useState(null);
   const [answers, setAnswers] = useState({});
-
+  const [result, setResult] = useState(null);
   const BASE_URL = "http://localhost:5000";
 
   useEffect(() => {
@@ -26,14 +26,36 @@ const StudentTestView = () => {
     if (testId) fetchTest();
   }, [testId]);
 
-  const handleAnswerChange = (questionId, itemIndex, value) => {
-    setAnswers((prev) => ({
+const handleAnswerChange = (questionId, itemIndex, value) => {
+  setAnswers((prev) => {
+    const updated = {
       ...prev,
       [questionId]: {
         ...prev[questionId],
         [itemIndex]: value,
       },
-    }));
+    };
+  });
+};
+
+
+  const handleSubmit = () => {
+    let score = 0;
+    let total = 0;
+
+    test.reading.sections.forEach(section => {
+      section.questions.forEach(q => {
+        q.answers.forEach(correct => {
+          total++;
+          const studentAnswer = answers[q._id]?.[correct.index];
+          if (studentAnswer === correct.value) {
+            score++;
+          }
+        });
+      });
+    });
+
+    setResult({ score, total });
   };
 
   if (error) return <div>Error: {error}</div>;
@@ -54,7 +76,11 @@ const StudentTestView = () => {
               <p>{passage.text}</p>
             </div>
           ))}
-
+          {section.images?.map((img, idx) => (
+            <div key={idx}>
+              <img src={img.url} alt={`Section ${secIdx} image ${idx}`} style={{ maxWidth: "100%" }} />
+            </div>
+          ))}
           {section.questions.map((q) => (
             <div key={q._id}>
               <h4>{q.requirement}</h4>
@@ -91,11 +117,11 @@ const StudentTestView = () => {
                       <label key={optIdx} style={{ display: "block" }}>
                         <input
                           type="radio"
-                          name={`${q._id}_${idx}`}
+                          name={`${q._id}_${item.index}`}
                           value={option}
-                          checked={answers[q._id]?.[idx] === option}
+                          checked={answers[q._id]?.[item.index] === option}
                           onChange={(e) =>
-                            handleAnswerChange(q._id, idx, e.target.value)
+                            handleAnswerChange(q._id, item.index, e.target.value)
                           }
                         />
                         {option}
@@ -107,6 +133,12 @@ const StudentTestView = () => {
           ))}
         </div>
       ))}
+      <button onClick={handleSubmit}>Submit Answers</button>
+      {result && (
+        <div>
+          <h3>Result: {result.score} / {result.total}</h3>
+        </div>
+      )}
     </div>
   );
 };

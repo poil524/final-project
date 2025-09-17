@@ -4,7 +4,6 @@ const questionItemSchema = new mongoose.Schema({
     index: Number,
     text: String,
     options: [String],       
-    answer: String           // correct answer (only shown to teachers/admins)
 });
 
 const questionSchema = new mongoose.Schema({
@@ -13,16 +12,20 @@ const questionSchema = new mongoose.Schema({
     questionItems: [questionItemSchema],
     answers: [{ index: Number, value: String }]
 });
-
 const passageSchema = new mongoose.Schema({
     header: String,
     text: String
 });
 
+const imageSchema = new mongoose.Schema({
+    url: String              
+});
+
 const sectionSchema = new mongoose.Schema({
     sectionTitle: String,
     passages: [passageSchema],
-    questions: [questionSchema]
+    questions: [questionSchema],
+    images: [imageSchema]
 });
 
 const readingSchema = new mongoose.Schema({
