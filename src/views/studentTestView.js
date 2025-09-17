@@ -10,6 +10,7 @@ const StudentTestView = () => {
   const [error, setError] = useState(null);
   const [answers, setAnswers] = useState({});
   const [result, setResult] = useState(null);
+  const [showAnswers, setShowAnswers] = useState(false);
   const BASE_URL = "http://localhost:5000";
 
   useEffect(() => {
@@ -26,17 +27,17 @@ const StudentTestView = () => {
     if (testId) fetchTest();
   }, [testId]);
 
-const handleAnswerChange = (questionId, itemIndex, value) => {
-  setAnswers((prev) => {
-    const updated = {
-      ...prev,
-      [questionId]: {
-        ...prev[questionId],
-        [itemIndex]: value,
-      },
-    };
-  });
-};
+  const handleAnswerChange = (questionId, itemIndex, value) => {
+    setAnswers((prev) => {
+      return {
+        ...prev,
+        [questionId]: {
+          ...prev[questionId],
+          [itemIndex]: value,
+        },
+      };
+    });
+  };
 
 
   const handleSubmit = () => {
@@ -137,6 +138,40 @@ const handleAnswerChange = (questionId, itemIndex, value) => {
       {result && (
         <div>
           <h3>Result: {result.score} / {result.total}</h3>
+          <button onClick={() => setShowAnswers(!showAnswers)}>
+            {showAnswers ? "Hide Answers" : "View Answers"}
+          </button>
+        </div>
+      )}
+
+      {showAnswers && (
+        <div>
+          {test.reading.sections.map((section, secIdx) => (
+            <div key={secIdx}>
+              {section.questions.map((q) => (
+                <div key={q._id}>
+                  <h4>{q.requirement}</h4>
+                  {q.questionItems.map((item) => {
+                    const studentAns = answers[q._id]?.[item.index] || "—";
+                    const correctAns =
+                      q.answers?.find((a) => a.index === item.index)?.value || "—";
+                    const isCorrect = studentAns === correctAns;
+
+                    return (
+                      <p key={item.index}>
+                        {item.text} <br />
+                        Your answer:{" "}
+                        <span style={{ color: isCorrect ? "green" : "red" }}>
+                          {studentAns}
+                        </span>{" "}
+                        | Correct: <span style={{ color: "green" }}>{correctAns}</span>
+                      </p>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
       )}
     </div>
