@@ -1,9 +1,9 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import StudentTestView from "./views/studentTestView";
-import TeacherTestCreateView from "./views/teacherTestCreateView"; 
+import TeacherTestCreateView from "./views/testCreateEditView"; 
 import TestListView from "./views/testListView";
-import EditTestView from "./views/editTestView";
+import EditTestView from "./views/testCreateEditView";
 
 const App = () => {
   return (
