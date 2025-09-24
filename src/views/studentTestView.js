@@ -154,83 +154,66 @@ const StudentTestView = () => {
                 {/* Matching Headings */}
                 {q.type === "matching_headings" && (
                   <div>
-                    {(q.shuffledItems?.length ? q.shuffledItems : q.questionItems)?.map(
-                      (item, idx) => {
-                        console.log("DEBUG matching_headings item:", item);
-                        const studentAnswer = answers[q._id]?.[item.index] || "";
-                        return (
-                          <div key={item.key || idx} style={{ marginBottom: "10px" }}>
-                            <label>
-                              {idx + 1}. {item.text}
-                            </label>
-                            <select
-                              value={studentAnswer}
-                              onChange={(e) =>
-                                handleAnswerChange(q._id, item.index, e.target.value)
-                              }
-                            >
-                              <option value="">-- Select Paragraph --</option>
-                              {section.passages.map((p) => (
-                                <option key={p.header} value={p.header}>
-                                  {p.header}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        );
-                      }
-                    )}
+                    {(q.shuffledItems || []).map((shuffledItem, idx) => {
+                      const originalItem = q.questionItems?.find(
+                        (item) => item.headingLabel === shuffledItem.headingLabel
+                      );
+
+                      if (!originalItem) return null; // safety check
+
+                      const studentAnswer = answers[q._id]?.[originalItem.index] || "";
+
+                      return (
+                        <div key={shuffledItem.key || idx} style={{ marginBottom: "10px" }}>
+                          <label>
+                            {idx + 1}. {shuffledItem.text}
+                          </label>
+                          <select
+                            value={studentAnswer}
+                            onChange={(e) =>
+                              handleAnswerChange(q._id, originalItem.index, e.target.value)
+                            }
+                          >
+                            <option value="">-- Select Paragraph --</option>
+                            {section.passages?.map((p) => (
+                              <option key={p.header} value={p.header}>
+                                {p.header}
+                              </option>
+                            )) || null}
+                          </select>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
-
-
 
                 {/* Matching Sentence Endings */}
                 {q.type === "matching_sentence_endings" && (
                   <div>
-                    {console.log(
-                      "begins:",
-                      q.begins,
-                      "shuffledEnds:",
-                      q.shuffledEnds,
-                      "questionItems:",
-                      q.questionItems
-                    )}
-                    {(q.begins?.length ? q.begins : q.questionItems || []).map(
-                      (begin, idx) => {
-                        const label =
-                          typeof begin === "string" ? begin : begin.sentenceBegin;
-                        return (
-                          <div key={idx} style={{ marginBottom: "10px" }}>
-                            <label>
-                              {idx + 1}. {label}
-                            </label>
-                            <select
-                              value={answers[q._id]?.[idx + 1] || ""}
-                              onChange={(e) =>
-                                handleAnswerChange(q._id, idx + 1, e.target.value)
-                              }
-                            >
-                              <option value="">-- Select Ending --</option>
-                              {(q.shuffledEnds?.length
-                                ? q.shuffledEnds
-                                : q.questionItems || []
-                              ).map((end, i) => {
-                                const value = end.key || String.fromCharCode(97 + i);
-                                const text = end.value || end.sentenceEnd;
-                                return (
-                                  <option key={value} value={value}>
-                                    {value}. {text}
-                                  </option>
-                                );
-                              })}
-                            </select>
-                          </div>
-                        );
-                      }
-                    )}
+                    {(q.questionItems || []).map((item, idx) => {
+                      const label = item?.sentenceBegin || "";
+                      return (
+                        <div key={item.index} style={{ marginBottom: "10px" }}>
+                          <label>{idx + 1}. {label}</label>
+                          <select
+                            value={answers[q._id]?.[item.index] || ""}
+                            onChange={(e) =>
+                              handleAnswerChange(q._id, item.index, e.target.value)
+                            }
+                          >
+                            <option value="">-- Select Ending --</option>
+                            {(q.shuffledEnds || []).map((end) => (
+                              <option key={end.key} value={end.key}>
+                                {end.key}. {end.value}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
+
               </div>
             );
           })}

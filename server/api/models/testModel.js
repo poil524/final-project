@@ -3,26 +3,44 @@ import mongoose from 'mongoose';
 const questionItemSchema = new mongoose.Schema({
     index: Number,
     text: String,
-    options: [String],       
+    options: [String],
+    headingLabel: String,
+    sentenceBegin: String,
+    sentenceEnd: String
 });
 
 const questionSchema = new mongoose.Schema({
-    type: String,            
+    type: String,
     requirement: String,
     questionItems: [questionItemSchema],
-    answers: [{ 
-        index: Number, 
+    answers: [{
+        index: Number,
         value: String,
-        sourceText: String // teacher marks the paragraph part 
-    }]
+        sourceText: String
+    }],
+    shuffle: { type: Boolean, default: false },
+    shuffledItems: [
+        {
+            key: String,         // A, B, C
+            text: String,        // heading text
+            headingLabel: String // original label
+        }
+    ],
+    shuffledEnds: [
+        {
+            key: String,
+            value: String
+        }
+    ]
 });
+
 const passageSchema = new mongoose.Schema({
     header: String,
     text: String
 });
 
 const imageSchema = new mongoose.Schema({
-    url: String              
+    url: String
 });
 
 const sectionSchema = new mongoose.Schema({

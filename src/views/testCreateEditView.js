@@ -15,68 +15,69 @@ const TestCreateEditView = () => {
 
     const BASE_URL = "http://localhost:5000";
 
-useEffect(() => {
-    if (id) {
-        setLoading(true);
-        axios
-            .get(`${BASE_URL}/api/tests/${id}`)
-            .then((res) => {
-                const data = res.data;
+    useEffect(() => {
+        if (id) {
+            setLoading(true);
+            axios
+                .get(`${BASE_URL}/api/tests/${id}`)
+                .then((res) => {
+                    const data = res.data;
 
-                // Lock questions
-                data.reading.sections.forEach((s) =>
-                    s.questions.forEach((q) => (q.locked = true))
-                );
+                    // Lock questions
+                    data.reading.sections.forEach((s) =>
+                        s.questions.forEach((q) => (q.locked = true))
+                    );
 
-                // Ensure previews are open in edit mode
-                data.reading.sections.forEach((section) => {
-                    section.questions = section.questions.map((q) => {
-                        if (q.type === "matching_headings") {
-                            const items = section.passages.map((p, idx) => {
-                                const existing = q.questionItems?.[idx];
+                    // Ensure previews are open in edit mode
+                    data.reading.sections.forEach((section) => {
+                        section.questions = section.questions.map((q) => {
+                            if (q.type === "matching_headings") {
+                                const items = section.passages.map((p, idx) => {
+                                    const existing = q.questionItems?.[idx];
+                                    return {
+                                        index: idx + 1,
+                                        headingLabel: p.header,
+                                        text: existing ? existing.text : "",
+                                        sourceText: existing ? existing.sourceText : "",
+                                    };
+                                });
+
                                 return {
-                                    index: idx + 1,
-                                    headingLabel: p.header,
-                                    text: existing ? existing.text : "",
+                                    ...q,
+                                    questionItems: items,
+                                    shuffle: true, // force preview open
+                                    shuffledItems: q.shuffledItems || items.map((item, i) => ({
+                                        key: String.fromCharCode(65 + i),
+                                        text: item.text,
+                                        headingLabel: item.headingLabel
+                                    })),
                                 };
-                            });
+                            }
 
-                            return {
-                                ...q,
-                                questionItems: items,
-                                shuffle: true, // force preview open
-                                shuffledItems: q.shuffledItems || items.map((item, i) => ({
-                                    key: String.fromCharCode(65 + i),
-                                    text: item.text,
-                                    headingLabel: item.headingLabel
-                                })),
-                            };
-                        }
+                            if (q.type === "matching_sentence_endings") {
+                                return {
+                                    ...q,
+                                    shuffle: true, // force preview open
+                                    shuffledEnds: q.shuffledEnds || q.questionItems.map((item, i) => ({
+                                        key: String.fromCharCode(97 + i), // a,b,c
+                                        value: item.sentenceEnd
+                                    })),
+                                };
+                            }
 
-                        if (q.type === "matching_sentence_endings") {
-                            return {
-                                ...q,
-                                shuffle: true, // force preview open
-                                shuffledEnds: q.shuffledEnds || q.questionItems.map((item, i) => ({
-                                    key: String.fromCharCode(97 + i), // a,b,c
-                                    value: item.sentenceEnd
-                                })),
-                            };
-                        }
-
-                        return q;
+                            return q;
+                        });
                     });
-                });
 
-                setTestData(data);
-            })
-            .catch((err) => {
-                console.error("Error fetching test:", err);
-                alert("Error loading test");
-            })
-            .finally(() => setLoading(false));
-    }
-}, [id]);
+                    setTestData(data);
+                })
+                .catch((err) => {
+                    console.error("Error fetching test:", err);
+                    alert("Error loading test");
+                })
+                .finally(() => setLoading(false));
+        }
+    }, [id]);
 
 
 
@@ -124,7 +125,8 @@ useEffect(() => {
         section.passages.push({ header: nextHeader, text: "" });
         // Sync matching_headings questions
         const updatedSection = syncMatchingHeadingsItems(section);
-        updateSection(secIdx, section);
+        updateSection(secIdx, updatedSection);
+
     };
 
     const addQuestion = (secIdx) => {
@@ -160,7 +162,6 @@ useEffect(() => {
             case "matching_sentence_endings":
                 newItem = {
                     ...newItem,
-                    shuffle: false,
                     sentenceBegin: "",
                     sentenceEnd: "",
                     answer: "",
@@ -248,27 +249,26 @@ useEffect(() => {
     const shuffleSentenceEndings = (secIdx, qIdx) => {
         const section = testData.reading.sections[secIdx];
         const question = section.questions[qIdx];
-
         if (question.type !== "matching_sentence_endings") return;
 
-        // Extract sentence ends
-        const ends = question.questionItems.map((it) => it.sentenceEnd);
-        // Shuffle array
-        const shuffled = [...ends].sort(() => Math.random() - 0.5);
+        const items = [...question.questionItems];
 
-        // Map to a,b,c...
-        const labels = shuffled.map((end, i) => ({
-            key: String.fromCharCode(97 + i), // a,b,c...
-            value: end,
+        // Shuffle endings
+        const shuffledEnds = [...items.map(item => item.sentenceEnd)].sort(() => Math.random() - 0.5);
+
+        // Map shuffled ends to letters a,b,c
+        const labels = shuffledEnds.map((value, i) => ({
+            key: String.fromCharCode(97 + i), // a,b,c
+            value
         }));
 
-        // Auto-generate answers
-        const newAnswers = question.questionItems.map((item, idx) => {
-            const matchIdx = labels.findIndex((l) => l.value === item.sentenceEnd);
+        // Create permanent answers for saving
+        const answers = items.map(item => {
+            const match = labels.find(l => l.value === item.sentenceEnd);
             return {
                 index: item.index,
-                value: labels[matchIdx].key, // a/b/c
-                sourceText: "" // optional link
+                value: match.key,
+                sourceText: item.sourceText || "" // keep optional sourceText
             };
         });
 
@@ -276,13 +276,15 @@ useEffect(() => {
             ...question,
             shuffle: true,
             shuffledEnds: labels,
-            answers: newAnswers,
+            answers
         };
 
         const updatedQuestions = [...section.questions];
         updatedQuestions[qIdx] = updatedQ;
         updateSection(secIdx, { ...section, questions: updatedQuestions });
     };
+
+
 
 
     const updateSection = (secIdx, updatedSection) => {
@@ -295,28 +297,26 @@ useEffect(() => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        // DEBUG LOG: Inspect testData before saving
+        console.log("testData before submit");
+        testData.reading.sections.forEach((section, secIdx) => {
+            console.log(`Section ${secIdx + 1}:`, section.sectionTitle);
+            section.questions.forEach((q, qIdx) => {
+                console.log(`  Question ${qIdx + 1} (${q.type}):`, q);
+            });
+        });
         try {
             if (id) {
-                // Ensure auto-shuffle if not done
                 testData.reading.sections.forEach((section, secIdx) => {
-                    section.questions.forEach((q, qIdx) => {
-                        if (q.type === "matching_sentence_endings" && !q.shuffle) {
-                            shuffleSentenceEndings(secIdx, qIdx);
-                        }
-                    });
+
                 });
 
                 const res = await axios.put(`${BASE_URL}/api/tests/${id}`, testData);
                 alert("Test updated successfully");
                 console.log("Updated test:", res.data);
             } else {
-                // Ensure auto-shuffle if not done
                 testData.reading.sections.forEach((section, secIdx) => {
-                    section.questions.forEach((q, qIdx) => {
-                        if (q.type === "matching_sentence_endings" && !q.shuffle) {
-                            shuffleSentenceEndings(secIdx, qIdx);
-                        }
-                    });
+
                 });
                 const res = await axios.post(`${BASE_URL}/api/tests`, testData);
                 alert("Test created successfully");
@@ -572,12 +572,16 @@ useEffect(() => {
                                                     value={item.sentenceBegin || ""}
                                                     onChange={(e) => {
                                                         const updatedItems = [...q.questionItems];
-                                                        updatedItems[itemIdx] = { ...item, sentenceBegin: e.target.value };
+                                                        updatedItems[itemIdx] = {
+                                                            ...item,
+                                                            sentenceBegin: e.target.value
+                                                        };
                                                         const updatedQ = { ...q, questionItems: updatedItems };
                                                         const updatedQuestions = [...section.questions];
                                                         updatedQuestions[qIdx] = updatedQ;
                                                         updateSection(secIdx, { ...section, questions: updatedQuestions });
                                                     }}
+
                                                 />
                                                 <input
                                                     type="text"
@@ -585,12 +589,16 @@ useEffect(() => {
                                                     value={item.sentenceEnd || ""}
                                                     onChange={(e) => {
                                                         const updatedItems = [...q.questionItems];
-                                                        updatedItems[itemIdx] = { ...item, sentenceEnd: e.target.value };
+                                                        updatedItems[itemIdx] = {
+                                                            ...item,
+                                                            sentenceEnd: e.target.value
+                                                        };
                                                         const updatedQ = { ...q, questionItems: updatedItems };
                                                         const updatedQuestions = [...section.questions];
                                                         updatedQuestions[qIdx] = updatedQ;
                                                         updateSection(secIdx, { ...section, questions: updatedQuestions });
                                                     }}
+
                                                 />
                                             </div>
                                         )}
@@ -743,12 +751,23 @@ useEffect(() => {
                                             <div style={{ marginTop: "10px", padding: "5px", border: "1px solid #ccc" }}>
                                                 <h5>Preview</h5>
 
-                                                {/* Shuffled items with "Select Paragraph" input */}
+                                                {/* Shuffled items with "Select Paragraph" dropdown */}
                                                 {q.shuffledItems.map((item, idx) => (
-                                                    <div key={idx}>
-                                                        {idx + 1}. {item.text} <input type="text" placeholder="Select Paragraph" />
+                                                    <div key={idx} style={{ marginBottom: "8px" }}>
+                                                        <label>
+                                                            {idx + 1}. {item.text}{" "}
+                                                            <select>
+                                                                <option value="">-- Select Paragraph --</option>
+                                                                {section.passages.map((p) => (
+                                                                    <option key={p.header} value={p.header}>
+                                                                        {p.header}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </label>
                                                     </div>
                                                 ))}
+
 
                                                 {/* Answer key */}
                                                 <div style={{ marginTop: "5px" }}>
@@ -776,30 +795,36 @@ useEffect(() => {
                                         {q.shuffledEnds && (
                                             <div style={{ marginTop: "10px", padding: "5px", border: "1px solid #ccc" }}>
                                                 <h5>Preview</h5>
+                                                {q.questionItems.map((item, idx) => (
+                                                    <div key={idx}>
+                                                        <b>{item.sentenceBegin}</b> →
+                                                        <select value="">
+                                                            <option value="">Select Ending</option>
+                                                            {q.shuffledEnds.map((opt) => (
+                                                                <option key={opt.key} value={opt.key}>
+                                                                    {opt.value}
+                                                                </option>
+                                                            ))}
+                                                        </select>
 
-                                                {/* Numbered sentence begins */}
-                                                <div>
-                                                    {q.questionItems.map((item, idx) => (
-                                                        <p key={idx}>{idx + 1}. {item.sentenceBegin}</p>
-                                                    ))}
-                                                </div>
+                                                    </div>
+                                                ))}
 
-                                                {/* Lettered sentence ends */}
-                                                <div>
-                                                    {q.shuffledEnds.map((end, idx) => (
-                                                        <p key={idx}>{end.key}. {end.value}</p>
-                                                    ))}
-                                                </div>
-
-                                                {/* Auto-generated answers */}
-                                                <div>
-                                                    <h6>Answers:</h6>
-                                                    {q.answers?.map((a, idx) => (
-                                                        <p key={idx}>{a.index}. {a.value}</p>
-                                                    ))}
+                                                <div style={{ marginTop: "5px" }}>
+                                                    <h6>Answer Key:</h6>
+                                                    {q.answers.map(a => {
+                                                        const textBegin = q.questionItems.find(item => item.index === a.index)?.sentenceBegin;
+                                                        const textEnd = q.shuffledEnds.find(opt => opt.key === a.value)?.value;
+                                                        return (
+                                                            <div key={a.index}>
+                                                                {textBegin} → {textEnd}
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
                                             </div>
                                         )}
+
                                     </div>
                                 )}
 
@@ -819,5 +844,4 @@ useEffect(() => {
         </div >
     );
 };
-
 export default TestCreateEditView;
