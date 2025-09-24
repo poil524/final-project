@@ -3,7 +3,7 @@ import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 
 const StudentTestView = () => {
-  const { id: testId } = useParams(); // get testId from route /view/:id
+  const { id: testId } = useParams();
   const navigate = useNavigate();
 
   const [test, setTest] = useState(null);
@@ -19,6 +19,7 @@ const StudentTestView = () => {
     const fetchTest = async () => {
       try {
         const res = await axios.get(`${BASE_URL}/api/tests/${testId}`);
+        console.log("DEBUG fetched test:", res.data); // DEBUG: check test structure
         setTest(res.data);
       } catch (err) {
         console.error("Error fetching test:", err);
@@ -30,30 +31,25 @@ const StudentTestView = () => {
   }, [testId]);
 
   const handleAnswerChange = (questionId, itemIndex, value) => {
-    setAnswers((prev) => {
-      return {
-        ...prev,
-        [questionId]: {
-          ...prev[questionId],
-          [itemIndex]: value,
-        },
-      };
-    });
+    setAnswers((prev) => ({
+      ...prev,
+      [questionId]: {
+        ...prev[questionId],
+        [itemIndex]: value,
+      },
+    }));
   };
-
 
   const handleSubmit = () => {
     let score = 0;
     let total = 0;
 
-    test.reading.sections.forEach(section => {
-      section.questions.forEach(q => {
-        q.answers.forEach(correct => {
+    test.reading.sections.forEach((section) => {
+      section.questions.forEach((q) => {
+        q.answers.forEach((correct) => {
           total++;
           const studentAnswer = answers[q._id]?.[correct.index];
-          if (studentAnswer === correct.value) {
-            score++;
-          }
+          if (studentAnswer === correct.value) score++;
         });
       });
     });
@@ -73,19 +69,16 @@ const StudentTestView = () => {
         <div key={secIdx}>
           <h2>{section.sectionTitle}</h2>
 
-          {section.passages.map((passage, idx) => (
+          {section.passages?.map((passage, idx) => (
             <div key={idx}>
               <h3>Paragraph {passage.header}</h3>
-              {/* Highlight where does the answer from in the paragraph when hover on answer */}
               <p>
                 {highlightText && passage.text.includes(highlightText)
                   ? passage.text.split(highlightText).map((part, i, arr) =>
                     i < arr.length - 1 ? (
                       <React.Fragment key={i}>
                         {part}
-                        <span className={highlightText ? "highlight-active" : ""}>
-                          {highlightText}
-                        </span>
+                        <span className="highlight-active">{highlightText}</span>
                       </React.Fragment>
                     ) : (
                       part
@@ -93,70 +86,164 @@ const StudentTestView = () => {
                   )
                   : passage.text}
               </p>
-
             </div>
           ))}
+
           {section.images?.map((img, idx) => (
             <div key={idx}>
-              <img src={img.url} alt={`Section ${secIdx} image ${idx}`} style={{ maxWidth: "100%" }} />
+              <img
+                src={img.url}
+                alt={`Section ${secIdx} image ${idx}`}
+                style={{ maxWidth: "100%" }}
+              />
             </div>
           ))}
-          {section.questions.map((q) => (
-            <div key={q._id}>
-              <h4>{q.requirement}</h4>
 
-              {/* Matching Heading */}
-              {q.type === "matching_heading" &&
-                q.questionItems.map((item) => (
-                  <div key={item.index}>
-                    <label>
-                      {item.index}. {item.text}
-                    </label>
-                    <select
-                      value={answers[q._id]?.[item.index] || ""}
-                      onChange={(e) =>
-                        handleAnswerChange(q._id, item.index, e.target.value)
-                      }
-                    >
-                      <option value="">-- Select Paragraph --</option>
-                      {section.passages.map((p) => (
-                        <option key={p.header} value={p.header}>
-                          {p.header}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
+          {section.questions?.map((q) => {
+            console.log("DEBUG question:", q._id, "type:", q.type, "shuffledItems:", q.shuffledItems); // DEBUG
 
-              {/* Multiple Choice */}
-              {q.type === "multiple_choice" &&
-                q.questionItems.map((item, idx) => (
-                  <div key={idx}>
-                    <p>{item.text}</p>
-                    {item.options.map((option, optIdx) => (
-                      <label key={optIdx} style={{ display: "block" }}>
-                        <input
-                          type="radio"
-                          name={`${q._id}_${item.index}`}
-                          value={option}
-                          checked={answers[q._id]?.[item.index] === option}
-                          onChange={(e) =>
-                            handleAnswerChange(q._id, item.index, e.target.value)
-                          }
-                        />
-                        {option}
+            return (
+              <div key={q._id}>
+                <h4>{q.requirement}</h4>
+
+                {/* Matching Paragraph Information */}
+                {q.type === "matching_paragraph_information" &&
+                  q.questionItems?.map((item) => (
+                    <div key={item.index}>
+                      <label>
+                        {item.index}. {item.text}
                       </label>
-                    ))}
+                      <select
+                        value={answers[q._id]?.[item.index] || ""}
+                        onChange={(e) =>
+                          handleAnswerChange(q._id, item.index, e.target.value)
+                        }
+                      >
+                        <option value="">-- Select Paragraph --</option>
+                        {section.passages.map((p) => (
+                          <option key={p.header} value={p.header}>
+                            {p.header}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+
+                {/* Multiple Choice */}
+                {q.type === "multiple_choice" &&
+                  q.questionItems?.map((item) => (
+                    <div key={item.index}>
+                      <p>{item.text}</p>
+                      {item.options.map((option, optIdx) => (
+                        <label key={optIdx} style={{ display: "block" }}>
+                          <input
+                            type="radio"
+                            name={`${q._id}_${item.index}`}
+                            value={option}
+                            checked={answers[q._id]?.[item.index] === option}
+                            onChange={(e) =>
+                              handleAnswerChange(q._id, item.index, e.target.value)
+                            }
+                          />
+                          {option}
+                        </label>
+                      ))}
+                    </div>
+                  ))}
+
+                {/* Matching Headings */}
+                {q.type === "matching_headings" && (
+                  <div>
+                    {(q.shuffledItems?.length ? q.shuffledItems : q.questionItems)?.map(
+                      (item, idx) => {
+                        console.log("DEBUG matching_headings item:", item);
+                        const studentAnswer = answers[q._id]?.[item.index] || "";
+                        return (
+                          <div key={item.key || idx} style={{ marginBottom: "10px" }}>
+                            <label>
+                              {idx + 1}. {item.text}
+                            </label>
+                            <select
+                              value={studentAnswer}
+                              onChange={(e) =>
+                                handleAnswerChange(q._id, item.index, e.target.value)
+                              }
+                            >
+                              <option value="">-- Select Paragraph --</option>
+                              {section.passages.map((p) => (
+                                <option key={p.header} value={p.header}>
+                                  {p.header}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        );
+                      }
+                    )}
                   </div>
-                ))}
-            </div>
-          ))}
+                )}
+
+
+
+                {/* Matching Sentence Endings */}
+                {q.type === "matching_sentence_endings" && (
+                  <div>
+                    {console.log(
+                      "begins:",
+                      q.begins,
+                      "shuffledEnds:",
+                      q.shuffledEnds,
+                      "questionItems:",
+                      q.questionItems
+                    )}
+                    {(q.begins?.length ? q.begins : q.questionItems || []).map(
+                      (begin, idx) => {
+                        const label =
+                          typeof begin === "string" ? begin : begin.sentenceBegin;
+                        return (
+                          <div key={idx} style={{ marginBottom: "10px" }}>
+                            <label>
+                              {idx + 1}. {label}
+                            </label>
+                            <select
+                              value={answers[q._id]?.[idx + 1] || ""}
+                              onChange={(e) =>
+                                handleAnswerChange(q._id, idx + 1, e.target.value)
+                              }
+                            >
+                              <option value="">-- Select Ending --</option>
+                              {(q.shuffledEnds?.length
+                                ? q.shuffledEnds
+                                : q.questionItems || []
+                              ).map((end, i) => {
+                                const value = end.key || String.fromCharCode(97 + i);
+                                const text = end.value || end.sentenceEnd;
+                                return (
+                                  <option key={value} value={value}>
+                                    {value}. {text}
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          </div>
+                        );
+                      }
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       ))}
+
       <button onClick={handleSubmit}>Submit Answers</button>
+
       {result && (
         <div>
-          <h3>Result: {result.score} / {result.total}</h3>
+          <h3>
+            Result: {result.score} / {result.total}
+          </h3>
           <button onClick={() => setShowAnswers(!showAnswers)}>
             {showAnswers ? "Hide Answers" : "View Answers"}
           </button>
@@ -167,10 +254,16 @@ const StudentTestView = () => {
         <div>
           {test.reading.sections.map((section, secIdx) => (
             <div key={secIdx}>
-              {section.questions.map((q) => (
+              {section.questions?.map((q) => (
                 <div key={q._id}>
                   <h4>{q.requirement}</h4>
-                  {q.questionItems.map((item) => {
+                  {(q.questionItems?.length
+                    ? q.questionItems
+                    : q.begins?.map((b, i) => ({
+                      index: i + 1,
+                      text: b,
+                    })) || []
+                  ).map((item) => {
                     const studentAns = answers[q._id]?.[item.index] || "—";
                     const correctAns =
                       q.answers?.find((a) => a.index === item.index)?.value || "—";
@@ -178,16 +271,18 @@ const StudentTestView = () => {
 
                     return (
                       <p key={item.index}>
-                        {item.text} <br />
+                        {item.text || item.sentenceBegin || ""} <br />
                         Your answer:{" "}
                         <span style={{ color: isCorrect ? "green" : "red" }}>
                           {studentAns}
                         </span>{" "}
-                        | Correct: <span
+                        | Correct:{" "}
+                        <span
                           style={{ color: "green", cursor: "pointer" }}
                           onMouseEnter={() =>
                             setHighlightText(
-                              q.answers?.find((a) => a.index === item.index)?.sourceText || null
+                              q.answers?.find((a) => a.index === item.index)
+                                ?.sourceText || null
                             )
                           }
                           onMouseLeave={() => setHighlightText(null)}
