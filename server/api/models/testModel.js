@@ -6,7 +6,7 @@ const questionItemSchema = new mongoose.Schema({
     options: [String],
     headingLabel: String,
     sentenceBegin: String,
-    sentenceEnd: String
+    sentenceEnd: String,
 });
 
 const questionSchema = new mongoose.Schema({

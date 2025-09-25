@@ -213,7 +213,32 @@ const StudentTestView = () => {
                     })}
                   </div>
                 )}
-
+                {/* Matching Features */}
+                {q.type === "matching_features" && (
+                  <div>
+                    {(q.questionItems || []).map((item, idx) => {
+                      const label = item?.sentenceBegin || "";
+                      return (
+                        <div key={item.index} style={{ marginBottom: "10px" }}>
+                          <label>{idx + 1}. {label}</label>
+                          <select
+                            value={answers[q._id]?.[item.index] || ""}
+                            onChange={(e) =>
+                              handleAnswerChange(q._id, item.index, e.target.value)
+                            }
+                          >
+                            <option value="">-- Select Features --</option>
+                            {(q.shuffledEnds || []).map((end) => (
+                              <option key={end.key} value={end.key}>
+                                {end.key}. {end.value}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })}

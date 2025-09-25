@@ -53,22 +53,10 @@ const TestCreateEditView = () => {
                                     })),
                                 };
                             }
-
-                            if (q.type === "matching_sentence_endings") {
-                                return {
-                                    ...q,
-                                    shuffle: true, // force preview open
-                                    shuffledEnds: q.shuffledEnds || q.questionItems.map((item, i) => ({
-                                        key: String.fromCharCode(97 + i), // a,b,c
-                                        value: item.sentenceEnd
-                                    })),
-                                };
-                            }
-
+                            
                             return q;
                         });
                     });
-
                     setTestData(data);
                 })
                 .catch((err) => {
@@ -132,6 +120,7 @@ const TestCreateEditView = () => {
     const addQuestion = (secIdx) => {
         const section = testData.reading.sections[secIdx];
         section.questions.push({
+            type: "matching_headings",
             requirement: "",
             questionItems: [],
             shuffle: false,
@@ -168,7 +157,23 @@ const TestCreateEditView = () => {
                 };
                 break;
 
+            case "matching_features":
+                newItem = {
+                    ...newItem,
+                    sentenceBegin: "",  // Questions
+                    sentenceEnd: "",    // Features
+                    answer: "",
+                };
+                break;
+
             case "matching_paragraph_information":
+                newItem = {
+                    ...newItem,
+                    text: "",
+                    answer: "",
+                };
+                break;
+
             case "matching_headings":
                 // Use section passages to generate heading labels
                 const headingLabel = section.passages[question.questionItems.length]
@@ -208,6 +213,7 @@ const TestCreateEditView = () => {
         updateSection(secIdx, section);
     };
 
+    // Shuffle Heading
     const shuffleHeadings = (secIdx, qIdx) => {
         const section = testData.reading.sections[secIdx];
         const question = section.questions[qIdx];
@@ -245,38 +251,34 @@ const TestCreateEditView = () => {
         updateSection(secIdx, { ...section, questions: updatedQuestions });
     };
 
-    // Shuffle matching sentence endings
-    const shuffleSentenceEndings = (secIdx, qIdx) => {
+    // Shuffle Paragraph Information
+    const shuffleParagraphInfo = (secIdx, qIdx) => {
         const section = testData.reading.sections[secIdx];
         const question = section.questions[qIdx];
-        if (question.type !== "matching_sentence_endings") return;
+        if (question.type !== "matching_paragraph_information") return;
 
         const items = [...question.questionItems];
+        const shuffled = [...items].sort(() => Math.random() - 0.5);
 
-        // Shuffle endings
-        const shuffledEnds = [...items.map(item => item.sentenceEnd)].sort(() => Math.random() - 0.5);
-
-        // Map shuffled ends to letters a,b,c
-        const labels = shuffledEnds.map((value, i) => ({
-            key: String.fromCharCode(97 + i), // a,b,c
-            value
+        const labels = shuffled.map((item, i) => ({
+            key: String.fromCharCode(65 + i),
+            text: item.text
         }));
 
-        // Create permanent answers for saving
-        const answers = items.map(item => {
-            const match = labels.find(l => l.value === item.sentenceEnd);
+        const newAnswers = items.map(item => {
+            const matchIdx = labels.findIndex(l => l.text === item.text);
             return {
                 index: item.index,
-                value: match.key,
-                sourceText: item.sourceText || "" // keep optional sourceText
+                value: labels[matchIdx].key,
+                sourceText: question.answers?.find(a => a.index === item.index)?.sourceText || ""
             };
         });
 
         const updatedQ = {
             ...question,
             shuffle: true,
-            shuffledEnds: labels,
-            answers
+            shuffledItems: labels,
+            answers: newAnswers,
         };
 
         const updatedQuestions = [...section.questions];
@@ -285,6 +287,44 @@ const TestCreateEditView = () => {
     };
 
 
+    // Shuffle matching sentence endings & matching features
+    const shuffleSentenceEndings = (secIdx, qIdx) => {
+    const section = testData.reading.sections[secIdx];
+    const question = section.questions[qIdx];
+    if (question.type !== "matching_sentence_endings" && question.type !== "matching_features") return;
+
+    const items = [...question.questionItems];
+
+    // Shuffle endings
+    const shuffledEnds = [...items.map(item => item.sentenceEnd)].sort(() => Math.random() - 0.5);
+
+    // Map shuffled ends to letters a,b,c
+    const labels = shuffledEnds.map((value, i) => ({
+        key: String.fromCharCode(97 + i), // a,b,c
+        value
+    }));
+
+    // Create permanent answers
+    const newAnswers = items.map(item => {
+        const matchIdx = labels.find(l => l.value === item.sentenceEnd);
+        return {
+            index: item.index,
+            value: labels[matchIdx]?.key || "",
+            sourceText: question.answers?.find(a => a.index === item.index)?.sourceText || ""
+        };
+    });
+
+    const updatedQ = {
+        ...question,
+        shuffle: true,
+        shuffledEnds: labels,
+        answers: newAnswers,
+    };
+
+    const updatedQuestions = [...section.questions];
+    updatedQuestions[qIdx] = updatedQ;
+    updateSection(secIdx, { ...section, questions: updatedQuestions });
+};
 
 
     const updateSection = (secIdx, updatedSection) => {
@@ -297,8 +337,6 @@ const TestCreateEditView = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        // DEBUG LOG: Inspect testData before saving
-        console.log("testData before submit");
         testData.reading.sections.forEach((section, secIdx) => {
             console.log(`Section ${secIdx + 1}:`, section.sectionTitle);
             section.questions.forEach((q, qIdx) => {
@@ -308,15 +346,12 @@ const TestCreateEditView = () => {
         try {
             if (id) {
                 testData.reading.sections.forEach((section, secIdx) => {
-
                 });
-
                 const res = await axios.put(`${BASE_URL}/api/tests/${id}`, testData);
                 alert("Test updated successfully");
                 console.log("Updated test:", res.data);
             } else {
                 testData.reading.sections.forEach((section, secIdx) => {
-
                 });
                 const res = await axios.post(`${BASE_URL}/api/tests`, testData);
                 alert("Test created successfully");
@@ -330,7 +365,6 @@ const TestCreateEditView = () => {
     };
 
     if (loading) return <div>Loading...</div>;
-
 
     return (
         <div>
@@ -457,6 +491,7 @@ const TestCreateEditView = () => {
                                     <option value="matching_paragraph_information">Matching Paragraph Information</option>
                                     <option value="matching_headings">Matching Headings</option>
                                     <option value="matching_sentence_endings">Matching Sentence Endings</option>
+                                    <option value="matching_features">Matching Features</option>
                                     <option value="multiple_choice">Multiple Choice</option>
                                 </select>
 
@@ -499,24 +534,18 @@ const TestCreateEditView = () => {
                                     <div key={itemIdx} style={{ marginLeft: "15px" }}>
                                         <b>{item.index}. </b>
                                         {q.type === "matching_paragraph_information" && (
-                                            <>
+                                            <div>
                                                 <input
                                                     type="text"
                                                     placeholder="Question Text"
                                                     value={item.text}
                                                     onChange={(e) => {
                                                         const updatedItems = [...q.questionItems];
-                                                        updatedItems[itemIdx] = {
-                                                            ...item,
-                                                            text: e.target.value,
-                                                        };
+                                                        updatedItems[itemIdx] = { ...item, text: e.target.value };
                                                         const updatedQ = { ...q, questionItems: updatedItems };
                                                         const updatedQuestions = [...section.questions];
                                                         updatedQuestions[qIdx] = updatedQ;
-                                                        updateSection(secIdx, {
-                                                            ...section,
-                                                            questions: updatedQuestions,
-                                                        });
+                                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
                                                     }}
                                                 />
                                                 <select
@@ -532,20 +561,19 @@ const TestCreateEditView = () => {
                                                         updateSection(secIdx, { ...section, questions: updatedQuestions });
                                                     }}
                                                 >
-                                                    <option value="">Select Correct Paragraph</option>
+                                                    <option value="">-- Select Correct Paragraph --</option>
                                                     {section.passages.map((p) => (
                                                         <option key={p.header} value={p.header}>
                                                             {p.header}
                                                         </option>
                                                     ))}
                                                 </select>
-                                            </>
+                                            </div>
                                         )}
-
                                         {q.type === "matching_headings" && (
                                             <div>
                                                 <div key={itemIdx} style={{ marginLeft: "15px" }}>
-                                                    <b>{item.headingLabel}: </b> {/*Auto generate passage index in this part*/}
+                                                    <b>{item.headingLabel}: </b>
                                                     <input
                                                         type="text"
                                                         placeholder="Question Text"
@@ -598,11 +626,47 @@ const TestCreateEditView = () => {
                                                         updatedQuestions[qIdx] = updatedQ;
                                                         updateSection(secIdx, { ...section, questions: updatedQuestions });
                                                     }}
+                                                />
+                                            </div>
+                                        )}
+                                        {q.type === "matching_features" && (
+                                            <div>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Questions"
+                                                    value={item.sentenceBegin || ""}
+                                                    onChange={(e) => {
+                                                        const updatedItems = [...q.questionItems];
+                                                        updatedItems[itemIdx] = {
+                                                            ...item,
+                                                            sentenceBegin: e.target.value
+                                                        };
+                                                        const updatedQ = { ...q, questionItems: updatedItems };
+                                                        const updatedQuestions = [...section.questions];
+                                                        updatedQuestions[qIdx] = updatedQ;
+                                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                    }}
+
+                                                />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Features"
+                                                    value={item.sentenceEnd || ""}
+                                                    onChange={(e) => {
+                                                        const updatedItems = [...q.questionItems];
+                                                        updatedItems[itemIdx] = {
+                                                            ...item,
+                                                            sentenceEnd: e.target.value
+                                                        };
+                                                        const updatedQ = { ...q, questionItems: updatedItems };
+                                                        const updatedQuestions = [...section.questions];
+                                                        updatedQuestions[qIdx] = updatedQ;
+                                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                    }}
 
                                                 />
                                             </div>
                                         )}
-
                                         {q.type === "multiple_choice" && (
                                             <div>
                                                 <input
@@ -698,7 +762,7 @@ const TestCreateEditView = () => {
                                             </div>
                                         )}
 
-                                        {/* New sourceText input */}
+                                        {/* sourceText input */}
                                         <input
                                             type="text"
                                             placeholder="Answer comes from..."
@@ -739,6 +803,7 @@ const TestCreateEditView = () => {
                                     </div>
 
                                 ))}
+                                {/* Outside loop */}
                                 {q.type === "matching_headings" && (
                                     <div style={{ marginTop: "10px" }}>
                                         {/* Shuffle button */}
@@ -767,8 +832,6 @@ const TestCreateEditView = () => {
                                                         </label>
                                                     </div>
                                                 ))}
-
-
                                                 {/* Answer key */}
                                                 <div style={{ marginTop: "5px" }}>
                                                     <h6>Answer:</h6>
@@ -781,7 +844,42 @@ const TestCreateEditView = () => {
                                                         );
                                                     })}
                                                 </div>
-
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                {q.type === "matching_paragraph_information" && (
+                                    <div style={{ marginTop: "10px" }}>
+                                        <button type="button" onClick={() => shuffleParagraphInfo(secIdx, qIdx)}>
+                                            Shuffle
+                                        </button>
+                                        {q.shuffledItems && (
+                                            <div style={{ marginTop: "10px", padding: "5px", border: "1px solid #ccc" }}>
+                                                <h5>Preview</h5>
+                                                {q.shuffledItems.map((item, idx) => (
+                                                    <div key={idx}>
+                                                        {idx + 1}. {item.text} →
+                                                        <select>
+                                                            <option value="">-- Select Paragraph --</option>
+                                                            {section.passages.map((p) => (
+                                                                <option key={p.header} value={p.header}>
+                                                                    {p.header}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                ))}
+                                                <div style={{ marginTop: "5px" }}>
+                                                    <h6>Answer Key:</h6>
+                                                    {q.answers?.map((a) => {
+                                                        const questionText = q.questionItems.find(it => it.index === a.index)?.text;
+                                                        return (
+                                                            <div key={a.index}>
+                                                                {questionText}: {a.value}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
                                         )}
                                     </div>
@@ -791,7 +889,6 @@ const TestCreateEditView = () => {
                                         <button type="button" onClick={() => shuffleSentenceEndings(secIdx, qIdx)}>
                                             Shuffle
                                         </button>
-
                                         {q.shuffledEnds && (
                                             <div style={{ marginTop: "10px", padding: "5px", border: "1px solid #ccc" }}>
                                                 <h5>Preview</h5>
@@ -806,10 +903,8 @@ const TestCreateEditView = () => {
                                                                 </option>
                                                             ))}
                                                         </select>
-
                                                     </div>
                                                 ))}
-
                                                 <div style={{ marginTop: "5px" }}>
                                                     <h6>Answer Key:</h6>
                                                     {q.answers.map(a => {
@@ -824,16 +919,50 @@ const TestCreateEditView = () => {
                                                 </div>
                                             </div>
                                         )}
-
                                     </div>
                                 )}
-
+                                {q.type === "matching_features" && (
+                                    <div style={{ marginTop: "10px" }}>
+                                        <button type="button" onClick={() => shuffleSentenceEndings(secIdx, qIdx)}>
+                                            Shuffle
+                                        </button>
+                                        {q.shuffledEnds && (
+                                            <div style={{ marginTop: "10px", padding: "5px", border: "1px solid #ccc" }}>
+                                                <h5>Preview</h5>
+                                                {q.questionItems.map((item, idx) => (
+                                                    <div key={idx}>
+                                                        <b>{item.sentenceBegin}</b> →
+                                                        <select value="">
+                                                            <option value="">Select Ending</option>
+                                                            {q.shuffledEnds.map((opt) => (
+                                                                <option key={opt.key} value={opt.key}>
+                                                                    {opt.value}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                ))}
+                                                <div style={{ marginTop: "5px" }}>
+                                                    <h6>Answer Key:</h6>
+                                                    {q.answers.map(a => {
+                                                        const textBegin = q.questionItems.find(item => item.index === a.index)?.sentenceBegin;
+                                                        const textEnd = q.shuffledEnds.find(opt => opt.key === a.value)?.value;
+                                                        return (
+                                                            <div key={a.index}>
+                                                                {textBegin} → {textEnd}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         ))}
                         <button type="button" onClick={() => addQuestion(secIdx)}>
                             Add Question
                         </button>
-
                     </div>
                 ))
                 }
