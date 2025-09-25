@@ -49,7 +49,17 @@ const StudentTestView = () => {
         q.answers.forEach((correct) => {
           total++;
           const studentAnswer = answers[q._id]?.[correct.index];
-          if (studentAnswer === correct.value) score++;
+          // No case sensitive for input text type of questions
+          if (q.type === "short_answer") {
+            if ((studentAnswer || "").trim().toLowerCase() === (correct.value || "").trim().toLowerCase()) {
+              score++;
+            }
+          } else {
+            if (studentAnswer === correct.value) {
+              score++;
+            }
+          }
+
         });
       });
     });
@@ -101,11 +111,9 @@ const StudentTestView = () => {
 
           {section.questions?.map((q) => {
             console.log("DEBUG question:", q._id, "type:", q.type, "shuffledItems:", q.shuffledItems); // DEBUG
-
             return (
               <div key={q._id}>
                 <h4>{q.requirement}</h4>
-
                 {/* Matching Paragraph Information */}
                 {q.type === "matching_paragraph_information" &&
                   q.questionItems?.map((item) => (
@@ -128,29 +136,6 @@ const StudentTestView = () => {
                       </select>
                     </div>
                   ))}
-
-                {/* Multiple Choice */}
-                {q.type === "multiple_choice" &&
-                  q.questionItems?.map((item) => (
-                    <div key={item.index}>
-                      <p>{item.text}</p>
-                      {item.options.map((option, optIdx) => (
-                        <label key={optIdx} style={{ display: "block" }}>
-                          <input
-                            type="radio"
-                            name={`${q._id}_${item.index}`}
-                            value={option}
-                            checked={answers[q._id]?.[item.index] === option}
-                            onChange={(e) =>
-                              handleAnswerChange(q._id, item.index, e.target.value)
-                            }
-                          />
-                          {option}
-                        </label>
-                      ))}
-                    </div>
-                  ))}
-
                 {/* Matching Headings */}
                 {q.type === "matching_headings" && (
                   <div>
@@ -158,11 +143,8 @@ const StudentTestView = () => {
                       const originalItem = q.questionItems?.find(
                         (item) => item.headingLabel === shuffledItem.headingLabel
                       );
-
                       if (!originalItem) return null; // safety check
-
                       const studentAnswer = answers[q._id]?.[originalItem.index] || "";
-
                       return (
                         <div key={shuffledItem.key || idx} style={{ marginBottom: "10px" }}>
                           <label>
@@ -239,6 +221,72 @@ const StudentTestView = () => {
                     })}
                   </div>
                 )}
+                {/* Multiple Choice */}
+                {q.type === "multiple_choice" &&
+                  q.questionItems?.map((item) => (
+                    <div key={item.index}>
+                      <p>{item.text}</p>
+                      {item.options.map((option, optIdx) => (
+                        <label key={optIdx} style={{ display: "block" }}>
+                          <input
+                            type="radio"
+                            name={`${q._id}_${item.index}`}
+                            value={option}
+                            checked={answers[q._id]?.[item.index] === option}
+                            onChange={(e) =>
+                              handleAnswerChange(q._id, item.index, e.target.value)
+                            }
+                          />
+                          {option}
+                        </label>
+                      ))}
+                    </div>
+                  ))}
+                {/* True / False / Not Given */}
+                {q.type === "true_false_not_given" &&
+                  q.questionItems?.map((item) => (
+                    <div key={item.index}>
+                      <label>{item.index}. {item.text}</label>
+                      <select
+                        value={answers[q._id]?.[item.index] || ""}
+                        onChange={(e) => handleAnswerChange(q._id, item.index, e.target.value)}
+                      >
+                        <option value="">-- Select --</option>
+                        <option value="True">True</option>
+                        <option value="False">False</option>
+                        <option value="Not Given">Not Given</option>
+                      </select>
+                    </div>
+                  ))}
+                {/* Yes/ No / Not Given */}
+                {q.type === "yes_no_not_given" &&
+                  q.questionItems?.map((item) => (
+                    <div key={item.index}>
+                      <label>{item.index}. {item.text}</label>
+                      <select
+                        value={answers[q._id]?.[item.index] || ""}
+                        onChange={(e) => handleAnswerChange(q._id, item.index, e.target.value)}
+                      >
+                        <option value="">-- Select --</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                        <option value="Not Given">Not Given</option>
+                      </select>
+                    </div>
+                  ))}
+                {/* Short Answer */}
+                {q.type === "short_answer" &&
+                  q.questionItems?.map((item) => (
+                    <div key={item.index}>
+                      <label>{item.index}. {item.text}</label>
+                      <input
+                        type="text"
+                        value={answers[q._id]?.[item.index] || ""}
+                        onChange={(e) => handleAnswerChange(q._id, item.index, e.target.value)}
+                      />
+                    </div>
+                  ))}
+
               </div>
             );
           })}
