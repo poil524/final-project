@@ -1,20 +1,23 @@
 import mongoose from 'mongoose';
+import { v4 as uuidv4 } from 'uuid';
 
 const questionItemSchema = new mongoose.Schema({
-    index: Number,
+    id: { type: String, default: uuidv4, required: true },
     text: String,
     options: [String],
     headingLabel: String,
     sentenceBegin: String,
     sentenceEnd: String,
+    summary: String,
 });
 
 const questionSchema = new mongoose.Schema({
     type: String,
     requirement: String,
+    summary: String,    // for summary completion
     questionItems: [questionItemSchema],
     answers: [{
-        index: Number,
+        id: { type: String, default: uuidv4, required: true },
         value: String,
         sourceText: String
     }],

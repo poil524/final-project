@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
+
 import axios from "axios";
 
 const TestCreateEditView = () => {
@@ -13,9 +14,8 @@ const TestCreateEditView = () => {
         name: "",
         reading: { sections: [] },
     });
-
+    const summaryRef = useRef(null);
     const BASE_URL = "http://localhost:5000";
-    const summaryRefs = useRef({});
     useEffect(() => {
         if (id) {
             setLoading(true);
@@ -54,23 +54,8 @@ const TestCreateEditView = () => {
                                 };
                             }
                             if (q.type === "summary_completion") {
-                                const matches = [...(q.summary || "").matchAll(/\[BLANK\]/g)];
-                                q.questionItems = matches.map((_, i) => {
-                                    // Try to find existing answer with id
-                                    const existingAnswer = q.answers?.[i];
-                                    return {
-                                        id: existingAnswer?.id || uuidv4(),
-                                        text: "[BLANK]",
-                                    };
-                                });
-
-                                // Sync answers with questionItems
-                                q.answers = q.questionItems.map((item, idx) => {
-                                    const existing = q.answers?.find(a => a.id === item.id);
-                                    return existing
-                                        ? { ...existing, index: idx + 1 }
-                                        : { id: item.id, index: idx + 1, value: "", sourceText: "" };
-                                });
+                                console.log("Loaded summary:", q.requirement);
+                                console.log("Loaded answers:", q.answers);
                             }
                             return q;
                         });
@@ -121,9 +106,41 @@ const TestCreateEditView = () => {
             }
             return q;
         });
-
         return { ...section, questions: updatedQuestions };
     };
+
+    const handleSummaryChange = (secIdx, qIdx, newText) => {
+        const section = testData.reading.sections[secIdx];
+        const question = section.questions[qIdx];
+        const blankCount = (newText.match(/\[BLANK\]/g) || []).length;
+
+        // Sync answers array length
+        let answers = question.answers || [];
+        if (blankCount > answers.length) {
+            for (let i = answers.length; i < blankCount; i++) {
+                answers.push({ id: uuidv4(), value: "", sourceText: "" });
+            }
+        } else if (blankCount < answers.length) {
+            answers = answers.slice(0, blankCount);
+        }
+
+        const updatedQ = { ...question, requirement: newText, summary: newText, answers };
+        const updatedQuestions = [...section.questions];
+        updatedQuestions[qIdx] = updatedQ;
+        updateSection(secIdx, { ...section, questions: updatedQuestions });
+    };
+    const updateAnswerValue = (secIdx, qIdx, answerId, value, sourceText) => {
+        const section = testData.reading.sections[secIdx];
+        const question = section.questions[qIdx];
+        const answers = question.answers.map(a =>
+            a.id === answerId ? { ...a, value: value ?? a.value, sourceText: sourceText ?? a.sourceText } : a
+        );
+        const updatedQ = { ...question, answers };
+        const updatedQuestions = [...section.questions];
+        updatedQuestions[qIdx] = updatedQ;
+        updateSection(secIdx, { ...section, questions: updatedQuestions });
+    };
+
 
     const addPassage = (secIdx) => {
         const section = testData.reading.sections[secIdx];
@@ -143,85 +160,41 @@ const TestCreateEditView = () => {
             questionItems: [],
             shuffle: false,
         });
+
         updateSection(secIdx, section);
     };
+
 
     const addQuestionItem = (secIdx, qIdx) => {
         const section = testData.reading.sections[secIdx];
         const question = section.questions[qIdx];
 
-        // compute max index across all questions in this section
-        const allItems = section.questions.flatMap(q => q.questionItems);
-        const nextIndex = allItems.length + 1;
-
-        let newItem = { index: nextIndex };
+        let newItem = { id: uuidv4() }; // use id instead of index
 
         switch (question.type) {
             case "multiple_choice":
-                newItem = {
-                    ...newItem,
-                    text: "",
-                    options: [],
-                    answer: "",
-                };
+                newItem = { ...newItem, text: "", options: [], answer: "" };
                 break;
             case "true_false_not_given":
-                newItem = {
-                    ...newItem,
-                    text: "",
-                    answer: "",
-                };
-                break;
             case "yes_no_not_given":
-                newItem = {
-                    ...newItem,
-                    text: "",
-                    answer: "",
-                };
-                break;
             case "short_answer":
-                newItem = {
-                    ...newItem,
-                    text: "",
-                    answer: "",
-                };
+                newItem = { ...newItem, text: "", answer: "" };
                 break;
             case "matching_sentence_endings":
-                newItem = {
-                    ...newItem,
-                    sentenceBegin: "",
-                    sentenceEnd: "",
-                    answer: "",
-                };
-                break;
             case "matching_features":
-                newItem = {
-                    ...newItem,
-                    sentenceBegin: "",  // Questions
-                    sentenceEnd: "",    // Features
-                    answer: "",
-                };
+                newItem = { ...newItem, sentenceBegin: "", sentenceEnd: "", answer: "" };
                 break;
             case "matching_paragraph_information":
-                newItem = {
-                    ...newItem,
-                    text: "",
-                    answer: "",
-                };
+                newItem = { ...newItem, text: "", answer: "" };
                 break;
             case "matching_headings":
-                // Use section passages to generate heading labels
                 const headingLabel = section.passages[question.questionItems.length]
                     ? section.passages[question.questionItems.length].header
-                    : String.fromCharCode(65 + question.questionItems.length); // fallback
-                newItem = {
-                    ...newItem,
-                    text: "",
-                    headingLabel,
-                };
+                    : String.fromCharCode(65 + question.questionItems.length);
+                newItem = { ...newItem, text: "", headingLabel };
                 break;
             default:
-                newItem = { ...newItem, text: "" }; // safe fallback
+                newItem = { ...newItem, text: "" };
         }
 
         question.questionItems.push(newItem);
@@ -229,16 +202,26 @@ const TestCreateEditView = () => {
         updateSection(secIdx, section);
     };
 
-    // Re-index question item after delete 
-    const reindexItems = (section) => {
-        let idx = 1;
-        section.questions.forEach(q => {
-            q.questionItems.forEach(item => {
-                item.index = idx++;
-            });
-        });
-        return section;
+
+    const updateAnswer = (secIdx, qIdx, itemId, value, sourceText) => {
+        const section = testData.reading.sections[secIdx];
+        const question = section.questions[qIdx];
+
+        const updatedAnswers = question.answers ? [...question.answers] : [];
+        const existing = updatedAnswers.find(a => a.id === itemId);
+        if (existing) {
+            existing.value = value ?? existing.value;
+            existing.sourceText = sourceText ?? existing.sourceText;
+        } else {
+            updatedAnswers.push({ id: itemId, value: value ?? "", sourceText: sourceText ?? "" });
+        }
+
+        const updatedQ = { ...question, answers: updatedAnswers };
+        const updatedQuestions = [...section.questions];
+        updatedQuestions[qIdx] = updatedQ;
+        updateSection(secIdx, { ...section, questions: updatedQuestions });
     };
+
 
     const addImage = (secIdx) => {
         const section = testData.reading.sections[secIdx];
@@ -267,9 +250,9 @@ const TestCreateEditView = () => {
         const newAnswers = items.map((item, idx) => {
             const matchIdx = labels.findIndex(l => l.text === item.text);
             return {
-                index: item.index,
+                index: item.id,
                 value: labels[matchIdx].key,
-                sourceText: question.answers?.find(a => a.index === item.index)?.sourceText || ""
+                sourceText: question.answers?.find(a => a.index === item.id)?.sourceText || ""
             };
         });
         // Save shuffledItems and answers permanently
@@ -302,9 +285,9 @@ const TestCreateEditView = () => {
         const newAnswers = items.map(item => {
             const matchIdx = labels.findIndex(l => l.text === item.text);
             return {
-                index: item.index,
+                index: item.id,
                 value: labels[matchIdx].key,
-                sourceText: question.answers?.find(a => a.index === item.index)?.sourceText || ""
+                sourceText: question.answers?.find(a => a.index === item.id)?.sourceText || ""
             };
         });
 
@@ -340,9 +323,9 @@ const TestCreateEditView = () => {
         const newAnswers = items.map(item => {
             const matchIdx = labels.find(l => l.value === item.sentenceEnd);
             return {
-                index: item.index,
+                index: item.id,
                 value: labels[matchIdx]?.key || "",
-                sourceText: question.answers?.find(a => a.index === item.index)?.sourceText || ""
+                sourceText: question.answers?.find(a => a.index === item.id)?.sourceText || ""
             };
         });
 
@@ -357,31 +340,6 @@ const TestCreateEditView = () => {
         updatedQuestions[qIdx] = updatedQ;
         updateSection(secIdx, { ...section, questions: updatedQuestions });
     };
-    // Shuffle summary completion list 
-    const shuffleSummaryList = (secIdx, qIdx) => {
-        const section = testData.reading.sections[secIdx];
-        const question = section.questions[qIdx];
-        if (question.type !== "summary_completion_list") return;
-
-        const answers = [...question.answers];
-        const shuffled = answers.sort(() => Math.random() - 0.5);
-
-        const labels = shuffled.map((ans, i) => ({
-            key: String.fromCharCode(65 + i),
-            text: ans.value
-        }));
-
-        const updatedQ = {
-            ...question,
-            shuffle: true,
-            shuffledItems: labels
-        };
-
-        const updatedQuestions = [...section.questions];
-        updatedQuestions[qIdx] = updatedQ;
-        updateSection(secIdx, { ...section, questions: updatedQuestions });
-    };
-
 
     const updateSection = (secIdx, updatedSection) => {
         setTestData((prev) => {
@@ -563,7 +521,6 @@ const TestCreateEditView = () => {
                                     onClick={() => {
                                         const updatedQuestions = section.questions.filter((_, i) => i !== qIdx);
                                         let updatedSection = { ...section, questions: updatedQuestions };
-                                        updatedSection = reindexItems(updatedSection);
                                         updateSection(secIdx, updatedSection);
                                     }}
                                 >
@@ -583,7 +540,7 @@ const TestCreateEditView = () => {
                                 />
                                 <br />
 
-                                {q.type !== "matching_headings" || q.type !== "summary_completion" && (
+                                {q.type !== "summary_completion" && (
                                     <button type="button" onClick={() => addQuestionItem(secIdx, qIdx)}>
                                         Add Question Item
                                     </button>
@@ -591,7 +548,6 @@ const TestCreateEditView = () => {
 
                                 {q.questionItems.map((item, itemIdx) => (
                                     <div key={itemIdx} style={{ marginLeft: "15px" }}>
-                                        <b>{item.index}. </b>
                                         {q.type === "matching_paragraph_information" && (
                                             <div>
                                                 <input
@@ -608,12 +564,12 @@ const TestCreateEditView = () => {
                                                     }}
                                                 />
                                                 <select
-                                                    value={q.answers?.find(a => a.index === item.index)?.value || ""}
+                                                    value={q.answers?.find(a => a.index === item.id)?.value || ""}
                                                     onChange={(e) => {
                                                         const updatedAnswers = q.answers ? [...q.answers] : [];
-                                                        const existing = updatedAnswers.find(a => a.index === item.index);
+                                                        const existing = updatedAnswers.find(a => a.index === item.id);
                                                         if (existing) existing.value = e.target.value;
-                                                        else updatedAnswers.push({ index: item.index, value: e.target.value, sourceText: "" });
+                                                        else updatedAnswers.push({ index: item.id, value: e.target.value, sourceText: "" });
                                                         const updatedQ = { ...q, answers: updatedAnswers };
                                                         const updatedQuestions = [...section.questions];
                                                         updatedQuestions[qIdx] = updatedQ;
@@ -801,14 +757,14 @@ const TestCreateEditView = () => {
                                                     <label key={optIdx}>
                                                         <input
                                                             type="radio"
-                                                            name={`correct_${secIdx}_${qIdx}_${item.index}`}
+                                                            name={`correct_${secIdx}_${qIdx}_${item.id}`}
                                                             value={opt}
-                                                            checked={q.answers?.find(a => a.index === item.index)?.value === opt}
+                                                            checked={q.answers?.find(a => a.index === item.id)?.value === opt}
                                                             onChange={(e) => {
                                                                 const updatedAnswers = q.answers ? [...q.answers] : [];
-                                                                const existing = updatedAnswers.find(a => a.index === item.index);
+                                                                const existing = updatedAnswers.find(a => a.index === item.id);
                                                                 if (existing) existing.value = e.target.value;
-                                                                else updatedAnswers.push({ index: item.index, value: e.target.value, sourceText: "" });
+                                                                else updatedAnswers.push({ index: item.id, value: e.target.value, sourceText: "" });
                                                                 const updatedQ = { ...q, answers: updatedAnswers };
                                                                 const updatedQuestions = [...section.questions];
                                                                 updatedQuestions[qIdx] = updatedQ;
@@ -836,12 +792,12 @@ const TestCreateEditView = () => {
                                                     }}
                                                 />
                                                 <select
-                                                    value={q.answers?.find(a => a.index === item.index)?.value || ""}
+                                                    value={q.answers?.find(a => a.index === item.id)?.value || ""}
                                                     onChange={(e) => {
                                                         const updatedAnswers = q.answers ? [...q.answers] : [];
-                                                        const existing = updatedAnswers.find(a => a.index === item.index);
+                                                        const existing = updatedAnswers.find(a => a.index === item.id);
                                                         if (existing) existing.value = e.target.value;
-                                                        else updatedAnswers.push({ index: item.index, value: e.target.value, sourceText: "" });
+                                                        else updatedAnswers.push({ index: item.id, value: e.target.value, sourceText: "" });
                                                         const updatedQ = { ...q, answers: updatedAnswers };
                                                         const updatedQuestions = [...section.questions];
                                                         updatedQuestions[qIdx] = updatedQ;
@@ -871,12 +827,12 @@ const TestCreateEditView = () => {
                                                     }}
                                                 />
                                                 <select
-                                                    value={q.answers?.find(a => a.index === item.index)?.value || ""}
+                                                    value={q.answers?.find(a => a.index === item.id)?.value || ""}
                                                     onChange={(e) => {
                                                         const updatedAnswers = q.answers ? [...q.answers] : [];
-                                                        const existing = updatedAnswers.find(a => a.index === item.index);
+                                                        const existing = updatedAnswers.find(a => a.index === item.id);
                                                         if (existing) existing.value = e.target.value;
-                                                        else updatedAnswers.push({ index: item.index, value: e.target.value, sourceText: "" });
+                                                        else updatedAnswers.push({ index: item.id, value: e.target.value, sourceText: "" });
                                                         const updatedQ = { ...q, answers: updatedAnswers };
                                                         const updatedQuestions = [...section.questions];
                                                         updatedQuestions[qIdx] = updatedQ;
@@ -908,93 +864,12 @@ const TestCreateEditView = () => {
                                                 <input
                                                     type="text"
                                                     placeholder="Correct Answer"
-                                                    value={q.answers?.find(a => a.index === item.index)?.value || ""}
+                                                    value={q.answers?.find(a => a.index === item.id)?.value || ""}
                                                     onChange={(e) => {
                                                         const updatedAnswers = q.answers ? [...q.answers] : [];
-                                                        const existing = updatedAnswers.find(a => a.index === item.index);
+                                                        const existing = updatedAnswers.find(a => a.index === item.id);
                                                         if (existing) existing.value = e.target.value;
-                                                        else updatedAnswers.push({ index: item.index, value: e.target.value, sourceText: "" });
-                                                        const updatedQ = { ...q, answers: updatedAnswers };
-                                                        const updatedQuestions = [...section.questions];
-                                                        updatedQuestions[qIdx] = updatedQ;
-                                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                    }}
-                                                />
-                                            </div>
-                                        )}
-                                        {q.type === "summary_completion" && (
-                                            <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                                                <input
-                                                    type="text"
-                                                    placeholder="Correct Answer"
-                                                    value={q.answers?.find((a) => a.id === item.id)?.value || ""}
-                                                    onChange={(e) => {
-                                                        const updatedAnswers = q.answers ? [...q.answers] : [];
-                                                        const existing = updatedAnswers.find((a) => a.id === item.id);
-                                                        if (existing) existing.value = e.target.value;
-                                                        else updatedAnswers.push({ id: item.id, index: itemIdx + 1, value: e.target.value, sourceText: "" });
-
-                                                        const updatedQ = { ...q, answers: updatedAnswers };
-                                                        const updatedQuestions = [...section.questions];
-                                                        updatedQuestions[qIdx] = updatedQ;
-                                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                    }}
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        const itemId = item.id; // the questionItem ID
-                                                        const questionItems = q.questionItems.filter((qi) => qi.id !== itemId);
-                                                        const answers = q.answers.filter((a) => a.id !== itemId);
-
-                                                        // Remove the corresponding [BLANK] in the summary text
-                                                        let summaryText = q.summary || "";
-                                                        const matches = [...summaryText.matchAll(/\[BLANK\]/g)];
-
-                                                        // Remove the [BLANK] at the same index as the removed item
-                                                        const idx = q.questionItems.findIndex(qi => qi.id === itemId);
-                                                        const start = matches[idx]?.index;
-                                                        if (start !== undefined) {
-                                                            summaryText = summaryText.slice(0, start) + summaryText.slice(start + 7);
-                                                        }
-
-                                                        const updatedQ = {
-                                                            ...q,
-                                                            questionItems,
-                                                            answers,
-                                                            summary: summaryText
-                                                        };
-
-                                                        const updatedQuestions = [...section.questions];
-                                                        updatedQuestions[qIdx] = updatedQ;
-                                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                    }}
-                                                >
-                                                    Remove Item
-                                                </button>
-                                            </div>
-                                        )}
-
-
-
-                                        {q.type === "summary_completion_list" && (
-                                            <div>
-                                                <input
-                                                    type="text"
-                                                    placeholder="Correct Answer"
-                                                    value={q.answers?.find(a => a.index === item.index)?.value || ""}
-                                                    onChange={(e) => {
-                                                        const updatedAnswers = q.answers ? [...q.answers] : [];
-                                                        const existing = updatedAnswers.find(a => a.index === item.index);
-                                                        if (existing) {
-                                                            existing.value = e.target.value;
-                                                        } else {
-                                                            updatedAnswers.push({
-                                                                index: item.index,
-                                                                value: e.target.value,
-                                                                sourceText: ""
-                                                            });
-                                                        }
+                                                        else updatedAnswers.push({ index: item.id, value: e.target.value, sourceText: "" });
                                                         const updatedQ = { ...q, answers: updatedAnswers };
                                                         const updatedQuestions = [...section.questions];
                                                         updatedQuestions[qIdx] = updatedQ;
@@ -1005,22 +880,24 @@ const TestCreateEditView = () => {
                                         )}
                                         {/* Globally Component */}
                                         {/* sourceText input */}
+                                        {q.type !== "summary_completion" && (
+                                            <input
+                                                type="text"
+                                                placeholder="Answer comes from..."
+                                                value={q.answers?.find(a => a.index === item.id)?.sourceText || ""}
+                                                onChange={(e) => {
+                                                    const updatedAnswers = q.answers ? [...q.answers] : [];
+                                                    const existing = updatedAnswers.find(a => a.index === item.id);
+                                                    if (existing) existing.sourceText = e.target.value;
+                                                    else updatedAnswers.push({ index: item.id, value: "", sourceText: e.target.value });
+                                                    const updatedQ = { ...q, answers: updatedAnswers };
+                                                    const updatedQuestions = [...section.questions];
+                                                    updatedQuestions[qIdx] = updatedQ;
+                                                    updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                }}
+                                            />
+                                        )}
 
-                                        <input
-                                            type="text"
-                                            placeholder="Answer comes from..."
-                                            value={q.answers?.find(a => a.index === item.index)?.sourceText || ""}
-                                            onChange={(e) => {
-                                                const updatedAnswers = q.answers ? [...q.answers] : [];
-                                                const existing = updatedAnswers.find(a => a.index === item.index);
-                                                if (existing) existing.sourceText = e.target.value;
-                                                else updatedAnswers.push({ index: item.index, value: "", sourceText: e.target.value });
-                                                const updatedQ = { ...q, answers: updatedAnswers };
-                                                const updatedQuestions = [...section.questions];
-                                                updatedQuestions[qIdx] = updatedQ;
-                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                            }}
-                                        />
                                         {q.type !== "summary_completion" && q.type !== "summary_completion_list" && (
                                             <button
                                                 type="button"
@@ -1029,7 +906,7 @@ const TestCreateEditView = () => {
                                                     const updatedQ = { ...q, questionItems: updatedItems };
 
                                                     // filter out its answer if one exists
-                                                    const updatedAnswers = (q.answers || []).filter(a => a.index !== item.index);
+                                                    const updatedAnswers = (q.answers || []).filter(a => a.index !== item.id);
                                                     updatedQ.answers = updatedAnswers;
 
                                                     const updatedQuestions = [...section.questions];
@@ -1037,7 +914,6 @@ const TestCreateEditView = () => {
 
                                                     // reindex after deletion
                                                     let updatedSection = { ...section, questions: updatedQuestions };
-                                                    updatedSection = reindexItems(updatedSection);
 
                                                     updateSection(secIdx, updatedSection);
                                                 }}
@@ -1049,6 +925,140 @@ const TestCreateEditView = () => {
 
                                 ))}
                                 {/* Outside loop */}
+                                {q.type === "summary_completion" && (
+                                    <div style={{ marginTop: "10px" }}>
+                                        <h4>Summary Text</h4>
+                                        <textarea
+                                            ref={summaryRef}
+                                            rows={4}
+                                            style={{ width: "100%" }}
+                                            value={q.requirement || ""}
+                                            onChange={(e) => {
+                                                const newText = e.target.value;
+                                                const blankCount = (newText.match(/\[BLANK\]/g) || []).length;
+
+                                                // Sync answers array length
+                                                let answers = q.answers || [];
+                                                if (blankCount > answers.length) {
+                                                    for (let i = answers.length; i < blankCount; i++) {
+                                                        answers.push({ id: uuidv4(), value: "", sourceText: "" });
+                                                    }
+                                                } else if (blankCount < answers.length) {
+                                                    answers = answers.slice(0, blankCount);
+                                                }
+
+                                                const updatedQ = { ...q, requirement: newText, summary: newText, answers };
+                                                const updatedQuestions = [...section.questions];
+                                                updatedQuestions[qIdx] = updatedQ;
+                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                            }}
+                                        />
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (!summaryRef.current) return;
+
+                                                const textarea = summaryRef.current;
+                                                const cursorPos = textarea.selectionStart; // get cursor position
+
+                                                const updatedText =
+                                                    (q.requirement || "").slice(0, cursorPos) +
+                                                    " [BLANK]" +
+                                                    (q.requirement || "").slice(cursorPos);
+
+                                                // Increment answers array
+                                                const updatedAnswers = [...(q.answers || []), { id: uuidv4(), value: "", sourceText: "" }];
+
+                                                const updatedQ = { ...q, requirement: updatedText, summary: updatedText, answers: updatedAnswers };
+                                                const updatedQuestions = [...section.questions];
+                                                updatedQuestions[qIdx] = updatedQ;
+                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
+
+                                                // Move cursor after inserted [BLANK]
+                                                setTimeout(() => {
+                                                    textarea.selectionStart = textarea.selectionEnd = cursorPos + " [BLANK]".length;
+                                                    textarea.focus();
+                                                }, 0);
+                                            }}
+                                        >
+                                            Add Blank
+                                        </button>
+
+                                        <h4>Answers</h4>
+                                        {q.answers?.map((answer, idx) => (
+                                            <div key={answer.id} style={{ display: "flex", alignItems: "center", marginBottom: "5px" }}>
+                                                <input
+                                                    type="text"
+                                                    placeholder={`Answer for blank #${idx + 1}`}
+                                                    value={answer.value}
+                                                    onChange={(e) => {
+                                                        const updatedAnswers = q.answers.map(a =>
+                                                            a.id === answer.id ? { ...a, value: e.target.value } : a
+                                                        );
+                                                        const updatedQ = { ...q, answers: updatedAnswers };
+                                                        const updatedQuestions = [...section.questions];
+                                                        updatedQuestions[qIdx] = updatedQ;
+                                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                    }}
+                                                    style={{ flex: 1 }}
+                                                />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Answer comes from..."
+                                                    value={answer.sourceText}
+                                                    onChange={(e) => {
+                                                        const updatedAnswers = q.answers.map(a =>
+                                                            a.id === answer.id ? { ...a, sourceText: e.target.value } : a
+                                                        );
+                                                        const updatedQ = { ...q, answers: updatedAnswers };
+                                                        const updatedQuestions = [...section.questions];
+                                                        updatedQuestions[qIdx] = updatedQ;
+                                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                    }}
+                                                    style={{ flex: 1, marginRight: "5px" }}
+                                                />
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        // Remove blank from requirement/summary
+                                                        let blankIndex = 0;
+                                                        const updatedText = (q.requirement || "").replace(/\[BLANK\]/g, () => {
+                                                            blankIndex++;
+                                                            return blankIndex === idx + 1 ? "" : "[BLANK]";
+                                                        });
+
+                                                        // Remove the answer
+                                                        const updatedAnswers = q.answers.filter(a => a.id !== answer.id);
+
+                                                        const updatedQ = { ...q, requirement: updatedText, summary: updatedText, answers: updatedAnswers };
+                                                        const updatedQuestions = [...section.questions];
+                                                        updatedQuestions[qIdx] = updatedQ;
+                                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                    }}
+                                                    style={{ marginLeft: "5px" }}
+                                                >
+                                                    Remove Item
+                                                </button>
+                                            </div>
+                                        ))}
+
+                                        <h4>Preview</h4>
+                                        <div style={{ border: "1px solid #ccc", padding: "5px", whiteSpace: "pre-wrap" }}>
+                                            {(() => {
+                                                let idx = 0;
+                                                return (q.requirement || "").replace(/\[BLANK\]/g, () => {
+                                                    const val = q.answers?.[idx]?.value || "[BLANK]";
+                                                    idx++;
+                                                    return val;
+                                                });
+                                            })()}
+                                        </div>
+                                    </div>
+                                )}
+
+
                                 {q.type === "matching_headings" && (
                                     <div style={{ marginTop: "10px" }}>
                                         {/* Shuffle button */}
@@ -1081,7 +1091,7 @@ const TestCreateEditView = () => {
                                                 <div style={{ marginTop: "5px" }}>
                                                     <h6>Answer:</h6>
                                                     {q.answers.map((a) => {
-                                                        const headingText = q.questionItems.find(item => item.index === a.index)?.text;
+                                                        const headingText = q.questionItems.find(item => item.id === a.index)?.text;
                                                         return (
                                                             <div key={a.index}>
                                                                 {headingText}: {a.value}
@@ -1153,7 +1163,7 @@ const TestCreateEditView = () => {
                                                 <div style={{ marginTop: "5px" }}>
                                                     <h6>Answer Key:</h6>
                                                     {q.answers.map(a => {
-                                                        const textBegin = q.questionItems.find(item => item.index === a.index)?.sentenceBegin;
+                                                        const textBegin = q.questionItems.find(item => item.id === a.index)?.sentenceBegin;
                                                         const textEnd = q.shuffledEnds.find(opt => opt.key === a.value)?.value;
                                                         return (
                                                             <div key={a.index}>
@@ -1190,7 +1200,7 @@ const TestCreateEditView = () => {
                                                 <div style={{ marginTop: "5px" }}>
                                                     <h6>Answer Key:</h6>
                                                     {q.answers.map(a => {
-                                                        const textBegin = q.questionItems.find(item => item.index === a.index)?.sentenceBegin;
+                                                        const textBegin = q.questionItems.find(item => item.id === a.index)?.sentenceBegin;
                                                         const textEnd = q.shuffledEnds.find(opt => opt.key === a.value)?.value;
                                                         return (
                                                             <div key={a.index}>
@@ -1203,229 +1213,6 @@ const TestCreateEditView = () => {
                                         )}
                                     </div>
                                 )}
-
-                                {q.type === "summary_completion" && (
-                                    <div>
-                                        {/* Summary textarea for editing the text and adding blanks */}
-                                        <textarea
-                                            id={`summary_${secIdx}_${qIdx}`}
-                                            ref={(el) => (summaryRefs.current[`s_${secIdx}_${qIdx}`] = el)}
-                                            value={q.summary || ""}
-                                            onChange={(e) => {
-                                                const updatedSummary = e.target.value;
-
-                                                // Detect all [BLANK] occurrences
-                                                const matches = [...updatedSummary.matchAll(/\[BLANK\]/g)];
-
-                                                // Sync questionItems by ID
-                                                const newItems = matches.map((_, i) => {
-                                                    const existing = q.questionItems?.[i];
-                                                    return existing ? existing : { id: uuidv4(), text: "[BLANK]" };
-                                                });
-
-                                                // Keep only answers with matching IDs
-                                                const validIds = newItems.map((it) => it.id);
-                                                const updatedAnswers = (q.answers || []).filter((a) => validIds.includes(a.id));
-
-                                                // Add placeholder answers for new blanks
-                                                newItems.forEach((item, idx) => {
-                                                    if (!updatedAnswers.some((a) => a.id === item.id)) {
-                                                        updatedAnswers.push({
-                                                            id: item.id,
-                                                            index: idx + 1,
-                                                            value: "",
-                                                            sourceText: "",
-                                                        });
-                                                    }
-                                                });
-
-                                                // Preserve value/sourceText mapping
-                                                const finalAnswers = newItems.map((item, idx) => {
-                                                    const existing = updatedAnswers.find((a) => a.id === item.id);
-                                                    return {
-                                                        id: item.id,
-                                                        index: idx + 1,
-                                                        value: existing ? existing.value : "",
-                                                        sourceText: existing ? existing.sourceText : "",
-                                                    };
-                                                });
-
-                                                const updatedQ = {
-                                                    ...q,
-                                                    summary: updatedSummary,
-                                                    questionItems: newItems,
-                                                    answers: finalAnswers,
-                                                };
-
-                                                const updatedQuestions = [...section.questions];
-                                                updatedQuestions[qIdx] = updatedQ;
-
-                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                            }}
-                                        />
-
-
-
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                const key = `s_${secIdx}_${qIdx}`;
-                                                const ta = summaryRefs.current[key];
-                                                if (!ta) return;
-
-                                                const cursorPos = ta.selectionStart;
-                                                const insert = "[BLANK]";
-                                                const newText =
-                                                    (q.summary || "").slice(0, cursorPos) +
-                                                    insert +
-                                                    (q.summary || "").slice(cursorPos);
-
-                                                // Update textarea value
-                                                ta.value = newText;
-
-                                                // Trigger onChange manually
-                                                ta.dispatchEvent(new Event("input", { bubbles: true }));
-
-                                                setTimeout(() => {
-                                                    const ta2 = summaryRefs.current[key];
-                                                    if (!ta2) return;
-                                                    const pos = cursorPos + insert.length;
-                                                    ta2.focus();
-                                                    ta2.selectionStart = ta2.selectionEnd = pos;
-                                                }, 0);
-                                            }}
-                                        >
-                                            Add Blank
-                                        </button>
-
-
-                                        {/* Preview */}
-                                        <div style={{ marginTop: "10px", padding: "5px", border: "1px solid #ccc" }}>
-                                            <h5>Preview</h5>
-                                            <p>
-                                                {(q.summary || "").split(/\[BLANK\]/).map((part, i, arr) => (
-                                                    <span key={i}>
-                                                        {part}
-                                                        {i < arr.length - 1 && <b>{i + 1}. ____</b>}
-                                                    </span>
-                                                ))}
-                                            </p>
-
-                                            <div style={{ marginTop: "5px" }}>
-                                                <h6>Answers:</h6>
-                                                {q.answers?.map(a => (
-                                                    <div key={a.id}>
-                                                        {a.index}. {a.value}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-
-
-                                {q.type === "summary_completion_list" && (
-                                    <div style={{ marginTop: "10px" }}>
-                                        {/* Summary editor and Add Blank same as summary_completion */}
-                                        <textarea
-                                            id={`summary_${secIdx}_${qIdx}`}
-                                            value={q.summary || ""}
-                                            onChange={(e) => {
-                                                const updatedSummary = e.target.value;
-                                                const matches = [...updatedSummary.matchAll(/\[BLANK\]/g)];
-
-                                                // regenerate blanks
-                                                const newItems = matches.map((_, idx) => ({
-                                                    index: idx + 1,
-                                                    text: "[BLANK]"
-                                                }));
-
-                                                // regenerate answers
-                                                const newAnswers = matches.map((_, idx) => {
-                                                    const existing = q.answers?.find(a => a.index === idx + 1);
-                                                    return {
-                                                        index: idx + 1,
-                                                        value: existing ? existing.value : "",
-                                                        sourceText: existing ? existing.sourceText : ""
-                                                    };
-                                                });
-
-                                                const updatedQ = {
-                                                    ...q,
-                                                    summary: updatedSummary,
-                                                    questionItems: newItems,
-                                                    answers: newAnswers
-                                                };
-                                                const updatedQuestions = [...section.questions];
-                                                updatedQuestions[qIdx] = updatedQ;
-                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                            }}
-                                        />
-
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                const textarea = document.querySelector(
-                                                    `#summary_${secIdx}_${qIdx}`
-                                                );
-                                                if (!textarea) return;
-                                                const cursorPos = textarea.selectionStart;
-                                                const newText =
-                                                    (q.summary || "").slice(0, cursorPos) +
-                                                    "[BLANK]" +
-                                                    (q.summary || "").slice(cursorPos);
-                                                textarea.value = newText;
-                                                textarea.dispatchEvent(new Event("input", { bubbles: true }));
-                                            }}
-                                        >
-                                            Add Blank
-                                        </button>
-
-                                        {/* Shuffle button */}
-                                        <button type="button" onClick={() => shuffleSummaryList(secIdx, qIdx)}>
-                                            Shuffle
-                                        </button>
-
-                                        {/* Preview */}
-                                        {q.shuffledItems && (
-                                            <div
-                                                style={{ marginTop: "10px", padding: "5px", border: "1px solid #ccc" }}
-                                            >
-                                                <h5>Preview</h5>
-                                                <p>
-                                                    {(q.summary || "").split(/\[BLANK\]/).map((part, i, arr) => (
-                                                        <span key={i}>
-                                                            {part}
-                                                            {i < arr.length - 1 && (
-                                                                <select>
-                                                                    <option value="">-- Select Word --</option>
-                                                                    {q.shuffledItems.map((item) => (
-                                                                        <option key={item.key} value={item.key}>
-                                                                            {item.key}. {item.text}
-                                                                        </option>
-                                                                    ))}
-                                                                </select>
-                                                            )}
-                                                        </span>
-                                                    ))}
-                                                </p>
-
-
-                                                {/* Answer key */}
-                                                <div style={{ marginTop: "5px" }}>
-                                                    <h6>Answer:</h6>
-                                                    {q.answers.map((a) => (
-                                                        <div key={a.index}>
-                                                            {a.index}: {a.value}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
                             </div>
                         ))}
                         <button type="button" onClick={() => addQuestion(secIdx)}>
