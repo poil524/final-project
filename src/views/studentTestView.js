@@ -50,7 +50,7 @@ const StudentTestView = () => {
           total++;
           const studentAnswer = answers[q._id]?.[correct.index];
           // No case sensitive for input text type of questions
-          if (q.type === "short_answer") {
+          if (q.type === "short_answer" || q.type === "summary_completion") {
             if ((studentAnswer || "").trim().toLowerCase() === (correct.value || "").trim().toLowerCase()) {
               score++;
             }
@@ -286,6 +286,32 @@ const StudentTestView = () => {
                       />
                     </div>
                   ))}
+                {/* Summary Completion */}
+                {q.type === "summary_completion" && (
+                  <div>
+                    <p>
+                      {(q.summary || "").split(/\[BLANK\]/).map((part, i, arr) => (
+                        <span key={i}>
+                          {part}
+                          {i < arr.length - 1 && (
+                            <>
+                              <b>{i + 1}.</b>
+                              <input
+                                type="text"
+                                style={{ width: "120px", margin: "0 5px" }}
+                                value={answers[q._id]?.[i + 1] || ""}
+                                onChange={(e) =>
+                                  handleAnswerChange(q._id, i + 1, e.target.value)
+                                }
+                              />
+                            </>
+                          )}
+                        </span>
+                      ))}
+                    </p>
+                  </div>
+                )}
+
 
               </div>
             );
