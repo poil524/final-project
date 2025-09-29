@@ -1,1 +1,0 @@
-# Endeavor-nextjs-pro
