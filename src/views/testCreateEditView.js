@@ -32,12 +32,21 @@ const TestCreateEditView = () => {
                     data.reading.sections.forEach((section) => {
                         section.questions = section.questions.map((q) => {
                             if (q.type === "matching_headings") {
+                                // Sync questionItems and answers
                                 const items = section.passages.map((p, idx) => {
                                     const existing = q.questionItems?.[idx];
                                     return {
-                                        index: idx + 1,
-                                        headingLabel: p.header,
+                                        id: existing ? existing.id : uuidv4(),
                                         text: existing ? existing.text : "",
+                                        sourceText: existing ? existing.sourceText : "",
+                                    };
+                                });
+
+                                const answers = section.passages.map((p, idx) => {
+                                    const existing = q.answers?.[idx];
+                                    return {
+                                        id: existing ? existing.id : uuidv4(),
+                                        value: p.header, // heading stored in answers
                                         sourceText: existing ? existing.sourceText : "",
                                     };
                                 });
@@ -45,17 +54,13 @@ const TestCreateEditView = () => {
                                 return {
                                     ...q,
                                     questionItems: items,
-                                    shuffle: true, // force preview open
-                                    shuffledItems: q.shuffledItems || items.map((item, i) => ({
-                                        key: String.fromCharCode(65 + i),
-                                        text: item.text,
-                                        headingLabel: item.headingLabel
-                                    })),
+                                    answers,
                                 };
                             }
                             return q;
                         });
                     });
+
                     setTestData(data);
                 })
                 .catch((err) => {
@@ -65,6 +70,7 @@ const TestCreateEditView = () => {
                 .finally(() => setLoading(false));
         }
     }, [id]);
+
 
 
 
@@ -90,22 +96,27 @@ const TestCreateEditView = () => {
         const updatedQuestions = section.questions.map((q) => {
             if (q.type === "matching_headings") {
                 const items = section.passages.map((p, idx) => {
-                    // Keep existing text if it exists, otherwise empty
                     const existing = q.questionItems?.[idx];
                     return {
-                        index: idx + 1,
-                        headingLabel: p.header, // auto from passage header
+                        id: existing ? existing.id : uuidv4(),
                         text: existing ? existing.text : "",
                     };
                 });
-                return { ...q, questionItems: items };
+
+                const answers = section.passages.map((p, idx) => {
+                    const existing = q.answers?.[idx];
+                    return {
+                        id: existing ? existing.id : uuidv4(),
+                        value: p.header,
+                    };
+                });
+
+                return { ...q, questionItems: items, answers };
             }
             return q;
         });
         return { ...section, questions: updatedQuestions };
     };
-
-
 
     const addPassage = (secIdx) => {
         const section = testData.reading.sections[secIdx];
@@ -114,7 +125,6 @@ const TestCreateEditView = () => {
         // Sync matching_headings questions
         const updatedSection = syncMatchingHeadingsItems(section);
         updateSection(secIdx, updatedSection);
-
     };
 
     const addQuestion = (secIdx) => {
@@ -123,9 +133,7 @@ const TestCreateEditView = () => {
             type: "multiple_choice",
             requirement: "",
             questionItems: [],
-            shuffle: false,
         });
-
         updateSection(secIdx, section);
     };
 
@@ -133,9 +141,7 @@ const TestCreateEditView = () => {
     const addQuestionItem = (secIdx, qIdx) => {
         const section = testData.reading.sections[secIdx];
         const question = section.questions[qIdx];
-
         let newItem = { id: uuidv4() }; // use id instead of index
-
         switch (question.type) {
             case "multiple_choice":
                 newItem = { ...newItem, text: "", options: [], answer: "" };
@@ -155,149 +161,29 @@ const TestCreateEditView = () => {
                 newItem = { ...newItem, text: "", answer: "" };
                 break;
             case "matching_headings":
+                newItem = { ...newItem, text: "" };
+                // Add answer for this item
                 const headingLabel = section.passages[question.questionItems.length]
                     ? section.passages[question.questionItems.length].header
                     : String.fromCharCode(65 + question.questionItems.length);
-                newItem = { ...newItem, text: "", headingLabel };
+
+                question.answers = question.answers || [];
+                question.answers.push({ id: uuidv4(), value: headingLabel });
                 break;
+
             default:
                 newItem = { ...newItem, text: "" };
         }
-
         question.questionItems.push(newItem);
         section.questions[qIdx] = question;
         updateSection(secIdx, section);
     };
-
-
     const addImage = (secIdx) => {
         const section = testData.reading.sections[secIdx];
         section.images = section.images || [];
         section.images.push({ url: "" });
         updateSection(secIdx, section);
     };
-
-    // Shuffle Heading
-    const shuffleHeadings = (secIdx, qIdx) => {
-        const section = testData.reading.sections[secIdx];
-        const question = section.questions[qIdx];
-        if (question.type !== "matching_headings") return;
-
-        const items = [...question.questionItems];
-        const shuffled = items.sort(() => Math.random() - 0.5);
-
-        // Map heading labels A,B,C...
-        const labels = shuffled.map((item, i) => ({
-            key: String.fromCharCode(65 + i),
-            text: item.text,
-            headingLabel: item.headingLabel
-        }));
-
-        // Generate answers linking question to shuffled heading
-        const newAnswers = items.map((item, idx) => {
-            const matchIdx = labels.findIndex(l => l.text === item.text);
-            return {
-                index: item.id,
-                value: labels[matchIdx].key,
-                sourceText: question.answers?.find(a => a.index === item.id)?.sourceText || ""
-            };
-        });
-        // Save shuffledItems and answers permanently
-        const updatedQ = {
-            ...question,
-            shuffle: true,
-            shuffledItems: labels,
-            answers: newAnswers,
-        };
-
-        const updatedQuestions = [...section.questions];
-        updatedQuestions[qIdx] = updatedQ;
-        updateSection(secIdx, { ...section, questions: updatedQuestions });
-    };
-
-    // Shuffle Paragraph Information
-    const shuffleParagraphInfo = async (secIdx, qIdx) => {
-        const section = testData.reading.sections[secIdx];
-        const question = section.questions[qIdx];
-        if (question.type !== "matching_paragraph_information") return;
-
-        const items = [...question.questionItems];
-        const shuffled = [...items].sort(() => Math.random() - 0.5);
-
-        const labels = shuffled.map((item, i) => ({
-            key: String.fromCharCode(65 + i),
-            text: item.text
-        }));
-
-        const newAnswers = (question.answers || []).map(a => ({ ...a }));
-
-
-        const updatedQ = {
-            ...question,
-            shuffle: true,
-            shuffledItems: labels,
-            answers: newAnswers,
-        };
-
-        const updatedQuestions = [...section.questions];
-        updatedQuestions[qIdx] = updatedQ;
-        const updatedSection = { ...section, questions: updatedQuestions };
-        updateSection(secIdx, updatedSection);
-
-        // persist to backend
-        try {
-            await axios.put(`http://localhost:5000/api/tests/${testData._id}`, {
-                ...testData,
-                reading: {
-                    ...testData.reading,
-                    sections: testData.reading.sections.map((s, i) =>
-                        i === secIdx ? updatedSection : s
-                    ),
-                },
-            });
-        } catch (err) {
-            console.error("Failed to save shuffle:", err);
-        }
-    };
-    // Shuffle matching sentence endings & matching features
-    const shuffleSentenceEndings = (secIdx, qIdx) => {
-        const section = testData.reading.sections[secIdx];
-        const question = section.questions[qIdx];
-        if (question.type !== "matching_sentence_endings" && question.type !== "matching_features") return;
-
-        const items = [...question.questionItems];
-
-        // Shuffle endings
-        const shuffledEnds = [...items.map(item => item.sentenceEnd)].sort(() => Math.random() - 0.5);
-
-        // Map shuffled ends to letters a,b,c
-        const labels = shuffledEnds.map((value, i) => ({
-            key: String.fromCharCode(97 + i), // a,b,c
-            value
-        }));
-
-        // Create permanent answers
-        const newAnswers = items.map(item => {
-            const matchIdx = labels.find(l => l.value === item.sentenceEnd);
-            return {
-                index: item.id,
-                value: labels[matchIdx]?.key || "",
-                sourceText: question.answers?.find(a => a.index === item.id)?.sourceText || ""
-            };
-        });
-
-        const updatedQ = {
-            ...question,
-            shuffle: true,
-            shuffledEnds: labels,
-            answers: newAnswers,
-        };
-
-        const updatedQuestions = [...section.questions];
-        updatedQuestions[qIdx] = updatedQ;
-        updateSection(secIdx, { ...section, questions: updatedQuestions });
-    };
-
     const updateSection = (secIdx, updatedSection) => {
         setTestData((prev) => {
             const sections = [...prev.reading.sections];
@@ -308,24 +194,25 @@ const TestCreateEditView = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        testData.reading.sections.forEach((section, secIdx) => {
-            section.questions.forEach((q, qIdx) => {
+
+        if (!id) {
+            testData.reading.sections.forEach((section) => {
+                section.questions.forEach((q) => {
+                    
+                    
+                });
             });
-        });
+        }
+
         try {
             if (id) {
-                testData.reading.sections.forEach((section, secIdx) => {
-                });
-                const res = await axios.put(`${BASE_URL}/api/tests/${id}`, testData);
+                await axios.put(`${BASE_URL}/api/tests/${id}`, testData);
                 alert("Test updated successfully");
-                console.log("Updated test:", res.data);
             } else {
-                testData.reading.sections.forEach((section, secIdx) => {
-                });
-                const res = await axios.post(`${BASE_URL}/api/tests`, testData);
+                await axios.post(`${BASE_URL}/api/tests`, testData);
                 alert("Test created successfully");
             }
-            navigate("/tests"); // redirect
+            navigate("/tests");
         } catch (err) {
             console.error("Error saving test:", err);
             alert("Error saving test");
@@ -542,9 +429,10 @@ const TestCreateEditView = () => {
                                             </div>
                                         )}
                                         {q.type === "matching_headings" && (
-                                            <div>
-                                                <div key={itemIdx} style={{ marginLeft: "15px" }}>
-                                                    <b>{item.headingLabel}: </b>
+                                            <div style={{ marginLeft: "15px" }}>
+
+                                                <div key={item.id} style={{ marginLeft: "15px" }}>
+                                                    <b>{String.fromCharCode(65 + itemIdx)}. </b>
                                                     <input
                                                         type="text"
                                                         placeholder="Question Text"
@@ -562,6 +450,8 @@ const TestCreateEditView = () => {
 
                                             </div>
                                         )}
+
+
 
                                         {q.type === "matching_sentence_endings" && (
                                             <div key={item.id} style={{ marginBottom: "8px" }}>
@@ -618,8 +508,8 @@ const TestCreateEditView = () => {
                                                         updatedQuestions[qIdx] = updatedQ;
                                                         updateSection(secIdx, { ...section, questions: updatedQuestions });
                                                     }}
-style={{ marginRight: "5px", width: "50%" }}
-        />
+                                                    style={{ marginRight: "5px", width: "50%" }}
+                                                />
                                                 <input
                                                     type="text"
                                                     placeholder="Correct Feature"
@@ -886,7 +776,6 @@ style={{ marginRight: "5px", width: "50%" }}
                                             </button>
                                         )}
                                     </div>
-
                                 ))}
                                 {/* Outside loop */}
                                 {q.type === "summary_completion" && (
@@ -1019,116 +908,6 @@ style={{ marginRight: "5px", width: "50%" }}
                                                 });
                                             })()}
                                         </div>
-                                    </div>
-                                )}
-
-
-                                {q.type === "matching_headings" && (
-                                    <div style={{ marginTop: "10px" }}>
-                                        {/* Shuffle button */}
-                                        <button type="button" onClick={() => shuffleHeadings(secIdx, qIdx)}>
-                                            Shuffle
-                                        </button>
-
-                                        {/* Preview section */}
-                                        {q.shuffledItems && (
-                                            <div style={{ marginTop: "10px", padding: "5px", border: "1px solid #ccc" }}>
-                                                <h5>Preview</h5>
-
-                                                {/* Shuffled items with "Select Paragraph" dropdown */}
-                                                {q.shuffledItems.map((item, idx) => (
-                                                    <div key={idx} style={{ marginBottom: "8px" }}>
-                                                        <label>
-                                                            {idx + 1}. {item.text}{" "}
-                                                            <select>
-                                                                <option value="">-- Select Paragraph --</option>
-                                                                {section.passages.map((p) => (
-                                                                    <option key={p.header} value={p.header}>
-                                                                        {p.header}
-                                                                    </option>
-                                                                ))}
-                                                            </select>
-                                                        </label>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                                {q.type === "matching_paragraph_information" && (
-                                    <div style={{ marginTop: "10px" }}>
-                                        <button type="button" onClick={() => shuffleParagraphInfo(secIdx, qIdx)}>
-                                            Shuffle
-                                        </button>
-                                        {q.shuffledItems && (
-                                            <div style={{ marginTop: "10px", padding: "5px", border: "1px solid #ccc" }}>
-                                                <h5>Preview</h5>
-                                                {q.shuffledItems.map((item, idx) => (
-                                                    <div key={idx}>
-                                                        {idx + 1}. {item.text} →
-                                                        <select>
-                                                            <option value="">-- Select Paragraph --</option>
-                                                            {section.passages.map((p) => (
-                                                                <option key={p.header} value={p.header}>
-                                                                    {p.header}
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                                {q.type === "matching_sentence_endings" && (
-                                    <div style={{ marginTop: "10px" }}>
-                                        <button type="button" onClick={() => shuffleSentenceEndings(secIdx, qIdx)}>
-                                            Shuffle
-                                        </button>
-                                        {q.shuffledEnds && (
-                                            <div style={{ marginTop: "10px", padding: "5px", border: "1px solid #ccc" }}>
-                                                <h5>Preview</h5>
-                                                {q.questionItems.map((item, idx) => (
-                                                    <div key={idx}>
-                                                        <b>{item.text}</b> →
-                                                        <select value="">
-                                                            <option value="">Select Ending</option>
-                                                            {q.shuffledEnds.map((opt) => (
-                                                                <option key={opt.key} value={opt.key}>
-                                                                    {opt.value}
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                                {q.type === "matching_features" && (
-                                    <div style={{ marginTop: "10px" }}>
-                                        <button type="button" onClick={() => shuffleSentenceEndings(secIdx, qIdx)}>
-                                            Shuffle
-                                        </button>
-                                        {q.shuffledEnds && (
-                                            <div style={{ marginTop: "10px", padding: "5px", border: "1px solid #ccc" }}>
-                                                <h5>Preview</h5>
-                                                {q.questionItems.map((item, idx) => (
-                                                    <div key={idx}>
-                                                        <b>{item.text}</b>:
-                                                        <select value="">
-                                                            <option value="">Select Ending</option>
-                                                            {q.shuffledEnds.map((opt) => (
-                                                                <option key={opt.key} value={opt.key}>
-                                                                    {opt.value}
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                ))}
-                                                
-                                            </div>
-                                        )}
                                     </div>
                                 )}
                             </div>

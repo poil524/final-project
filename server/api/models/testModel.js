@@ -5,9 +5,6 @@ const questionItemSchema = new mongoose.Schema({
     id: { type: String, default: uuidv4, required: true },
     text: String,
     options: [String],
-    headingLabel: String,   // For matching label, answer = heading label
-    //sentenceBegin: String,
-    //sentenceEnd: String,
     summary: String,
 });
 
@@ -21,20 +18,6 @@ const questionSchema = new mongoose.Schema({
         value: String,
         sourceText: String
     }],
-    shuffle: { type: Boolean, default: false },
-    shuffledItems: [
-        {
-            key: String,         // A, B, C
-            text: String,        // heading text
-            headingLabel: String // original label
-        }
-    ],
-    shuffledEnds: [
-        {
-            key: String,
-            value: String
-        }
-    ]
 });
 
 const passageSchema = new mongoose.Schema({
