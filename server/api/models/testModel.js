@@ -5,9 +5,9 @@ const questionItemSchema = new mongoose.Schema({
     id: { type: String, default: uuidv4, required: true },
     text: String,
     options: [String],
-    headingLabel: String,
-    sentenceBegin: String,
-    sentenceEnd: String,
+    headingLabel: String,   // For matching label, answer = heading label
+    //sentenceBegin: String,
+    //sentenceEnd: String,
     summary: String,
 });
 

@@ -286,6 +286,24 @@ const StudentTestView = () => {
                       />
                     </div>
                   ))}
+                {/* Summary Completion */}
+                {q.type === "summary_completion" && (
+                  <div>
+                    {q.summary.split("[BLANK]").map((part, idx, arr) => (
+                      <React.Fragment key={idx}>
+                        {part}
+                        {idx < arr.length - 1 && (
+                          <input
+                            type="text"
+                            value={answers[q._id]?.[idx] || ""}
+                            onChange={(e) => handleAnswerChange(q._id, idx, e.target.value)}
+                            style={{ margin: "0 5px" }}
+                          />
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                )}
 
               </div>
             );
