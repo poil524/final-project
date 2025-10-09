@@ -99,8 +99,8 @@ const App = () => {
                 <div>
                   <h1 className="home-title">Welcome</h1>
                   <div className="home-actions">
-                    <Link to="/tests"><button>View Test</button></Link>
-                    <Link to="/create"><button>Create Test</button></Link>
+                    <a className="home-link" href="https://e72950325aa74e3a916fa52053ea1880-c830ff87a7d840ab8088ed415.fly.dev/tests">View Test</a>
+                    <a className="home-link" href="https://e72950325aa74e3a916fa52053ea1880-c830ff87a7d840ab8088ed415.fly.dev/create">Create Test</a>
                   </div>
                 </div>
               }
