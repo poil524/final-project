@@ -36,3 +36,232 @@
     transform: rotate(360deg);
   }
 }
+
+/* Added styles from visual diff */
+.site-root {
+  color: rgb(0, 0, 0);
+  background-color: rgba(0, 0, 0, 0);
+  font: 400 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+}
+
+.site-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  z-index: 2;
+  background-color: rgba(60, 60, 60, 0.4);
+  padding: 0 24px;
+}
+
+.site-header__brand {
+  align-items: center;
+  display: flex;
+  height: 72px;
+}
+
+.site-brand__link {
+  align-items: center;
+  align-self: flex-start;
+  display: flex;
+  justify-content: center;
+  min-height: 72px;
+  padding: 8px 0 16px;
+  color: rgb(4, 112, 185);
+  text-decoration: none;
+}
+
+.site-brand__logo {
+  max-height: 80px;
+  max-width: 160px;
+  vertical-align: middle;
+}
+
+.site-brand__logo--hidden {
+  display: none;
+}
+
+.site-header__nav {
+  align-items: center;
+  display: flex;
+  height: 72px;
+}
+
+.site-nav__list {
+  align-items: center;
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.site-nav__item {
+  list-style: none;
+}
+
+@media (max-width: 991px) {
+  .site-nav__item {
+    padding: 0 20px;
+  }
+}
+
+.site-nav__link {
+  color: rgb(255, 255, 255);
+  height: 72px;
+  position: relative;
+  text-align: left;
+  text-decoration: none;
+  transition: color 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  display: flex;
+  padding: 0 16px;
+  font: 700 14.4px/72px Poppins, sans-serif;
+}
+
+.site-nav__label p {
+  margin: 0;
+}
+
+.site-nav__group {
+  display: flex;
+  flex-direction: row;
+}
+
+.site-subnav__list {
+  display: none;
+  text-align: left;
+}
+
+.site-subnav__item {
+  padding-bottom: 24px;
+  text-align: left;
+}
+
+.site-subnav__link {
+  color: rgb(4, 112, 185);
+  display: inline;
+  font-weight: 700;
+  text-decoration: none;
+  transition: color 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.site-nav__cta {
+  align-items: center;
+  display: flex;
+  padding-left: 16px;
+}
+
+.btn-login {
+  background-color: rgb(175, 40, 44);
+  border: 0.833333px solid rgb(175, 40, 44);
+  border-radius: 80px;
+  color: rgb(255, 255, 255);
+  cursor: pointer;
+  display: inline-block;
+  text-align: center;
+  text-decoration: none;
+  transition: background-color 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  vertical-align: middle;
+  padding: 12px 24px;
+  font: 700 12.8px/17px Poppins, sans-serif;
+}
+
+.site-content {
+  padding: 20px;
+}
+
+.home-title {
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.home-actions {
+  display: flex;
+  gap: 10px;
+  font-weight: 400;
+}
+
+.home-link {
+  color: rgb(0, 0, 238);
+  text-decoration: underline;
+  text-decoration-color: rgb(0, 0, 238);
+}
+
+.feature-rail {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  z-index: 1;
+  transform: translateY(-132.487px);
+  background-color: rgb(255, 255, 255);
+  padding: 72px 36px 24px;
+}
+
+@media (max-width: 991px) {
+  .feature-rail {
+    top: 416px;
+  }
+}
+
+.feature-rail__inner {
+  max-width: 1110px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 15px;
+}
+
+.feature-grid {
+  background-color: rgb(255, 255, 255);
+  border-radius: 64.8px;
+  box-shadow: rgba(0, 0, 0, 0.08) 0 8px 24px 0;
+  display: grid;
+  gap: 48px 51.2px;
+  grid-template-columns: repeat(3, 1fr);
+  margin-bottom: 24px;
+  padding: 24px 64px;
+}
+
+@media (max-width: 991px) {
+  .feature-grid {
+    margin-bottom: 27px;
+  }
+}
+
+.feature-card {
+  color: rgb(4, 112, 185);
+  cursor: pointer;
+  display: grid;
+  gap: 12px 24px;
+  grid-template-columns: 96px 1fr;
+  font-weight: 700;
+  text-decoration: none;
+  transition: color 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.feature-card__icon {
+  align-self: center;
+}
+
+.feature-card__image {
+  display: block;
+  margin: 0 auto;
+  vertical-align: middle;
+}
+
+.feature-card__titles {
+  align-self: center;
+  text-align: left;
+}
+
+.feature-card__title {
+  cursor: pointer;
+  text-align: left;
+  font: 700 25.6px/38.4px Poppins, sans-serif;
+  margin: 0;
+}
+
+.feature-card__subtitle {
+  cursor: pointer;
+  text-align: left;
+  font: 700 19.2px/28.8px Poppins, sans-serif;
+  margin: 0;
+}

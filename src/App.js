@@ -1,41 +1,153 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import StudentTestView from "./views/studentTestView";
-import TeacherTestCreateView from "./views/testCreateEditView"; 
+import TeacherTestCreateView from "./views/testCreateEditView";
 import TestListView from "./views/testListView";
 import EditTestView from "./views/testCreateEditView";
+import "./App.css";
 
 const App = () => {
   return (
     <Router>
-      <div style={{ padding: "20px" }}>
-        <Routes>
-          {/* Home */}
-          <Route
-            path="/"
-            element={
-              <div>
-                <h1>Welcome</h1>
-                <div style={{ display: "flex", gap: "10px" }}>
-                  <Link to="/tests"><button>View Test</button></Link>
-                  <Link to="/create"><button>Create Test</button></Link>
+      <div className="site-root">
+        <header className="site-header">
+          <div className="site-header__brand">
+            <a className="site-brand__link" href="https://brightstarschools.org/" aria-label="Bright Star Schools Home">
+              <img
+                className="site-brand__logo site-brand__logo--hidden"
+                src="https://brightstarschools.org/images/bss-logo.svg"
+                alt="Bright Star School"
+              />
+              <img
+                className="site-brand__logo"
+                src="https://brightstarschools.org/images/bss-logo-white.svg"
+                alt="Bright Star School"
+              />
+            </a>
+          </div>
+          <nav className="site-header__nav" aria-label="Primary">
+            <ul className="site-nav__list">
+              <li className="site-nav__item">
+                <a className="site-nav__link" href="https://e72950325aa74e3a916fa52053ea1880-c830ff87a7d840ab8088ed415.fly.dev/tests">
+                  <span className="site-nav__label"><p>Exam Library</p></span>
+                </a>
+              </li>
+              <li className="site-nav__item">
+                <a className="site-nav__link" href="https://brightstarschools.org/#">
+                  <span className="site-nav__label"><p>Live Sessions</p></span>
+                </a>
+              </li>
+              <li className="site-nav__item">
+                <a className="site-nav__link" href="https://brightstarschools.org/#">
+                  <span className="site-nav__label">Program</span>
+                </a>
+              </li>
+              <li className="site-nav__item site-nav__item--has-sub">
+                <div className="site-nav__group">
+                  <a className="site-nav__link" href="https://brightstarschools.org/#">
+                    <span className="site-nav__label">About</span>
+                  </a>
+                  <ul className="site-subnav__list">
+                    <li className="site-subnav__item">
+                      <a className="site-subnav__link" href="https://brightstarschools.org/about"><span>About</span></a>
+                    </li>
+                    <li className="site-subnav__item">
+                      <a className="site-subnav__link" href="https://brightstarschools.org/Vision-Mission-And-Values"><span>Our Vision, Mission & Values</span></a>
+                    </li>
+                    <li className="site-subnav__item">
+                      <a className="site-subnav__link" href="https://brightstarschools.org/Our-Commitment-to-Anti-Racism"><span>Our Commitment to Anti-Racism</span></a>
+                    </li>
+                    <li className="site-subnav__item">
+                      <a className="site-subnav__link" href="https://brightstarschools.org/TK-12-Pathway"><span>TK-12th Grade Pathway</span></a>
+                    </li>
+                    <li className="site-subnav__item">
+                      <a className="site-subnav__link" href="https://brightstarschools.org/Impact"><span>Our Impact</span></a>
+                    </li>
+                    <li className="site-subnav__item">
+                      <a className="site-subnav__link" href="https://brightstarschools.org/Leadership"><span>Our Leadership</span></a>
+                    </li>
+                    <li className="site-subnav__item">
+                      <a className="site-subnav__link" href="https://brightstarschools.org/Discover-Our-Staff"><span>Discover Our Staff</span></a>
+                    </li>
+                    <li className="site-subnav__item">
+                      <a className="site-subnav__link" href="https://brightstarschools.org/Board-of-Directors"><span>Board of Directors</span></a>
+                    </li>
+                    <li className="site-subnav__item">
+                      <a className="site-subnav__link" href="https://brightstarschools.org/Board-Information"><span>Board Meetings</span></a>
+                    </li>
+                    <li className="site-subnav__item">
+                      <a className="site-subnav__link" href="https://brightstarschools.org/25-26-School-Year-Information"><span>25-26 School Year Information</span></a>
+                    </li>
+                    <li className="site-subnav__item">
+                      <a className="site-subnav__link" href="https://brightstarschools.org/Community-Schools"><span>Community Schools</span></a>
+                    </li>
+                  </ul>
                 </div>
-              </div>
-            }
-          />
+              </li>
+              <li className="site-nav__cta">
+                <a className="btn-login" href="https://brightstarschools.org/Enroll"><p>Log In</p></a>
+              </li>
+            </ul>
+          </nav>
+        </header>
 
-          {/* List of tests */}
-          <Route path="/tests" element={<TestListView />} />
+        <main className="site-content">
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <div>
+                  <h1 className="home-title">Welcome</h1>
+                  <div className="home-actions">
+                    <a className="home-link" href="https://e72950325aa74e3a916fa52053ea1880-c830ff87a7d840ab8088ed415.fly.dev/tests">View Test</a>
+                    <a className="home-link" href="https://e72950325aa74e3a916fa52053ea1880-c830ff87a7d840ab8088ed415.fly.dev/create">Create Test</a>
+                  </div>
+                </div>
+              }
+            />
 
-          {/* Single test by ID */}
-          <Route path="/tests/:id" element={<StudentTestView />} />
+            <Route path="/tests" element={<TestListView />} />
+            <Route path="/tests/:id" element={<StudentTestView />} />
+            <Route path="/create" element={<TeacherTestCreateView />} />
+            <Route path="/edit/:id" element={<EditTestView />} />
+          </Routes>
+        </main>
 
-          {/* Create test*/}
-          <Route path="/create" element={<TeacherTestCreateView />} />
+        <section className="feature-rail">
+          <div className="feature-rail__inner">
+            <div className="feature-grid">
+              <a className="feature-card" href="https://brightstarschools.org/enroll">
+                <div className="feature-card__icon">
+                  <img className="feature-card__image" src="https://brightstarschools.org/images/icon-enroll-with-us.svg" alt="Enroll With Us" />
+                </div>
+                <div className="feature-card__titles">
+                  <h4 className="feature-card__title">Enroll</h4>
+                  <h5 className="feature-card__subtitle">With Us</h5>
+                </div>
+              </a>
 
-          {/* Edit test */}
-          <Route path="/edit/:id" element={<EditTestView />} />
-        </Routes>
+              <a className="feature-card" href="https://brightstarschools.org/Application-Hiring-Process">
+                <div className="feature-card__icon">
+                  <img className="feature-card__image" src="https://brightstarschools.org/images/icon-teach-with-us.svg" alt="Teach With Us" />
+                </div>
+                <div className="feature-card__titles">
+                  <h4 className="feature-card__title">Teach</h4>
+                  <h5 className="feature-card__subtitle">With Us</h5>
+                </div>
+              </a>
+
+              <a className="feature-card" href="https://brightstarschools.org/How-Alumni-Support-Works">
+                <div className="feature-card__icon">
+                  <img className="feature-card__image" src="https://brightstarschools.org/images/icon-alumni-and-beyond.svg" alt="Alumni &amp; Beyond" />
+                </div>
+                <div className="feature-card__titles">
+                  <h4 className="feature-card__title">Alumni</h4>
+                  <h5 className="feature-card__subtitle">&amp; Beyond</h5>
+                </div>
+              </a>
+            </div>
+          </div>
+        </section>
       </div>
     </Router>
   );
