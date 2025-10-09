@@ -4,6 +4,7 @@ import StudentTestView from "./views/studentTestView";
 import TeacherTestCreateView from "./views/testCreateEditView";
 import TestListView from "./views/testListView";
 import EditTestView from "./views/testCreateEditView";
+import "./App.css";
 
 const App = () => {
   return (
