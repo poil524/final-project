@@ -112,6 +112,42 @@ const App = () => {
             <Route path="/edit/:id" element={<EditTestView />} />
           </Routes>
         </main>
+
+        <section className="feature-rail">
+          <div className="feature-rail__inner">
+            <div className="feature-grid">
+              <a className="feature-card" href="https://brightstarschools.org/enroll">
+                <div className="feature-card__icon">
+                  <img className="feature-card__image" src="https://brightstarschools.org/images/icon-enroll-with-us.svg" alt="Enroll With Us" />
+                </div>
+                <div className="feature-card__titles">
+                  <h4 className="feature-card__title">Enroll</h4>
+                  <h5 className="feature-card__subtitle">With Us</h5>
+                </div>
+              </a>
+
+              <a className="feature-card" href="https://brightstarschools.org/Application-Hiring-Process">
+                <div className="feature-card__icon">
+                  <img className="feature-card__image" src="https://brightstarschools.org/images/icon-teach-with-us.svg" alt="Teach With Us" />
+                </div>
+                <div className="feature-card__titles">
+                  <h4 className="feature-card__title">Teach</h4>
+                  <h5 className="feature-card__subtitle">With Us</h5>
+                </div>
+              </a>
+
+              <a className="feature-card" href="https://brightstarschools.org/How-Alumni-Support-Works">
+                <div className="feature-card__icon">
+                  <img className="feature-card__image" src="https://brightstarschools.org/images/icon-alumni-and-beyond.svg" alt="Alumni &amp; Beyond" />
+                </div>
+                <div className="feature-card__titles">
+                  <h4 className="feature-card__title">Alumni</h4>
+                  <h5 className="feature-card__subtitle">&amp; Beyond</h5>
+                </div>
+              </a>
+            </div>
+          </div>
+        </section>
       </div>
     </Router>
   );
