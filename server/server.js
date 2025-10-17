@@ -1,42 +1,40 @@
-// Importing required libraries and modules
-import express from 'express';
-import cors from 'cors';
-import mongoose from 'mongoose';
-import userRoutes from './api/routes/userRoutes.js';
-import testRoutes from './api/routes/testRoutes.js';
-// Set up mongoose
+import dotenv from "dotenv";
+dotenv.config();
+
+import express from "express";
+import cors from "cors";
+import mongoose from "mongoose";
+import cookieParser from "cookie-parser";
+
+import userRoutes from "./api/routes/userRoutes.js";
+import testRoutes from "./api/routes/testRoutes.js";
+import authMiddleware from "./api/middlewares/authMiddleware.js";
+
 mongoose.Promise = global.Promise;
+mongoose.connect("mongodb://localhost/final-project");
 
-// Create an Express app instance
 const app = express();
-
-// Connect to MongoDB database, set the port
-mongoose.connect('mongodb://localhost/final-project');
 const port = process.env.PORT || 5000;
 
-// Middleware
-app.use(cors());
+app.use(
+    cors({
+        origin: "http://localhost:3000",
+        credentials: true,
+    })
+);
 app.use(express.json());
+app.use(cookieParser());
 
-app.use((req, res, next) => {
-    console.log(`[REQUEST] ${req.method} ${req.originalUrl}`);
-    next();
-});
+// --- Routes ---
+app.use("/api/users", userRoutes); // public routes
+app.use("/api/tests", authMiddleware, testRoutes); // protected routes
 
-
-//app.use("/api/users", userRoutes);
-app.use('/api/tests', testRoutes);
-
-app.get('/api/test-check', (req, res) => {
-    res.json({ message: 'Proxy works!' });
-});
-
-
-// Handle undefined routes
+// --- 404 handler ---
 app.use((req, res) => {
     res.status(404).send({ url: `${req.originalUrl} not found` });
 });
 
+// --- Start server ---
 app.listen(port, () => {
     console.log(`Server started on port ${port}`);
 });

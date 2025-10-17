@@ -1,8 +1,14 @@
+import "dotenv/config";
 import express from 'express';
 import Test from '../models/testModel.js';
+import OpenAI from "openai";
 
 const router = express.Router();
+//const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 // Create new test
 router.post("/", async (req, res) => {
@@ -67,5 +73,90 @@ router.put("/:id", async (req, res) => {
         res.status(500).json({ error: "Failed to update test" });
     }
 });
+
+router.post("/evaluate-writing", async (req, res) => {
+  try {
+    console.log("[DEBUG] /evaluate-writing called");
+    console.log("[DEBUG] Request body:", req.body);
+
+    const { sections } = req.body;
+
+    if (!sections || !Array.isArray(sections) || sections.length === 0) {
+      return res.status(400).json({ error: "No writing sections provided" });
+    }
+
+    const results = [];
+
+    // Loop over each writing section
+    for (const section of sections) {
+      const { requirement, content } = section; // destructure safely
+
+      if (!content?.trim()) {
+        results.push({
+          requirement: requirement || "No requirement",
+          error: "No content provided",
+        });
+        continue;
+      }
+
+      const prompt = `
+You are an IELTS writing examiner. Evaluate the following essay according to IELTS Writing Task 2 band descriptors.
+
+Task requirement:
+"${requirement || "No specific requirement"}"
+
+Evaluate the student's essay accordingly and give a numeric band (0–9) with short feedback under four criteria:
+1. Task Response
+2. Coherence and Cohesion
+3. Lexical Resource
+4. Grammatical Range and Accuracy
+
+Essay:
+${content}
+
+Return JSON with fields:
+{
+  "band": number,
+  "feedback": {
+    "task_response": string,
+    "coherence_cohesion": string,
+    "lexical_resource": string,
+    "grammar": string
+  }
+}
+`;
+
+      console.log("[DEBUG] Sending prompt to OpenAI for requirement:", requirement);
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+      });
+
+      const text = completion.choices?.[0]?.message?.content?.trim();
+      console.log("[DEBUG] Raw OpenAI response:", text);
+
+      let evaluation;
+      try {
+        evaluation = JSON.parse(text);
+      } catch (err) {
+        console.error("[DEBUG] JSON parse failed, returning raw text");
+        evaluation = { band: null, feedback: { raw: text } };
+      }
+
+      results.push({
+        requirement,
+        ...evaluation,
+      });
+    }
+
+    res.json({ evaluations: results });
+  } catch (err) {
+    console.error("[DEBUG] Evaluation error:", err);
+    res.status(500).json({ error: "Failed to evaluate writing" });
+  }
+});
+
+
 
 export default router;

@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 const { Schema } = mongoose;
 
 // Define the schema for the User model
-const UserSchema = new Schema(
+const userSchema = new Schema(
     {
         username: {
             type: String,
@@ -25,5 +25,5 @@ const UserSchema = new Schema(
     },
     {timestamps: true})
 // Create and export the User model based on the UserSchema
-const User = mongoose.model('User', UserSchema)
+const User = mongoose.model('User', userSchema)
 export default User;

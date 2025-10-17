@@ -10,30 +10,39 @@ const TestCreateEditView = () => {
     const [loading, setLoading] = useState(false);
 
     const [testData, setTestData] = useState({
-        type: "reading",
+        type: "",    // TODO: Fix bug test type always reading
         name: "",
         reading: { sections: [] },
+        listening: { sections: [] },
+        writing: { sections: [] },
     });
     const summaryRef = useRef({})
     const BASE_URL = "http://localhost:5000";
     useEffect(() => {
-        if (id) {
-            setLoading(true);
-            axios
-                .get(`${BASE_URL}/api/tests/${id}`)
-                .then((res) => {
-                    const data = res.data;
+        if (!id) return;
 
-                    // Lock questions
-                    data.reading.sections.forEach((s) =>
-                        s.questions.forEach((q) => (q.locked = true))
+        setLoading(true);
+        axios
+            .get(`${BASE_URL}/api/tests/${id}`)
+            .then((res) => {
+                const data = res.data;
+
+                // Ensure structure safety
+                data.reading = data.reading || { sections: [] };
+                data.listening = data.listening || { sections: [] };
+                data.writing = data.writing || { sections: [] };
+
+                if (data.type === "reading") {
+                    const sections = data.reading.sections || [];
+                    sections.forEach((s) =>
+                        s.questions?.forEach((q) => (q.locked = true))
                     );
 
-                    data.reading.sections.forEach((section) => {
-                        section.questions = section.questions.map((q) => {
+                    // Sync "matching_headings"
+                    sections.forEach((section) => {
+                        section.questions = section.questions?.map((q) => {
                             if (q.type === "matching_headings") {
-                                // Sync questionItems and answers
-                                const items = section.passages.map((p, idx) => {
+                                const items = (section.passages || []).map((p, idx) => {
                                     const existing = q.questionItems?.[idx];
                                     return {
                                         id: existing ? existing.id : uuidv4(),
@@ -42,58 +51,70 @@ const TestCreateEditView = () => {
                                     };
                                 });
 
-                                const answers = section.passages.map((p, idx) => {
+                                const answers = (section.passages || []).map((p, idx) => {
                                     const existing = q.answers?.[idx];
                                     return {
                                         id: existing ? existing.id : uuidv4(),
-                                        value: p.header, // heading stored in answers
+                                        value: p.header,
                                         sourceText: existing ? existing.sourceText : "",
                                     };
                                 });
 
-                                return {
-                                    ...q,
-                                    questionItems: items,
-                                    answers,
-                                };
+                                return { ...q, questionItems: items, answers };
                             }
                             return q;
                         });
                     });
+                }
 
-                    setTestData(data);
-                })
-                .catch((err) => {
-                    console.error("Error fetching test:", err);
-                    alert("Error loading test");
-                })
-                .finally(() => setLoading(false));
-        }
+                // Listening and Writing do not need locking logic
+                setTestData(data);
+            })
+            .catch((err) => {
+                console.error("Error fetching test:", err);
+                alert("Error loading test");
+            })
+            .finally(() => setLoading(false));
     }, [id]);
 
 
-
-
     // Helpers
+    const sections =
+        testData.type === "reading"
+            ? testData.reading?.sections || []
+            : testData.type === "listening"
+                ? testData.listening?.sections || []
+                : testData.writing?.sections || [];
+
+
     const addSection = () => {
-        const sectionIndex = testData.reading.sections.length + 1;
-        setTestData((prev) => ({
-            ...prev,
-            reading: {
-                sections: [
-                    ...prev.reading.sections,
-                    {
-                        sectionTitle: `Section ${sectionIndex}`,
-                        passages: [],
-                        questions: [],
-                    },
-                ],
-            },
-        }));
+        setTestData((prev) => {
+            const { type } = prev;
+            const newSectionIndex = (prev[type].sections?.length || 0) + 1;
+            let newSection = { sectionTitle: `Section ${newSectionIndex}` };
+
+            if (type === "reading") {
+                newSection = { ...newSection, passages: [], questions: [], images: [] };
+            } else if (type === "listening") {
+                newSection = { ...newSection, audioUrl: "", transcript: "", questions: [], images: [] };
+            } else if (type === "writing") {
+                newSection = { ...newSection, requirement: "", questions: [], images: [] };
+            }
+
+
+            return {
+                ...prev,
+                [type]: {
+                    sections: [...(prev[type].sections || []), newSection],
+                },
+            };
+        });
     };
+
+
     // Sync question items for "matching_headings" questions in a section
     const syncMatchingHeadingsItems = (section) => {
-        const updatedQuestions = section.questions.map((q) => {
+        const updatedQuestions = section.questions?.map((q) => {
             if (q.type === "matching_headings") {
                 const items = section.passages.map((p, idx) => {
                     const existing = q.questionItems?.[idx];
@@ -128,56 +149,104 @@ const TestCreateEditView = () => {
     };
 
     const addQuestion = (secIdx) => {
-        const section = testData.reading.sections[secIdx];
-        section.questions.push({
-            type: "multiple_choice",
-            requirement: "",
-            questionItems: [],
+        setTestData((prev) => {
+            let sections = [];
+
+            if (prev.type === "reading") {
+                sections = [...(prev.reading?.sections || [])];
+            } else if (prev.type === "listening") {
+                sections = [...(prev.listening?.sections || [])];
+            } else if (prev.type === "writing") {
+                // Writing test has no questions
+                return prev;
+            }
+
+            const section = { ...sections[secIdx] };
+            section.questions = [
+                ...(section.questions || []),
+                {
+                    type: "multiple_choice",
+                    requirement: "",
+                    questionItems: [],
+                },
+            ];
+
+            const updatedSections = [...sections];
+            updatedSections[secIdx] = section;
+
+            return {
+                ...prev,
+                [prev.type]: { sections: updatedSections },
+            };
         });
-        updateSection(secIdx, section);
     };
+
+
 
 
     const addQuestionItem = (secIdx, qIdx) => {
-        const section = testData.reading.sections[secIdx];
-        const question = section.questions[qIdx];
-        let newItem = { id: uuidv4() }; // use id instead of index
-        switch (question.type) {
-            case "multiple_choice":
-                newItem = { ...newItem, text: "", options: [], answer: "" };
-                break;
-            case "true_false_not_given":
-            case "yes_no_not_given":
-            case "short_answer":
-                newItem = { ...newItem, text: "", answer: "" };
-                break;
-            case "matching_sentence_endings":
-                newItem = { ...newItem, text: "", answer: "" };
-                break;
-            case "matching_features":
-                newItem = { ...newItem, text: "", answer: "" };
-                break;
-            case "matching_paragraph_information":
-                newItem = { ...newItem, text: "", answer: "" };
-                break;
-            case "matching_headings":
-                newItem = { ...newItem, text: "" };
-                // Add answer for this item
-                const headingLabel = section.passages[question.questionItems.length]
-                    ? section.passages[question.questionItems.length].header
-                    : String.fromCharCode(65 + question.questionItems.length);
+        setTestData((prev) => {
+            let sections = [];
 
-                question.answers = question.answers || [];
-                question.answers.push({ id: uuidv4(), value: headingLabel });
-                break;
+            if (prev.type === "reading") {
+                sections = [...(prev.reading?.sections || [])];
+            } else if (prev.type === "listening") {
+                sections = [...(prev.listening?.sections || [])];
+            } else if (prev.type === "writing") {
+                // Writing tests don't have questions, so just return previous state unchanged
+                return prev;
+            }
 
-            default:
-                newItem = { ...newItem, text: "" };
-        }
-        question.questionItems.push(newItem);
-        section.questions[qIdx] = question;
-        updateSection(secIdx, section);
+            const section = { ...sections[secIdx] };
+            const question = { ...section.questions[qIdx] };
+
+            let newItem = { id: uuidv4() };
+
+            switch (question.type) {
+                case "multiple_choice":
+                    newItem = { ...newItem, text: "", options: [], answer: "" };
+                    break;
+                case "true_false_not_given":
+                case "yes_no_not_given":
+                case "short_answer":
+                case "matching_sentence_endings":
+                case "matching_features":
+                case "matching_paragraph_information":
+                    newItem = { ...newItem, text: "", answer: "" };
+                    break;
+                case "matching_headings":
+                    if (prev.type === "reading") {
+                        newItem = { ...newItem, text: "" };
+
+                        const headingLabel =
+                            section.passages?.[question.questionItems.length]
+                                ? section.passages[question.questionItems.length].header
+                                : String.fromCharCode(65 + question.questionItems.length);
+
+                        question.answers = question.answers || [];
+                        question.answers.push({ id: uuidv4(), value: headingLabel });
+                    } else {
+                        newItem = { ...newItem, text: "" };
+                    }
+                    break;
+                default:
+                    newItem = { ...newItem, text: "" };
+            }
+
+            question.questionItems = [...(question.questionItems || []), newItem];
+            section.questions[qIdx] = question;
+
+            const updatedSections = [...sections];
+            updatedSections[secIdx] = section;
+
+            return {
+                ...prev,
+                [prev.type]: { sections: updatedSections },
+            };
+        });
     };
+
+
     const addImage = (secIdx) => {
         const section = testData.reading.sections[secIdx];
         section.images = section.images || [];
@@ -186,21 +255,46 @@ const TestCreateEditView = () => {
     };
     const updateSection = (secIdx, updatedSection) => {
         setTestData((prev) => {
-            const sections = [...prev.reading.sections];
+            let sections = [];
+
+            if (prev.type === "reading") {
+                sections = [...(prev.reading?.sections || [])];
+            } else if (prev.type === "listening") {
+                sections = [...(prev.listening?.sections || [])];
+            } else if (prev.type === "writing") {
+                sections = [...(prev.writing?.sections || [])];
+            }
+
             sections[secIdx] = updatedSection;
-            return { ...prev, reading: { sections } };
+
+            return {
+                ...prev,
+                [prev.type]: { sections },
+            };
         });
     };
+
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (!id) {
-            testData.reading.sections.forEach((section) => {
-                section.questions.forEach((q) => {
-                    
-                    
-                });
+            const sections =
+                testData.type === "reading"
+                    ? testData.reading?.sections || []
+                    : testData.type === "listening"
+                        ? testData.listening?.sections || []
+                        : testData.writing?.sections || [];
+
+            // ✅ Only preprocess if questions exist
+            sections.forEach((section) => {
+                if (Array.isArray(section.questions)) {
+                    section.questions.forEach((q) => {
+                        // Add any preprocessing if needed
+                        // e.g., remove empty fields, normalize structure, etc.
+                    });
+                }
             });
         }
 
@@ -219,6 +313,8 @@ const TestCreateEditView = () => {
         }
     };
 
+
+
     if (loading) return <div>Loading...</div>;
 
     return (
@@ -226,9 +322,16 @@ const TestCreateEditView = () => {
             <h1>{id ? "Edit Test" : "Create New Test"}</h1>
             <form onSubmit={handleSubmit}>
                 <label>Test Type: </label>
-                <select value={testData.type} disabled>
+                <select
+                    value={testData.type}
+                    onChange={(e) => setTestData({ ...testData, type: e.target.value })}
+                >
+                    <option value="">Select a test type</option>
                     <option value="reading">Reading</option>
+                    <option value="listening">Listening</option>
+                    <option value="writing">Writing</option>
                 </select>
+
                 <br />
 
                 <label>Test Name: </label>
@@ -243,7 +346,7 @@ const TestCreateEditView = () => {
                     Add Section
                 </button>
 
-                {testData.reading.sections.map((section, secIdx) => (
+                {sections.map((section, secIdx) => (
                     <div
                         key={secIdx}
                         style={{ border: "1px solid gray", padding: "10px", margin: "10px" }}
@@ -259,31 +362,97 @@ const TestCreateEditView = () => {
                             }}
                         />
                         <br />
+                        {/* READING */}
+                        {testData.type === "reading" && (
+                            <div>
+                                <h3>Passages</h3>
 
-                        <h3>Passages</h3>
+                                {section.passages.map((p, pIdx) => (
+                                    <div key={pIdx}>
+                                        <b>{p.header}</b>
+                                        <textarea
+                                            value={p.text}
+                                            onChange={(e) => {
+                                                const updatedPassages = [...section.passages];
+                                                updatedPassages[pIdx] = { ...p, text: e.target.value };
+                                                let updatedSection = { ...section, passages: updatedPassages };
 
-                        {section.passages.map((p, pIdx) => (
-                            <div key={pIdx}>
-                                <b> {p.header}</b>
+                                                // Sync matching_headings questions
+                                                updatedSection = syncMatchingHeadingsItems(updatedSection);
+
+                                                updateSection(secIdx, updatedSection);
+                                            }}
+                                        />
+                                    </div>
+                                ))}
+
+                                <button type="button" onClick={() => addPassage(secIdx)}>
+                                    Add Passage
+                                </button>
+                            </div>
+                        )}
+                        {/*LISTENING*/}
+                        {testData.type === "listening" && (
+                            <div>
+                                <h3>Audio File</h3>
+                                <input
+                                    type="file"
+                                    accept="audio/*"
+                                    onChange={async (e) => {
+                                        const file = e.target.files[0];
+                                        if (!file) return;
+
+                                        // Create FormData to send file to backend
+                                        const formData = new FormData();
+                                        formData.append("audio", file);
+
+                                        try {
+                                            const res = await axios.post(
+                                                `http://localhost:5000/api/tests/upload-audio`,
+                                                formData,
+                                                { headers: { "Content-Type": "multipart/form-data" } }
+                                            );
+
+                                            // Response should contain the public URL from Google Drive
+                                            const updatedSection = { ...section, audioUrl: res.data.url };
+                                            updateSection(secIdx, updatedSection);
+                                        } catch (err) {
+                                            console.error("Upload failed:", err);
+                                        }
+                                    }}
+                                />
+
+                                <br />
+                                <h3>Transcript</h3>
                                 <textarea
-                                    value={p.text}
+                                    value={section.transcript || ""}
                                     onChange={(e) => {
-                                        const updatedPassages = [...section.passages];
-                                        updatedPassages[pIdx] = { ...p, text: e.target.value };
-                                        let updatedSection = { ...section, passages: updatedPassages };
-
-                                        // Sync matching_headings questions
-                                        updatedSection = syncMatchingHeadingsItems(updatedSection);
-
+                                        const updatedSection = { ...section, transcript: e.target.value };
                                         updateSection(secIdx, updatedSection);
                                     }}
-
+                                    placeholder="Enter transcript text"
+                                    rows={5}
+                                    style={{ width: "100%" }}
                                 />
                             </div>
-                        ))}
-                        <button type="button" onClick={() => addPassage(secIdx)}>
-                            Add Passage
-                        </button>
+                        )}
+                        {/* WRITING */}
+                        {testData.type === "writing" && (
+                            <div>
+                                <h3>Requirement</h3>
+                                <textarea
+                                    value={section.requirement || ""}
+                                    onChange={(e) => {
+                                        const updatedSection = { ...section, requirement: e.target.value };
+                                        updateSection(secIdx, updatedSection);
+                                    }}
+                                    placeholder="Enter writing task requirement..."
+                                    rows={5}
+                                    style={{ width: "100%" }}
+                                />
+                            </div>
+                        )}
+
                         <h3>Pictures</h3>
                         {section.images?.map((img, imgIdx) => (
                             <div key={imgIdx}>
@@ -310,7 +479,7 @@ const TestCreateEditView = () => {
                         ))}
                         <button type="button" onClick={() => addImage(secIdx)}>Add Picture</button>
                         <h3>Questions</h3>
-                        {section.questions.map((q, qIdx) => (
+                        {section.questions?.map((q, qIdx) => (
                             <div
                                 key={qIdx}
                                 style={{
@@ -326,10 +495,10 @@ const TestCreateEditView = () => {
                                         const newType = e.target.value;
                                         let updatedQ = { ...q, type: newType };
 
-                                        if (newType === "matching_headings") {
+                                        if (newType === "matching_headings" && testData.type === "reading") {
                                             const updatedSection = syncMatchingHeadingsItems({
                                                 ...section,
-                                                questions: section.questions.map((qq, idx) =>
+                                                questions: section.questions?.map((qq, idx) =>
                                                     idx === qIdx ? { ...qq, type: newType } : qq
                                                 ),
                                             });
@@ -344,16 +513,30 @@ const TestCreateEditView = () => {
                                         updateSection(secIdx, { ...section, questions: updatedQuestions });
                                     }}
                                 >
-                                    <option value="matching_paragraph_information">Matching Paragraph Information</option>
-                                    <option value="matching_headings">Matching Headings</option>
-                                    <option value="matching_sentence_endings">Matching Sentence Endings</option>
-                                    <option value="matching_features">Matching Features</option>
-                                    <option value="multiple_choice">Multiple Choice</option>
-                                    <option value="true_false_not_given">True/False/Not Give</option>
-                                    <option value="yes_no_not_given">Yes/No/Not Give</option>
-                                    <option value="short_answer">Short Answer</option>
-                                    <option value="summary_completion">Summary Completion</option>
+                                    {testData.type === "reading" ? (
+                                        <>
+                                            <option value="matching_paragraph_information">Matching Paragraph Information</option>
+                                            <option value="matching_headings">Matching Headings</option>
+                                            <option value="matching_sentence_endings">Matching Sentence Endings</option>
+                                            <option value="matching_features">Matching Features</option>
+                                            <option value="multiple_choice">Multiple Choice</option>
+                                            <option value="true_false_not_given">True/False/Not Given</option>
+                                            <option value="yes_no_not_given">Yes/No/Not Given</option>
+                                            <option value="short_answer">Short Answer</option>
+                                            <option value="summary_completion">Summary Completion</option>
+                                        </>
+                                    ) : testData.type === "listening" ? (
+                                        <>
+                                            <option value="matching_features">Matching Features</option>
+                                            <option value="multiple_choice">Multiple Choice</option>
+                                            <option value="summary_completion">Summary Completion</option>
+                                            <option value="sentence_completion">Sentence Completion</option>
+                                            <option value="short_answer">Short Answer</option>
+                                        </>
+                                    ) : null}
+
                                 </select>
+
                                 <button
                                     type="button"
                                     style={{ marginLeft: "10px" }}

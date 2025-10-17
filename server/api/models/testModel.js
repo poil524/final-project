@@ -33,19 +33,24 @@ const sectionSchema = new mongoose.Schema({
     sectionTitle: String,
     passages: [passageSchema],
     questions: [questionSchema],
-    images: [imageSchema]
+    images: [imageSchema],
+    audioUrl: String, // for listening
+    transcript: String, // for listening
+    requirement: String,
 });
-
+/*
 const readingSchema = new mongoose.Schema({
     sections: [sectionSchema]
 });
-
+*/
 const testSchema = new mongoose.Schema({
     name: String,
     createdAt: { type: Date, default: Date.now },
     createdBy: mongoose.Types.ObjectId,
     studentsTaken: { type: Number, default: 0 },
-    reading: readingSchema
+    reading: { sections: [sectionSchema] },
+    listening: { sections: [sectionSchema] },
+    writing: { sections: [sectionSchema] }
 });
 
 const Test = mongoose.model('Test', testSchema);
