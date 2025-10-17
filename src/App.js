@@ -17,27 +17,6 @@ const Layout = ({ children }) => (
   <>
     <Navigation />
     <main className="site-content">{children}</main>
-
-    <section className="feature-rail">
-      <div className="feature-rail__inner">
-        <div className="feature-grid">
-          <a className="feature-card" href="https://brightstarschools.org/enroll">
-            <div className="feature-card__icon">
-              <img
-                className="feature-card__image"
-                src="https://brightstarschools.org/images/icon-enroll-with-us.svg"
-                alt="Enroll With Us"
-              />
-            </div>
-            <div className="feature-card__titles">
-              <h4 className="feature-card__title">Enroll</h4>
-              <h5 className="feature-card__subtitle">With Us</h5>
-            </div>
-          </a>
-          {/* Other cards... */}
-        </div>
-      </div>
-    </section>
   </>
 );
 
@@ -46,41 +25,46 @@ const App = () => {
     <Router>
       <ToastContainer />
       <Routes>
-        {/* Login page: isolated, no navigation or footer */}
+        {/* Auth pages */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* Everything else uses Layout */}
+        {/* Main layout */}
         <Route
           path="*"
           element={
             <Layout>
               <Routes>
+                {/* Homepage */}
                 <Route
                   path="/"
                   element={
-                    <div>
-                      <h1 className="home-title">Welcome</h1>
+                    <div className="home">
+                      <h1>Welcome</h1>
                       <div className="home-actions">
-                        <a
-                          className="home-link"
-                          href="https://e72950325aa74e3a916fa52053ea1880-c830ff87a7d840ab8088ed415.fly.dev/tests"
-                        >
-                          View Test
-                        </a>
-                        <a
-                          className="home-link"
-                          href="https://e72950325aa74e3a916fa52053ea1880-c830ff87a7d840ab8088ed415.fly.dev/create"
-                        >
-                          Create Test
-                        </a>
+                        <a className="home-link" href="/tests">View Tests</a>
+                        <a className="home-link" href="/create/reading">Create Reading Test</a>
                       </div>
                     </div>
                   }
                 />
+
+                {/* Test list and taking */}
                 <Route path="/tests" element={<TestListView />} />
+                <Route path="/tests/listening" element={<TestListView />} />
+                <Route path="/tests/reading" element={<TestListView />} />
+                <Route path="/tests/writing" element={<TestListView />} />
+                <Route path="/tests/speaking" element={<TestListView />} />
+
                 <Route path="/tests/:id" element={<StudentTestView />} />
-                <Route path="/create" element={<TeacherTestCreateView />} />
+
+                {/* Type-specific test creation */}
+                <Route path="/create/reading" element={<TeacherTestCreateView />} />
+                <Route path="/create/listening" element={<TeacherTestCreateView />} />
+                <Route path="/create/writing" element={<TeacherTestCreateView />} />
+                <Route path="/create/speaking" element={<TeacherTestCreateView />} />
+
+                {/* Editing existing test */}
                 <Route path="/edit/:id" element={<EditTestView />} />
               </Routes>
             </Layout>

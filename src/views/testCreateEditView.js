@@ -1,23 +1,27 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 
-import axios from "axios";
+// ✅ safe position — after axios import
+axios.defaults.withCredentials = true;
 
 const TestCreateEditView = () => {
     const { id } = useParams(); // if test is exist, edit mode
     const navigate = useNavigate();
+    const location = useLocation();
     const [loading, setLoading] = useState(false);
 
     const [testData, setTestData] = useState({
-        type: "",    // TODO: Fix bug test type always reading
+        type: "",
         name: "",
-        reading: { sections: [] },
-        listening: { sections: [] },
-        writing: { sections: [] },
+        sections: [],
     });
+
     const summaryRef = useRef({})
     const BASE_URL = "http://localhost:5000";
+
+    // Load existing test if editing
     useEffect(() => {
         if (!id) return;
 
@@ -26,48 +30,7 @@ const TestCreateEditView = () => {
             .get(`${BASE_URL}/api/tests/${id}`)
             .then((res) => {
                 const data = res.data;
-
-                // Ensure structure safety
-                data.reading = data.reading || { sections: [] };
-                data.listening = data.listening || { sections: [] };
-                data.writing = data.writing || { sections: [] };
-
-                if (data.type === "reading") {
-                    const sections = data.reading.sections || [];
-                    sections.forEach((s) =>
-                        s.questions?.forEach((q) => (q.locked = true))
-                    );
-
-                    // Sync "matching_headings"
-                    sections.forEach((section) => {
-                        section.questions = section.questions?.map((q) => {
-                            if (q.type === "matching_headings") {
-                                const items = (section.passages || []).map((p, idx) => {
-                                    const existing = q.questionItems?.[idx];
-                                    return {
-                                        id: existing ? existing.id : uuidv4(),
-                                        text: existing ? existing.text : "",
-                                        sourceText: existing ? existing.sourceText : "",
-                                    };
-                                });
-
-                                const answers = (section.passages || []).map((p, idx) => {
-                                    const existing = q.answers?.[idx];
-                                    return {
-                                        id: existing ? existing.id : uuidv4(),
-                                        value: p.header,
-                                        sourceText: existing ? existing.sourceText : "",
-                                    };
-                                });
-
-                                return { ...q, questionItems: items, answers };
-                            }
-                            return q;
-                        });
-                    });
-                }
-
-                // Listening and Writing do not need locking logic
+                data.sections = data.sections || [];
                 setTestData(data);
             })
             .catch((err) => {
@@ -77,36 +40,59 @@ const TestCreateEditView = () => {
             .finally(() => setLoading(false));
     }, [id]);
 
+    // Auto-select type based on route when creating
+    useEffect(() => {
+        if (id) return;
+        if (location.pathname.includes("listening")) {
+            setTestData((p) => ({ ...p, type: "listening" }));
+        } else if (location.pathname.includes("writing")) {
+            setTestData((p) => ({ ...p, type: "writing" }));
+        } else if (location.pathname.includes("reading")) {
+            setTestData((p) => ({ ...p, type: "reading" }));
+        } else if (location.pathname.includes("speaking")) {
+            setTestData((p) => ({ ...p, type: "speaking" }));
+        }
+    }, [location.pathname, id]);
+
 
     // Helpers
-    const sections =
-        testData.type === "reading"
-            ? testData.reading?.sections || []
-            : testData.type === "listening"
-                ? testData.listening?.sections || []
-                : testData.writing?.sections || [];
+    const sections = testData.sections || [];
 
 
     const addSection = () => {
         setTestData((prev) => {
-            const { type } = prev;
-            const newSectionIndex = (prev[type].sections?.length || 0) + 1;
+            const newSectionIndex = (prev.sections?.length || 0) + 1;
             let newSection = { sectionTitle: `Section ${newSectionIndex}` };
 
-            if (type === "reading") {
+            if (prev.type === "reading") {
                 newSection = { ...newSection, passages: [], questions: [], images: [] };
-            } else if (type === "listening") {
-                newSection = { ...newSection, audioUrl: "", transcript: "", questions: [], images: [] };
-            } else if (type === "writing") {
-                newSection = { ...newSection, requirement: "", questions: [], images: [] };
+            } else if (prev.type === "listening") {
+                newSection = {
+                    ...newSection,
+                    audioUrl: "",
+                    transcript: "",
+                    questions: [],
+                    images: [],
+                };
+            } else if (prev.type === "writing") {
+                newSection = {
+                    ...newSection,
+                    requirement: "",
+                    questions: [],
+                    images: [],
+                };
+            } else if (prev.type === "speaking") {
+                newSection = {
+                    ...newSection,
+                    requirement: "",
+                    questions: [],
+                    images: [],
+                };
             }
-
 
             return {
                 ...prev,
-                [type]: {
-                    sections: [...(prev[type].sections || []), newSection],
-                },
+                sections: [...(prev.sections || []), newSection],
             };
         });
     };
@@ -139,28 +125,19 @@ const TestCreateEditView = () => {
         return { ...section, questions: updatedQuestions };
     };
 
+
     const addPassage = (secIdx) => {
-        const section = testData.reading.sections[secIdx];
-        const nextHeader = String.fromCharCode(65 + section.passages.length);
+        const section = testData.sections[secIdx];
+        const nextHeader = String.fromCharCode(65 + (section.passages?.length || 0));
+        section.passages = section.passages || [];
         section.passages.push({ header: nextHeader, text: "" });
-        // Sync matching_headings questions
         const updatedSection = syncMatchingHeadingsItems(section);
         updateSection(secIdx, updatedSection);
     };
 
     const addQuestion = (secIdx) => {
         setTestData((prev) => {
-            let sections = [];
-
-            if (prev.type === "reading") {
-                sections = [...(prev.reading?.sections || [])];
-            } else if (prev.type === "listening") {
-                sections = [...(prev.listening?.sections || [])];
-            } else if (prev.type === "writing") {
-                // Writing test has no questions
-                return prev;
-            }
-
+            const sections = [...(prev.sections || [])];
             const section = { ...sections[secIdx] };
             section.questions = [
                 ...(section.questions || []),
@@ -170,14 +147,8 @@ const TestCreateEditView = () => {
                     questionItems: [],
                 },
             ];
-
-            const updatedSections = [...sections];
-            updatedSections[secIdx] = section;
-
-            return {
-                ...prev,
-                [prev.type]: { sections: updatedSections },
-            };
+            sections[secIdx] = section;
+            return { ...prev, sections };
         });
     };
 
@@ -186,20 +157,9 @@ const TestCreateEditView = () => {
 
     const addQuestionItem = (secIdx, qIdx) => {
         setTestData((prev) => {
-            let sections = [];
-
-            if (prev.type === "reading") {
-                sections = [...(prev.reading?.sections || [])];
-            } else if (prev.type === "listening") {
-                sections = [...(prev.listening?.sections || [])];
-            } else if (prev.type === "writing") {
-                // Writing tests don't have questions, so just return previous state unchanged
-                return prev;
-            }
-
+            const sections = [...(prev.sections || [])];
             const section = { ...sections[secIdx] };
             const question = { ...section.questions[qIdx] };
-
             let newItem = { id: uuidv4() };
 
             switch (question.type) {
@@ -235,68 +195,27 @@ const TestCreateEditView = () => {
 
             question.questionItems = [...(question.questionItems || []), newItem];
             section.questions[qIdx] = question;
-
-            const updatedSections = [...sections];
-            updatedSections[secIdx] = section;
-
-            return {
-                ...prev,
-                [prev.type]: { sections: updatedSections },
-            };
+            sections[secIdx] = section;
+            return { ...prev, sections };
         });
     };
 
-
     const addImage = (secIdx) => {
-        const section = testData.reading.sections[secIdx];
+        const section = testData.sections[secIdx];
         section.images = section.images || [];
         section.images.push({ url: "" });
         updateSection(secIdx, section);
     };
     const updateSection = (secIdx, updatedSection) => {
         setTestData((prev) => {
-            let sections = [];
-
-            if (prev.type === "reading") {
-                sections = [...(prev.reading?.sections || [])];
-            } else if (prev.type === "listening") {
-                sections = [...(prev.listening?.sections || [])];
-            } else if (prev.type === "writing") {
-                sections = [...(prev.writing?.sections || [])];
-            }
-
+            const sections = [...(prev.sections || [])];
             sections[secIdx] = updatedSection;
-
-            return {
-                ...prev,
-                [prev.type]: { sections },
-            };
+            return { ...prev, sections };
         });
     };
 
-
-
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        if (!id) {
-            const sections =
-                testData.type === "reading"
-                    ? testData.reading?.sections || []
-                    : testData.type === "listening"
-                        ? testData.listening?.sections || []
-                        : testData.writing?.sections || [];
-
-            // ✅ Only preprocess if questions exist
-            sections.forEach((section) => {
-                if (Array.isArray(section.questions)) {
-                    section.questions.forEach((q) => {
-                        // Add any preprocessing if needed
-                        // e.g., remove empty fields, normalize structure, etc.
-                    });
-                }
-            });
-        }
 
         try {
             if (id) {
@@ -313,14 +232,13 @@ const TestCreateEditView = () => {
         }
     };
 
-
-
     if (loading) return <div>Loading...</div>;
 
     return (
         <div>
             <h1>{id ? "Edit Test" : "Create New Test"}</h1>
             <form onSubmit={handleSubmit}>
+                {/*
                 <label>Test Type: </label>
                 <select
                     value={testData.type}
@@ -331,9 +249,9 @@ const TestCreateEditView = () => {
                     <option value="listening">Listening</option>
                     <option value="writing">Writing</option>
                 </select>
-
+                
                 <br />
-
+*/}
                 <label>Test Name: </label>
                 <input
                     type="text"
@@ -402,7 +320,6 @@ const TestCreateEditView = () => {
                                         const file = e.target.files[0];
                                         if (!file) return;
 
-                                        // Create FormData to send file to backend
                                         const formData = new FormData();
                                         formData.append("audio", file);
 
@@ -413,13 +330,15 @@ const TestCreateEditView = () => {
                                                 { headers: { "Content-Type": "multipart/form-data" } }
                                             );
 
-                                            // Response should contain the public URL from Google Drive
+                                            // Save the returned URL to your section
                                             const updatedSection = { ...section, audioUrl: res.data.url };
                                             updateSection(secIdx, updatedSection);
                                         } catch (err) {
                                             console.error("Upload failed:", err);
+                                            alert("Audio upload failed");
                                         }
                                     }}
+
                                 />
 
                                 <br />
@@ -1108,4 +1027,5 @@ const TestCreateEditView = () => {
         </div >
     );
 };
+
 export default TestCreateEditView;

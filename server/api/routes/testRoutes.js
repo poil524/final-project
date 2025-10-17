@@ -1,6 +1,9 @@
 import "dotenv/config";
 import express from 'express';
 import Test from '../models/testModel.js';
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 import OpenAI from "openai";
 
 const router = express.Router();
@@ -22,17 +25,18 @@ router.post("/", async (req, res) => {
     }
 });
 
-// Get all tests (for test list)
+// Get all tests
 router.get("/", async (req, res) => {
     try {
-        const tests = await Test.find().select("name createdAt");
-        // only return basic info for list
+        const tests = await Test.find().sort({ createdAt: -1 });
         res.json(tests);
     } catch (err) {
         console.error("Error fetching tests:", err);
         res.status(500).json({ error: "Failed to fetch tests" });
     }
 });
+
+
 
 // Get test by ID
 router.get("/:id", async (req, res) => {
@@ -73,7 +77,40 @@ router.put("/:id", async (req, res) => {
         res.status(500).json({ error: "Failed to update test" });
     }
 });
+// Add audio to backend
+// Create uploads directory if it doesn't exist
+const uploadDir = path.join(process.cwd(), "uploads/audio");
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
+// Multer config
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const name = `${Date.now()}-${file.originalname.replace(/\s+/g, "_")}`;
+    cb(null, name);
+  },
+});
+
+const upload = multer({ storage });
+
+// Upload audio endpoint
+router.post("/upload-audio", upload.single("audio"), (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+
+    // Return a URL or relative path
+    const audioPath = `/uploads/audio/${req.file.filename}`; 
+    res.json({ url: audioPath });
+  } catch (err) {
+    console.error("Audio upload error:", err);
+    res.status(500).json({ error: "Failed to upload audio" });
+  }
+});
+
+
+
+// Evaluate Writing
 router.post("/evaluate-writing", async (req, res) => {
   try {
     console.log("[DEBUG] /evaluate-writing called");

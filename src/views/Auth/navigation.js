@@ -42,7 +42,6 @@ const Navigation = () => {
 
             {isExamDropdown && (
               <ul className="dropdown_menu">
-                <li><Link to="/tests/full">Full Exam</Link></li>
                 <li><Link to="/tests/listening">Listening Exam</Link></li>
                 <li><Link to="/tests/reading">Reading Exam</Link></li>
                 <li><Link to="/tests/writing">Writing Exam</Link></li>

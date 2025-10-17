@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import express from "express";
+import path from "path";
 import cors from "cors";
 import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
@@ -22,6 +23,7 @@ app.use(
         credentials: true,
     })
 );
+app.use("/uploads/audio", express.static(path.join(process.cwd(), "uploads/audio")));
 app.use(express.json());
 app.use(cookieParser());
 
