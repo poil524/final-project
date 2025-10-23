@@ -1,0 +1,164 @@
+/* Container padding and spacing */
+.container {
+    padding: 120px 80px; /* more padding on both sides */
+    display: flex;
+    flex-direction: column;
+    gap: 30px; /* spacing between components */
+}
+
+/* Filters styling */
+.filters {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.filters select {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.filters select:hover {
+    border-color: #007bff;
+}
+
+/* Add New Exam Button */
+.add-button {
+    padding: 10px 10px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.2s;
+    align-self: flex-start;
+    margin-bottom: 30px; /* increased spacing between button and test cards */
+}
+
+.add-button:hover {
+    background: #0056b3;
+}
+
+/* Tests grid */
+.tests-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 20px; /* distance between cards */
+    margin-top: 20px; /* optional: extra spacing from button */
+}
+
+
+/* Modal */
+.modal-backdrop {
+    position: fixed;
+    top:0; left:0; right:0; bottom:0;
+    background: rgba(0,0,0,0.5);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    min-width: 300px;
+}
+
+.modal-content button.close-button {
+    padding: 6px 12px;
+    background: #dc3545; /* red color */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.2s;
+    align-self: flex-end; /* move to the right inside modal */
+}
+
+.modal-content button.close-button:hover {
+    background: #c82333;
+}
+
+.card-grid {
+    display: flex;
+    gap: 5px;
+    margin: 20px 0;
+}
+
+.exam-card {
+    padding: 20px;
+    background: #f0f0f0;
+    border-radius: 8px;
+    cursor: pointer;
+    flex: 1;
+    text-align: center;
+    transition: 0.2s;
+}
+
+.exam-card:hover {
+    background: #007bff;
+    color: white;
+}
+
+/* Test cards stacked vertically */
+.tests-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.test-card {
+    background: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px 30px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.test-card h3, .test-card p {
+    margin: 5px; 
+}
+
+.test-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* Test name styling */
+.test-name {
+    font-weight: bold;
+    font-size: 18px;
+    color: #333;
+}
+
+/* Card actions */
+.card-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.card-actions button {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.2s;
+    background: #007bff;
+    color: white;
+}
+
+.card-actions button:hover {
+    background: #0056b3;
+}

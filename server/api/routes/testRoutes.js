@@ -1,13 +1,14 @@
 import "dotenv/config";
+
 import express from 'express';
 import Test from '../models/testModel.js';
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import multer from "multer";
-import path from "path";
-import fs from "fs";
 import OpenAI from "openai";
+import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 const router = express.Router();
-//const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -15,99 +16,268 @@ const openai = new OpenAI({
 
 // Create new test
 router.post("/", async (req, res) => {
-    try {
-        const newTest = new Test(req.body);
-        await newTest.save();
-        res.status(201).json(newTest);
-    } catch (err) {
-        console.error("Error creating test:", err);
-        res.status(500).json({ error: "Failed to create test" });
-    }
+  try {
+    const newTest = new Test(req.body);
+    await newTest.save();
+    res.status(201).json(newTest);
+  } catch (err) {
+    console.error("Error creating test:", err);
+    res.status(500).json({ error: "Failed to create test" });
+  }
 });
 
-// Get all tests
+// GET all tests, optional filter by type
 router.get("/", async (req, res) => {
-    try {
-        const tests = await Test.find().sort({ createdAt: -1 });
-        res.json(tests);
-    } catch (err) {
-        console.error("Error fetching tests:", err);
-        res.status(500).json({ error: "Failed to fetch tests" });
+  try {
+    const { type } = req.query; // e.g., /api/tests?type=listening
+    let query = {};
+    if (type && ["listening", "reading", "writing", "speaking"].includes(type)) {
+      query.type = type;
     }
+    const tests = await Test.find(query).sort({ createdAt: -1 });
+    res.json(tests);
+  } catch (err) {
+    console.error("Error fetching tests:", err);
+    res.status(500).json({ error: "Failed to fetch tests" });
+  }
 });
-
-
 
 // Get test by ID
 router.get("/:id", async (req, res) => {
-    console.log("Request received for test ID:", req.params.id);
-    try {
-        const test = await Test.findById(req.params.id);
-        if (!test) {
-            console.log("Test not found in DB");
-            return res.status(404).json({ error: "Test not found" });
-        }
-        console.log("Test found, sending to frontend");
-        res.json(test);
-    } catch (err) {
-        console.error("DB error:", err);
-        res.status(500).json({ error: "Failed to fetch test." });
+  try {
+    const test = await Test.findById(req.params.id);
+    if (!test) {
+      return res.status(404).json({ error: "Test not found" });
     }
-});
-// Delete test
-router.delete("/:id", async (req, res) => {
-    try {
-        const deleted = await Test.findByIdAndDelete(req.params.id);
-        if (!deleted) return res.status(404).json({ error: "Test not found" });
-        res.json({ message: "Test deleted successfully" });
-    } catch (err) {
-        res.status(500).json({ error: "Failed to delete test" });
-    }
+    res.json(test);
+  } catch (err) {
+    console.error("DB error:", err);
+    res.status(500).json({ error: "Failed to fetch test." });
+  }
 });
 
-// Update test
+/* Update test
 router.put("/:id", async (req, res) => {
-    try {
-        const updated = await Test.findByIdAndUpdate(req.params.id, req.body, {
-            new: true,
-        });
-        if (!updated) return res.status(404).json({ error: "Test not found" });
-        res.json(updated);
-    } catch (err) {
-        res.status(500).json({ error: "Failed to update test" });
-    }
-});
-// Add audio to backend
-// Create uploads directory if it doesn't exist
-const uploadDir = path.join(process.cwd(), "uploads/audio");
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+  try {
+    const test = await Test.findById(req.params.id);
+    if (!test) return res.status(404).json({ error: "Test not found" });
 
-// Multer config
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const name = `${Date.now()}-${file.originalname.replace(/\s+/g, "_")}`;
-    cb(null, name);
+    // Update fields
+    test.name = req.body.name;
+    test.type = req.body.type;
+    test.sections = req.body.sections;
+
+    // Important: tell Mongoose the nested array changed
+    test.markModified("sections");
+
+    await test.save();
+    res.json(test);
+  } catch (err) {
+    console.error("Error updating test:", err);
+    res.status(500).json({ error: "Failed to update test" });
+  }
+});
+*/
+// AUDIO UPLOAD
+// Add audio
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
+const s3 = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
   },
 });
 
-const upload = multer({ storage });
+const bucketName = 'final-project-ielts-test'
 
-// Upload audio endpoint
-router.post("/upload-audio", upload.single("audio"), (req, res) => {
+router.post("/upload-audio", upload.single("audio"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
-    // Return a URL or relative path
-    const audioPath = `/uploads/audio/${req.file.filename}`; 
-    res.json({ url: audioPath });
+    const { testId } = req.body;
+    const file = req.file;
+    const filename = `${testId}-${Date.now()}-${file.originalname}`;
+
+    const params = {
+      Bucket: bucketName,
+      Key: `audio/${filename}`,
+      Body: file.buffer,
+      ContentType: file.mimetype || "audio/mpeg",
+      ACL: "private",
+    };
+
+    await s3.send(new PutObjectCommand(params));
+
+    res.status(200).json({
+      message: "Audio uploaded successfully",
+      key: `audio/${filename}`,
+    });
   } catch (err) {
-    console.error("Audio upload error:", err);
+    console.error("Error uploading audio:", err);
     res.status(500).json({ error: "Failed to upload audio" });
   }
 });
 
+// Load audio
+router.get("/audio-url/:filename", async (req, res) => {
+  try {
+    const { filename } = req.params;
+
+    // if you’re storing with "audio/" prefix, include it:
+    const key = `audio/${filename}`;
+
+    const command = new GetObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+    });
+
+    const url = await getSignedUrl(s3, command, { expiresIn: 3600 }); // TODO: Temp URL. Increase expire time
+    res.json({ url });
+  } catch (err) {
+    console.error("Error generating signed URL:", err);
+    res.status(500).json({ error: "Failed to generate signed URL" });
+  }
+});
+
+const imageUpload = multer({ storage: multer.memoryStorage() });
+
+// IMAGE UPLOAD (unique key per test)
+router.post("/upload-image", imageUpload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const { testId } = req.body; // frontend must send this
+    const file = req.file;
+    const filename = `${testId}-${Date.now()}-${file.originalname}`;
+
+    const params = {
+      Bucket: bucketName,
+      Key: `images/${filename}`,
+      Body: file.buffer,
+      ContentType: file.mimetype || "image/jpeg",
+      ACL: "private",
+    };
+
+    await s3.send(new PutObjectCommand(params));
+
+    res.status(200).json({
+      message: "Image uploaded successfully",
+      key: `images/${filename}`,
+    });
+  } catch (err) {
+    console.error("Error uploading image:", err);
+    res.status(500).json({ error: "Failed to upload image" });
+  }
+});
+
+
+// Load image
+router.get("/image-url/:filename", async (req, res) => {
+  try {
+    let { filename } = req.params;
+    const key = filename.startsWith("images/") ? filename : `images/${filename}`;
+
+    const command = new GetObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+    });
+
+    const url = await getSignedUrl(s3, command, { expiresIn: 3600 });
+    res.json({ url });
+  } catch (err) {
+    console.error("Error generating image URL:", err);
+    res.status(500).json({ error: "Failed to generate image URL" });
+  }
+});
+
+// Update test
+router.put("/:id", async (req, res) => {
+  try {
+    const test = await Test.findById(req.params.id);
+    if (!test) return res.status(404).json({ error: "Test not found" });
+
+    const oldSections = test.sections || [];
+    const newSections = req.body.sections || [];
+
+    const keysToDelete = [];
+
+    oldSections.forEach((old, i) => {
+      const fresh = newSections[i] || {};
+
+      // Normalize empty values
+      const oldAudio = old.audioKey?.trim() || "";
+      const newAudio = fresh.audioKey?.trim() || "";
+      const oldImage = old.images?.trim() || "";
+      const newImage = fresh.images?.trim() || "";
+
+      if (oldAudio && oldAudio !== newAudio) {
+        keysToDelete.push(oldAudio);
+        console.log(`[DEBUG] Audio changed: ${oldAudio} → ${newAudio}`);
+      }
+      if (oldImage && oldImage !== newImage) {
+        keysToDelete.push(oldImage);
+        console.log(`[DEBUG] Image changed: ${oldImage} → ${newImage}`);
+      }
+    });
+
+    // Apply updates
+    test.name = req.body.name;
+    test.type = req.body.type;
+    test.sections = newSections;
+    test.markModified("sections");
+    await test.save();
+
+    // Delete obsolete files from S3
+    for (const key of keysToDelete) {
+      try {
+        await s3.send(new DeleteObjectCommand({ Bucket: bucketName, Key: key }));
+        console.log(`[CLEANUP] Deleted old S3 object: ${key}`);
+      } catch (err) {
+        console.warn(`[WARN] Failed to delete S3 object: ${key}`, err.message);
+      }
+    }
+
+    res.json(test);
+  } catch (err) {
+    console.error("[ERROR] Updating test failed:", err);
+    res.status(500).json({ error: "Failed to update test" });
+  }
+});
+
+// Delete test
+router.delete("/:id", async (req, res) => {
+  try {
+    const test = await Test.findById(req.params.id);
+    if (!test) return res.status(404).json({ error: "Test not found" });
+
+    // Collect all S3 keys to remove
+    const keys = [];
+    test.sections.forEach((s) => {
+      if (s.audioKey) keys.push(s.audioKey);
+      if (s.images) keys.push(s.images);
+    });
+
+    await Test.findByIdAndDelete(req.params.id);
+
+    // Delete each S3 object
+    for (const key of keys) {
+      try {
+        await s3.send(new DeleteObjectCommand({ Bucket: bucketName, Key: key }));
+        console.log("Deleted S3 object:", key);
+      } catch (err) {
+        console.warn("Failed to delete S3 object:", key, err.message);
+      }
+    }
+
+    res.json({ message: "Test and associated media deleted" });
+  } catch (err) {
+    console.error("Error deleting test:", err);
+    res.status(500).json({ error: "Failed to delete test" });
+  }
+});
 
 
 // Evaluate Writing

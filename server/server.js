@@ -1,8 +1,8 @@
-import dotenv from "dotenv";
-dotenv.config();
+//import dotenv from "dotenv";
+//dotenv.config();
+import "dotenv/config";
 
 import express from "express";
-import path from "path";
 import cors from "cors";
 import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
@@ -17,26 +17,27 @@ mongoose.connect("mongodb://localhost/final-project");
 const app = express();
 const port = process.env.PORT || 5000;
 
+// CORS
 app.use(
-    cors({
-        origin: "http://localhost:3000",
-        credentials: true,
-    })
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+  })
 );
-app.use("/uploads/audio", express.static(path.join(process.cwd(), "uploads/audio")));
+
 app.use(express.json());
 app.use(cookieParser());
 
-// --- Routes ---
-app.use("/api/users", userRoutes); // public routes
-app.use("/api/tests", authMiddleware, testRoutes); // protected routes
+// Routes
+app.use("/api/users", userRoutes);
+app.use("/api/tests", authMiddleware, testRoutes);
 
-// --- 404 handler ---
+// 404 handler
 app.use((req, res) => {
-    res.status(404).send({ url: `${req.originalUrl} not found` });
+  res.status(404).send({ url: `${req.originalUrl} not found` });
 });
 
-// --- Start server ---
+// Start server
 app.listen(port, () => {
-    console.log(`Server started on port ${port}`);
+  console.log(`Server started on port ${port}`);
 });

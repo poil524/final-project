@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
 import { v4 as uuidv4 } from "uuid";
 
-// ✅ Question Item Schema
 const questionItemSchema = new mongoose.Schema({
     id: { type: String, default: () => uuidv4(), required: true },
     text: { type: String, default: "" },
@@ -9,14 +8,12 @@ const questionItemSchema = new mongoose.Schema({
     summary: { type: String, default: "" },
 });
 
-// ✅ Answers Schema
 const answerSchema = new mongoose.Schema({
     id: { type: String, default: () => uuidv4(), required: true },
     value: { type: String, default: "" },
     sourceText: { type: String, default: "" },
 });
 
-// ✅ Question Schema
 const questionSchema = new mongoose.Schema({
     type: { type: String, default: "multiple_choice" },
     requirement: { type: String, default: "" },
@@ -25,29 +22,22 @@ const questionSchema = new mongoose.Schema({
     answers: { type: [answerSchema], default: [] },
 });
 
-// ✅ Passage Schema
 const passageSchema = new mongoose.Schema({
     header: { type: String, default: "" },
     text: { type: String, default: "" },
 });
 
-// ✅ Image Schema
-const imageSchema = new mongoose.Schema({
-    url: { type: String, default: "" },
-});
 
-// ✅ Section Schema
 const sectionSchema = new mongoose.Schema({
     sectionTitle: { type: String, default: "" },
     passages: { type: [passageSchema], default: [] },
     questions: { type: [questionSchema], default: [] },
-    images: { type: [imageSchema], default: [] },
-    audioUrl: { type: String, default: "" },       // for listening
+    images: { type: String, default: "" },
+    audioKey: { type: String, default: "" },  // for listening
     transcript: { type: String, default: "" },     // for listening
     requirement: { type: String, default: "" },    // for writing/speaking
 });
 
-// ✅ Main Test Schema
 const testSchema = new mongoose.Schema({
     name: { type: String, required: true },
     type: { type: String, enum: ["reading", "listening", "writing", "speaking"], required: true },

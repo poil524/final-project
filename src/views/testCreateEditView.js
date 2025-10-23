@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
+import "./TestCreateEditView.css";
 
-// ✅ safe position — after axios import
 axios.defaults.withCredentials = true;
 
 const TestCreateEditView = () => {
@@ -21,9 +21,8 @@ const TestCreateEditView = () => {
     const summaryRef = useRef({})
     const BASE_URL = "http://localhost:5000";
 
-    // Load existing test if editing
     useEffect(() => {
-        if (!id) return;
+        if (!id) return; // skip if creating
 
         setLoading(true);
         axios
@@ -40,19 +39,36 @@ const TestCreateEditView = () => {
             .finally(() => setLoading(false));
     }, [id]);
 
-    // Auto-select type based on route when creating
+    // Create a blank test automatically based on route type
     useEffect(() => {
-        if (id) return;
-        if (location.pathname.includes("listening")) {
-            setTestData((p) => ({ ...p, type: "listening" }));
-        } else if (location.pathname.includes("writing")) {
-            setTestData((p) => ({ ...p, type: "writing" }));
-        } else if (location.pathname.includes("reading")) {
-            setTestData((p) => ({ ...p, type: "reading" }));
-        } else if (location.pathname.includes("speaking")) {
-            setTestData((p) => ({ ...p, type: "speaking" }));
-        }
-    }, [location.pathname, id]);
+        if (id) return; // only run when creating
+
+        let type = "";
+        if (location.pathname.includes("listening")) type = "listening";
+        else if (location.pathname.includes("writing")) type = "writing";
+        else if (location.pathname.includes("reading")) type = "reading";
+        else if (location.pathname.includes("speaking")) type = "speaking";
+
+        if (!type) return;
+
+        const createEmptyTest = async () => {
+            try {
+                const res = await axios.post(`${BASE_URL}/api/tests`, {
+                    name: "Untitled Test",
+                    type,
+                    sections: [],
+                });
+                console.log("✅ Created new empty test:", res.data);
+                setTestData(res.data); // now testData._id exists immediately
+                navigate(`/edit/${res.data._id}`); // optional: redirect to edit URL
+            } catch (err) {
+                console.error("Error creating new test:", err);
+            }
+        };
+
+        createEmptyTest();
+    }, [id, location.pathname]);
+
 
 
     // Helpers
@@ -65,28 +81,28 @@ const TestCreateEditView = () => {
             let newSection = { sectionTitle: `Section ${newSectionIndex}` };
 
             if (prev.type === "reading") {
-                newSection = { ...newSection, passages: [], questions: [], images: [] };
+                newSection = { ...newSection, passages: [], questions: [], images: "" };
             } else if (prev.type === "listening") {
                 newSection = {
                     ...newSection,
-                    audioUrl: "",
+                    audioKey: "",
                     transcript: "",
                     questions: [],
-                    images: [],
+                    images: "",
                 };
             } else if (prev.type === "writing") {
                 newSection = {
                     ...newSection,
                     requirement: "",
                     questions: [],
-                    images: [],
+                    images: "",
                 };
             } else if (prev.type === "speaking") {
                 newSection = {
                     ...newSection,
                     requirement: "",
                     questions: [],
-                    images: [],
+                    images: "",
                 };
             }
 
@@ -152,9 +168,6 @@ const TestCreateEditView = () => {
         });
     };
 
-
-
-
     const addQuestionItem = (secIdx, qIdx) => {
         setTestData((prev) => {
             const sections = [...(prev.sections || [])];
@@ -199,13 +212,6 @@ const TestCreateEditView = () => {
             return { ...prev, sections };
         });
     };
-
-    const addImage = (secIdx) => {
-        const section = testData.sections[secIdx];
-        section.images = section.images || [];
-        section.images.push({ url: "" });
-        updateSection(secIdx, section);
-    };
     const updateSection = (secIdx, updatedSection) => {
         setTestData((prev) => {
             const sections = [...(prev.sections || [])];
@@ -213,9 +219,33 @@ const TestCreateEditView = () => {
             return { ...prev, sections };
         });
     };
+    const removeSection = (secIdx) => {
+        const confirmed = window.confirm("Are you sure you want to delete this section?");
+        if (!confirmed) return;
+
+        setTestData((prev) => {
+            const updatedSections = prev.sections.filter((_, i) => i !== secIdx);
+            return { ...prev, sections: updatedSections };
+        });
+    };
+
+    const removePassage = (secIdx, passageIdx) => {
+        setTestData((prev) => {
+            const sections = [...prev.sections];
+            const section = { ...sections[secIdx] };
+            section.passages = section.passages.filter((_, i) => i !== passageIdx);
+
+            // sync matching_headings questions if needed
+            const updatedSection = syncMatchingHeadingsItems(section);
+
+            sections[secIdx] = updatedSection;
+            return { ...prev, sections };
+        });
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        console.log("Before saving, testData:", JSON.stringify(testData, null, 2));
 
         try {
             if (id) {
@@ -235,40 +265,20 @@ const TestCreateEditView = () => {
     if (loading) return <div>Loading...</div>;
 
     return (
-        <div>
-            <h1>{id ? "Edit Test" : "Create New Test"}</h1>
+        <div className="test-container">
+            <h1 className="test-header">{id ? "Edit Test" : "Create New Test"}</h1>
             <form onSubmit={handleSubmit}>
-                {/*
-                <label>Test Type: </label>
-                <select
-                    value={testData.type}
-                    onChange={(e) => setTestData({ ...testData, type: e.target.value })}
-                >
-                    <option value="">Select a test type</option>
-                    <option value="reading">Reading</option>
-                    <option value="listening">Listening</option>
-                    <option value="writing">Writing</option>
-                </select>
-                
-                <br />
-*/}
-                <label>Test Name: </label>
+                <label>Test Name:</label>
                 <input
                     type="text"
                     value={testData.name}
                     onChange={(e) => setTestData({ ...testData, name: e.target.value })}
                 />
-                <br />
+                <button type="button" onClick={addSection}>Add Section</button>
 
-                <button type="button" onClick={addSection}>
-                    Add Section
-                </button>
 
                 {sections.map((section, secIdx) => (
-                    <div
-                        key={secIdx}
-                        style={{ border: "1px solid gray", padding: "10px", margin: "10px" }}
-                    >
+                    <div key={secIdx} className="section-card">
                         <h2>{section.sectionTitle}</h2>
                         <label>Section Title: </label>
                         <input
@@ -325,21 +335,25 @@ const TestCreateEditView = () => {
 
                                         try {
                                             const res = await axios.post(
-                                                `http://localhost:5000/api/tests/upload-audio`,
+                                                "http://localhost:5000/api/tests/upload-audio",
                                                 formData,
                                                 { headers: { "Content-Type": "multipart/form-data" } }
                                             );
 
-                                            // Save the returned URL to your section
-                                            const updatedSection = { ...section, audioUrl: res.data.url };
+                                            // S3 returns a public URL in res.data.url
+                                            const updatedSection = { ...section, audioKey: res.data.key };
                                             updateSection(secIdx, updatedSection);
+                                            //await axios.put(`${BASE_URL}/api/tests/${testId}/sections/${section._id}`, updatedSection);
+                                            console.log("Updated section after upload:", updatedSection);
+
                                         } catch (err) {
                                             console.error("Upload failed:", err);
                                             alert("Audio upload failed");
                                         }
                                     }}
-
                                 />
+
+
 
                                 <br />
                                 <h3>Transcript</h3>
@@ -372,41 +386,58 @@ const TestCreateEditView = () => {
                             </div>
                         )}
 
-                        <h3>Pictures</h3>
-                        {section.images?.map((img, imgIdx) => (
-                            <div key={imgIdx}>
-                                <input
-                                    type="text"
-                                    placeholder="Image URL"
-                                    value={img.url}
-                                    onChange={(e) => {
-                                        const updatedImages = [...section.images];
-                                        updatedImages[imgIdx] = { ...img, url: e.target.value };
-                                        updateSection(secIdx, { ...section, images: updatedImages });
-                                    }}
-                                />
+                        <h3>Image</h3>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={async (e) => {
+                                const file = e.target.files[0];
+                                if (!file) return;
+
+                                const formData = new FormData();
+                                formData.append("image", file);
+                                formData.append("testId", testData._id);
+                                try {
+                                    const res = await axios.post(
+                                        "http://localhost:5000/api/tests/upload-image",
+                                        formData,
+                                        { headers: { "Content-Type": "multipart/form-data" } }
+                                    );
+
+                                    const key = res.data.key;
+
+                                    // Update section in local state
+                                    const updatedSection = { ...section, images: key };
+                                    updateSection(secIdx, updatedSection);
+
+                                    // Immediately persist to MongoDB
+                                    await axios.put(`${BASE_URL}/api/tests/${testData._id}`, {
+                                        ...testData,
+                                        sections: testData.sections.map((s, i) => (i === secIdx ? updatedSection : s)),
+                                    });
+
+                                } catch (err) {
+                                    console.error("Image upload failed:", err);
+                                }
+                            }}
+
+                        />
+
+                        {section.images && (
+                            <div style={{ marginTop: "10px" }}>
+                                <p>Uploaded Image Key: {section.images}</p>
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        const updatedImages = section.images.filter((_, i) => i !== imgIdx);
-                                        updateSection(secIdx, { ...section, images: updatedImages });
-                                    }}
+                                    onClick={() => updateSection(secIdx, { ...section, images: "" })}
                                 >
-                                    Remove
+                                    Remove Image
                                 </button>
                             </div>
-                        ))}
-                        <button type="button" onClick={() => addImage(secIdx)}>Add Picture</button>
+                        )}
+
                         <h3>Questions</h3>
                         {section.questions?.map((q, qIdx) => (
-                            <div
-                                key={qIdx}
-                                style={{
-                                    border: "1px dashed gray",
-                                    margin: "5px",
-                                    padding: "5px",
-                                }}
-                            >
+                            <div key={qIdx} className="question-card">
                                 <label>Type: </label>
                                 <select
                                     value={q.type}
@@ -1022,7 +1053,7 @@ const TestCreateEditView = () => {
                 }
 
                 <br />
-                <button type="submit">{id ? "Update Test" : "Save Test"}</button>
+                <button type="submit">Save</button>
             </form >
         </div >
     );
