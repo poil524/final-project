@@ -1,0 +1,16 @@
+:root {
+    --color-primary: #db2524;
+    --color-primary-text: #fff;
+    --color-primary-hover: #a40000;
+
+    --color-secondary: #9d9d9d60;
+    --color-secondary-text: #9d9d9d;
+    --color-secondary-hover: rgba(164, 0, 0, 0.251);
+
+    --color-danger: #FFEA00;
+    --color-danger-hover: #e5d200;
+    --color-bg: #fff;
+    --color-bg-section-card: #fff;
+    --color-bg-question-card: #d2d2d245;
+    --color-border: #ddd;
+}

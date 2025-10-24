@@ -3,6 +3,8 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 import "./TestCreateEditView.css";
+import { Reorder, motion } from "framer-motion";
+import { BiTrash } from "react-icons/bi";
 
 axios.defaults.withCredentials = true;
 
@@ -41,7 +43,7 @@ const TestCreateEditView = () => {
 
     // Create a blank test automatically based on route type
     useEffect(() => {
-        if (id) return; // only run when creating
+        if (id) return; // only for creation mode
 
         let type = "";
         if (location.pathname.includes("listening")) type = "listening";
@@ -51,23 +53,27 @@ const TestCreateEditView = () => {
 
         if (!type) return;
 
+        let created = false;
         const createEmptyTest = async () => {
+            if (created) return; // prevent duplicate runs
+            created = true;
+
             try {
                 const res = await axios.post(`${BASE_URL}/api/tests`, {
                     name: "Untitled Test",
                     type,
                     sections: [],
                 });
-                console.log("✅ Created new empty test:", res.data);
-                setTestData(res.data); // now testData._id exists immediately
-                navigate(`/edit/${res.data._id}`); // optional: redirect to edit URL
+                setTestData(res.data);
+                navigate(`/edit/${res.data._id}`, { replace: true });
             } catch (err) {
                 console.error("Error creating new test:", err);
             }
         };
 
         createEmptyTest();
-    }, [id, location.pathname]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // run only once
 
 
 
@@ -266,51 +272,70 @@ const TestCreateEditView = () => {
 
     return (
         <div className="test-container">
-            <h1 className="test-header">{id ? "Edit Test" : "Create New Test"}</h1>
+            <h1 className="test-header">IELTS Test Creation</h1>
             <form onSubmit={handleSubmit}>
-                <label>Test Name:</label>
-                <input
-                    type="text"
-                    value={testData.name}
-                    onChange={(e) => setTestData({ ...testData, name: e.target.value })}
-                />
-                <button type="button" onClick={addSection}>Add Section</button>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <label style={{ whiteSpace: "nowrap" }}>Test Name:</label>
+                    <input
+                        type="text"
+                        value={testData.name}
+                        onChange={(e) => setTestData({ ...testData, name: e.target.value })}
+                    />
+                </div>
+
+
+
 
 
                 {sections.map((section, secIdx) => (
                     <div key={secIdx} className="section-card">
-                        <h2>{section.sectionTitle}</h2>
-                        <label>Section Title: </label>
-                        <input
-                            type="text"
-                            value={section.sectionTitle}
-                            onChange={(e) => {
-                                const updatedSection = { ...section, sectionTitle: e.target.value };
-                                updateSection(secIdx, updatedSection);
-                            }}
-                        />
+                        <div className="section-header">
+                            <h2>{section.sectionTitle}</h2>
+                            <button className="remove-button" onClick={() => removeSection(secIdx)}>
+                                <BiTrash size={20} /> Remove Section
+                            </button>
+                        </div>
+
+                        <div className="section-title-row">
+                            <label>Section Title:</label>
+                            <input
+                                type="text"
+                                value={section.sectionTitle}
+                                onChange={(e) => {
+                                    const updatedSection = { ...section, sectionTitle: e.target.value };
+                                    updateSection(secIdx, updatedSection);
+                                }}
+                            />
+                        </div>
                         <br />
                         {/* READING */}
                         {testData.type === "reading" && (
                             <div>
-                                <h3>Passages</h3>
-
                                 {section.passages.map((p, pIdx) => (
                                     <div key={pIdx}>
-                                        <b>{p.header}</b>
+                                        <div className="passage-header">
+                                            <b>Passage {p.header}</b>
+                                            <button
+                                                className="remove-button"
+                                                onClick={() => removePassage(secIdx, pIdx)}
+                                                title="Remove this passage"
+                                            >
+                                                <BiTrash size={16} />
+                                            </button>
+                                        </div>
+
                                         <textarea
                                             value={p.text}
                                             onChange={(e) => {
                                                 const updatedPassages = [...section.passages];
                                                 updatedPassages[pIdx] = { ...p, text: e.target.value };
                                                 let updatedSection = { ...section, passages: updatedPassages };
-
-                                                // Sync matching_headings questions
                                                 updatedSection = syncMatchingHeadingsItems(updatedSection);
-
                                                 updateSection(secIdx, updatedSection);
                                             }}
                                         />
+
+
                                     </div>
                                 ))}
 
@@ -625,45 +650,60 @@ const TestCreateEditView = () => {
                                             </div>
                                         )}
                                         {q.type === "matching_features" && (
-                                            <div>
+                                            <div style={{ marginBottom: "12px" }}>
+                                                <label>{itemIdx + 1}. </label>
                                                 <input
                                                     type="text"
-                                                    placeholder="Questions"
+                                                    placeholder="Question text"
                                                     value={item.text || ""}
                                                     onChange={(e) => {
                                                         const updatedItems = [...q.questionItems];
-                                                        updatedItems[itemIdx] = {
-                                                            ...item,
-                                                            text: e.target.value
-                                                        };
+                                                        updatedItems[itemIdx] = { ...item, text: e.target.value };
                                                         const updatedQ = { ...q, questionItems: updatedItems };
                                                         const updatedQuestions = [...section.questions];
                                                         updatedQuestions[qIdx] = updatedQ;
                                                         updateSection(secIdx, { ...section, questions: updatedQuestions });
                                                     }}
-                                                    style={{ marginRight: "5px", width: "50%" }}
+                                                    style={{ width: "60%", marginRight: "8px" }}
                                                 />
-                                                <input
-                                                    type="text"
-                                                    placeholder="Correct Feature"
-                                                    value={q.answers?.find(a => a.id === item.id)?.value || ""}
+
+                                                <select
+                                                    value={q.answers?.find((a) => a.id === item.id)?.value || ""}
                                                     onChange={(e) => {
-                                                        const updatedAnswers = q.answers ? [...q.answers] : [];
-                                                        const existing = updatedAnswers.find(a => a.id === item.id);
-                                                        if (existing) {
-                                                            existing.value = e.target.value;
-                                                        } else {
-                                                            updatedAnswers.push({ id: item.id, value: e.target.value, sourceText: "" });
-                                                        }
+                                                        const updatedAnswers = [...(q.answers || [])];
+                                                        const existing = updatedAnswers.find((a) => a.id === item.id);
+                                                        if (existing) existing.value = e.target.value;
+                                                        else
+                                                            updatedAnswers.push({
+                                                                id: item.id,
+                                                                value: e.target.value,
+                                                                sourceText: "",
+                                                            });
                                                         const updatedQ = { ...q, answers: updatedAnswers };
                                                         const updatedQuestions = [...section.questions];
                                                         updatedQuestions[qIdx] = updatedQ;
                                                         updateSection(secIdx, { ...section, questions: updatedQuestions });
                                                     }}
-                                                    style={{ width: "45%" }}
-                                                />
+                                                >
+                                                    <option value="">-- Select Feature --</option>
+                                                    {(q.features || []).map((f, i) => {
+                                                        const label =
+                                                            q.featureLabelType === "i"
+                                                                ? ["i", "ii", "iii", "iv", "v", "vi", "vii"][i]
+                                                                : String.fromCharCode(65 + i);
+                                                        return (
+                                                            <option key={i} value={f}>
+                                                                {label}. {f}
+                                                            </option>
+                                                        );
+                                                    })}
+                                                </select>
                                             </div>
                                         )}
+
+
+
+
                                         {q.type === "multiple_choice" && (
                                             <div>
                                                 <input
@@ -911,6 +951,97 @@ const TestCreateEditView = () => {
                                     </div>
                                 ))}
                                 {/* Outside loop */}
+                                {q.type === "matching_features" && (
+                                    <div>
+                                        <h4>Matching Features Setup</h4>
+
+                                        <label>Feature List Title: </label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. List of countries"
+                                            value={q.featureListTitle || ""}
+                                            onChange={(e) => {
+                                                const updatedQ = { ...q, featureListTitle: e.target.value };
+                                                const updatedQuestions = [...section.questions];
+                                                updatedQuestions[qIdx] = updatedQ;
+                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                            }}
+                                            style={{ width: "60%", marginBottom: "6px" }}
+                                        />
+
+                                        <br />
+                                        <label>Label Type: </label>
+                                        <select
+                                            value={q.featureLabelType || "A"}
+                                            onChange={(e) => {
+                                                const updatedQ = { ...q, featureLabelType: e.target.value };
+                                                const updatedQuestions = [...section.questions];
+                                                updatedQuestions[qIdx] = updatedQ;
+                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                            }}
+                                            style={{ marginBottom: "6px" }}
+                                        >
+                                            <option value="A">A, B, C...</option>
+                                            <option value="i">i, ii, iii...</option>
+                                        </select>
+
+                                        <h5>Feature List</h5>
+                                        {(q.features || []).map((feature, fIdx) => {
+                                            const label =
+                                                q.featureLabelType === "i"
+                                                    ? ["i", "ii", "iii", "iv", "v", "vi", "vii"][fIdx]
+                                                    : String.fromCharCode(65 + fIdx);
+
+                                            return (
+                                                <div key={fIdx} style={{ marginBottom: "5px" }}>
+                                                    <b>{label}.</b>
+                                                    <input
+                                                        type="text"
+                                                        placeholder={`Feature ${label}`}
+                                                        value={feature}
+                                                        onChange={(e) => {
+                                                            const updatedFeatures = [...q.features];
+                                                            updatedFeatures[fIdx] = e.target.value;
+                                                            const updatedQ = { ...q, features: updatedFeatures };
+                                                            const updatedQuestions = [...section.questions];
+                                                            updatedQuestions[qIdx] = updatedQ;
+                                                            updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                        }}
+                                                        style={{ width: "80%", marginLeft: "6px" }}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const updatedFeatures = q.features.filter((_, i) => i !== fIdx);
+                                                            const updatedQ = { ...q, features: updatedFeatures };
+                                                            const updatedQuestions = [...section.questions];
+                                                            updatedQuestions[qIdx] = updatedQ;
+                                                            updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                        }}
+                                                        style={{ marginLeft: "6px" }}
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const updatedFeatures = [...(q.features || []), ""];
+                                                const updatedQ = { ...q, features: updatedFeatures };
+                                                const updatedQuestions = [...section.questions];
+                                                updatedQuestions[qIdx] = updatedQ;
+                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                            }}
+                                        >
+                                            Add Feature
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/*
                                 {q.type === "summary_completion" && (
                                     <div style={{ marginTop: "10px" }}>
                                         <h4>Summary Text</h4>
@@ -972,8 +1103,10 @@ const TestCreateEditView = () => {
                                         </button>
 
                                         <h4>Answers</h4>
+                                        
                                         {q.answers?.map((answer, idx) => (
                                             <div key={answer.id} style={{ display: "flex", alignItems: "center", marginBottom: "5px" }}>
+                                                
                                                 <input
                                                     type="text"
                                                     placeholder={`Answer for blank #${idx + 1}`}
@@ -1030,6 +1163,7 @@ const TestCreateEditView = () => {
                                             </div>
                                         ))}
 
+
                                         <h4>Preview</h4>
                                         <div style={{ border: "1px solid #ccc", padding: "5px", whiteSpace: "pre-wrap" }}>
                                             {(() => {
@@ -1043,17 +1177,199 @@ const TestCreateEditView = () => {
                                         </div>
                                     </div>
                                 )}
+                                     */}
+                                {q.type === "summary_completion" && (
+                                    <div style={{ marginTop: "10px" }}>
+                                        <h4>Summary Text</h4>
+                                        <textarea
+                                            ref={summaryRef}
+                                            rows={4}
+                                            style={{ width: "100%" }}
+                                            value={q.summary || ""}
+                                            onChange={(e) => {
+                                                const newText = e.target.value;
+                                                const blankCount = (newText.match(/\[BLANK\]/g) || []).length;
+
+                                                // Sync answers array length
+                                                let answers = q.answers || [];
+                                                if (blankCount > answers.length) {
+                                                    for (let i = answers.length; i < blankCount; i++) {
+                                                        answers.push({ id: uuidv4(), value: "", sourceText: "" });
+                                                    }
+                                                } else if (blankCount < answers.length) {
+                                                    answers = answers.slice(0, blankCount);
+                                                }
+
+                                                const updatedQ = { ...q, summary: newText, answers };
+                                                const updatedQuestions = [...section.questions];
+                                                updatedQuestions[qIdx] = updatedQ;
+                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                            }}
+                                        />
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (!summaryRef.current) return;
+
+                                                const textarea = summaryRef.current;
+                                                const cursorPos = textarea.selectionStart; // get cursor position
+
+                                                const updatedText =
+                                                    (q.summary || "").slice(0, cursorPos) +
+                                                    " [BLANK]" +
+                                                    (q.summary || "").slice(cursorPos);
+
+                                                // Increment answers array
+                                                const updatedAnswers = [...(q.answers || []), { id: uuidv4(), value: "", sourceText: "" }];
+
+                                                const updatedQ = { ...q, summary: updatedText, answers: updatedAnswers };
+                                                const updatedQuestions = [...section.questions];
+                                                updatedQuestions[qIdx] = updatedQ;
+                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
+
+                                                // Move cursor after inserted [BLANK]
+                                                setTimeout(() => {
+                                                    textarea.selectionStart = textarea.selectionEnd = cursorPos + " [BLANK]".length;
+                                                    textarea.focus();
+                                                }, 0);
+                                            }}
+                                        >
+                                            Add Blank
+                                        </button>
+
+                                        <h4>Answers (drag to reorder)</h4>
+                                        <Reorder.Group
+                                            axis="y"
+                                            values={q.answers || []}
+                                            onReorder={(newOrder) => {
+                                                const updatedQ = { ...q, answers: newOrder };
+                                                const updatedQuestions = [...section.questions];
+                                                updatedQuestions[qIdx] = updatedQ;
+                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
+
+                                                // Keep [BLANK] count consistent
+                                                let newSummary = q.summary || "";
+                                                const blanks = newSummary.match(/\[BLANK\]/g) || [];
+                                                if (blanks.length > 0) {
+                                                    newSummary = newSummary.replace(/\[BLANK\]/g, () => "[TMP]");
+                                                    newOrder.forEach(() => {
+                                                        newSummary = newSummary.replace("[TMP]", "[BLANK]");
+                                                    });
+                                                }
+                                                updatedQ.summary = newSummary;
+                                            }}
+                                        >
+                                            {(q.answers || []).map((answer, idx) => (
+                                                <Reorder.Item
+                                                    key={answer.id}
+                                                    value={answer}
+
+                                                >
+                                                    <motion.div
+                                                        layout
+                                                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                                                        style={{
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            marginBottom: "8px",
+                                                            background: "#f9f9f9",
+                                                            padding: "6px",
+                                                            borderRadius: "5px",
+                                                        }}
+                                                    ></motion.div>
+                                                    <input
+                                                        type="text"
+                                                        placeholder={`Answer for blank #${idx + 1}`}
+                                                        value={answer.value}
+                                                        onChange={(e) => {
+                                                            const updatedAnswers = q.answers.map(a =>
+                                                                a.id === answer.id ? { ...a, value: e.target.value } : a
+                                                            );
+                                                            const updatedQ = { ...q, answers: updatedAnswers };
+                                                            const updatedQuestions = [...section.questions];
+                                                            updatedQuestions[qIdx] = updatedQ;
+                                                            updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                        }}
+                                                        style={{ flex: 1 }}
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Answer comes from..."
+                                                        value={answer.sourceText}
+                                                        onChange={(e) => {
+                                                            const updatedAnswers = q.answers.map(a =>
+                                                                a.id === answer.id ? { ...a, sourceText: e.target.value } : a
+                                                            );
+                                                            const updatedQ = { ...q, answers: updatedAnswers };
+                                                            const updatedQuestions = [...section.questions];
+                                                            updatedQuestions[qIdx] = updatedQ;
+                                                            updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                        }}
+                                                        style={{ flex: 1, marginRight: "5px" }}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            // Remove blank from summary
+                                                            let blankIndex = 0;
+                                                            const updatedText = (q.summary || "").replace(/\[BLANK\]/g, () => {
+                                                                blankIndex++;
+                                                                return blankIndex === idx + 1 ? "" : "[BLANK]";
+                                                            });
+
+                                                            // Remove the answer
+                                                            const updatedAnswers = q.answers.filter(a => a.id !== answer.id);
+
+                                                            const updatedQ = { ...q, summary: updatedText, answers: updatedAnswers };
+                                                            const updatedQuestions = [...section.questions];
+                                                            updatedQuestions[qIdx] = updatedQ;
+                                                            updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                        }}
+                                                        style={{ marginLeft: "5px" }}
+                                                    >
+                                                        Remove Item
+                                                    </button>
+                                                    <span style={{ cursor: "grab", padding: "4px 8px" }}>☰</span>
+                                                </Reorder.Item>
+                                            ))}
+                                        </Reorder.Group>
+
+                                        <h4>Preview</h4>
+                                        <div
+                                            style={{
+                                                border: "1px solid #ccc",
+                                                padding: "5px",
+                                                whiteSpace: "pre-wrap",
+                                            }}
+                                        >
+                                            {(() => {
+                                                let idx = 0;
+                                                return (q.summary || "").replace(/\[BLANK\]/g, () => {
+                                                    const val = q.answers?.[idx]?.value || "[BLANK]";
+                                                    idx++;
+                                                    return val;
+                                                });
+                                            })()}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
+
                         ))}
+
                         <button type="button" onClick={() => addQuestion(secIdx)}>
                             Add Question
                         </button>
                     </div>
                 ))
                 }
+                <div className="new-section-card" onClick={addSection}>
+                    + Add New Section
+                </div>
 
                 <br />
-                <button type="submit">Save</button>
+                <button type="submit" className="save-button">Complete Creation</button>
             </form >
         </div >
     );

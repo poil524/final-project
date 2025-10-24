@@ -20,6 +20,11 @@ const questionSchema = new mongoose.Schema({
     summary: { type: String, default: "" },
     questionItems: { type: [questionItemSchema], default: [] },
     answers: { type: [answerSchema], default: [] },
+
+    // For matching_features
+  featureListTitle: { type: String, default: "" }, // e.g. "List of countries"
+  featureLabelType: { type: String, enum: ["A", "i"], default: "A" },
+  features: { type: [String], default: [] }, // determines label style
 });
 
 const passageSchema = new mongoose.Schema({

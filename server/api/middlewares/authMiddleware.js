@@ -31,29 +31,3 @@ const authorisedAdmin = (req, res, next) => {
 
 export { authenticate, authorisedAdmin };
 export default authenticate;
-
-
-/*
-export default function (req, res, next) {
-    console.log("Cookies Debug")
-    console.log("Cookies:", req.cookies);
-    console.log("Header token:", req.header("x-auth-token"));
-
-    const token = req.header("x-auth-token") || req.cookies?.jwt;
-
-    if (!token) {
-        console.log("No token found in header or cookie");
-        return res.status(401).json({ message: "Access denied. No token provided." });
-    }
-
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        console.log("Decoded token:", decoded);
-        req.user = decoded;
-        next();
-    } catch (err) {
-        console.error("JWT verification failed:", err.message);
-        res.status(400).json({ message: "Invalid token" });
-    }
-}
-*/

@@ -1,0 +1,165 @@
+/* Container & page layout */
+.test-taking-container {
+    max-width: 50%;
+    margin: 20px auto;
+    padding: 20px 40px;
+    font-family: "Times New Roman", serif;
+    background: #fff;
+    color: #000;
+    line-height: 1.6;
+    border: 1px solid #ddd;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Headings */
+.test-taking-container h1 {
+    text-align: center;
+    font-size: 28px;
+    margin-bottom: 20px;
+}
+
+.test-taking-container h2 {
+    font-size: 22px;
+    margin-top: 25px;
+    border-bottom: 1px solid #000;
+    padding-bottom: 4px;
+}
+
+.test-taking-container h3 {
+    font-size: 18px;
+    margin-top: 15px;
+}
+
+.test-taking-container h4 {
+    font-size: 16px;
+    margin: 12px 0 6px;
+    font-weight: bold;
+}
+
+/* Paragraphs */
+.test-taking-container p {
+    margin: 6px 0;
+}
+
+/* Feature List / Box */
+.feature-list-box {
+    border: 1px solid #000;
+    background: #f9f9f9;
+    padding: 10px 15px;
+    border-radius: 4px;
+    margin-bottom: 12px;
+}
+
+.feature-list-box ul {
+    padding-left: 25px;
+    margin: 5px 0 0 0;
+}
+
+.feature-list-box li {
+    margin-bottom: 4px;
+}
+
+/* Questions */
+.question-block {
+    margin-bottom: 16px;
+}
+
+.question-block label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.question-block input[type="text"],
+.question-block select {
+    width: 40%;
+    padding: 6px 8px;
+    font-size: 14px;
+    margin-bottom: 8px;
+    border: 1px solid #aaa;
+    border-radius: 3px;
+}
+
+/* Multiple choice */
+.question-block input[type="radio"] {
+    margin-right: 6px;
+}
+
+/* Content editable (writing) */
+.writing-box {
+    border: 1px solid #000;
+    min-height: 180px;
+    padding: 10px;
+    margin: 10px 0;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+/* Highlight */
+.highlight-active {
+    background: yellow;
+}
+
+/* Images */
+.test-taking-container img {
+    max-width: 100%;
+    margin: 12px 0;
+}
+
+/* Transcript box */
+.transcript-box {
+    background: #f1f1f1;
+    padding: 8px 10px;
+    margin-bottom: 12px;
+    border-left: 4px solid #000;
+    font-style: italic;
+}
+
+/* Split view */
+.toggle-button {
+    text-align: right;
+    margin: 10px 0;
+}
+
+.toggle-button button {
+    padding: 6px 12px !important;
+    font-size: 14px !important;
+    cursor: pointer !important;
+    background: #fff !important; /* or transparent if you want */
+    border: 1px solid #ccc !important; /* optional */
+    color: #000 !important; /* make icon visible */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+
+.two-view-layout {
+    display: flex;
+    margin-top: 10px;
+    gap: 0;
+}
+
+.passage-container,
+.question-container {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 80vh;
+    padding: 16px;
+    border: none;
+    background: var(--color-bg);
+}
+
+/* Add single separator line between the two panes */
+.passage-container {
+    border-right: 1px solid #ccc;
+}
+
+.test-taking-container.two-view-layout-active {
+    max-width: 100%;
+    margin: 0;
+    border: none;
+    box-shadow: none;
+    padding: 20px;
+}

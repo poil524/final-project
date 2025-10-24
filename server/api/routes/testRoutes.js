@@ -29,7 +29,7 @@ router.post("/", async (req, res) => {
 // GET all tests, optional filter by type
 router.get("/", async (req, res) => {
   try {
-    const { type } = req.query; // e.g., /api/tests?type=listening
+    const { type } = req.query; 
     let query = {};
     if (type && ["listening", "reading", "writing", "speaking"].includes(type)) {
       query.type = type;
@@ -56,28 +56,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-/* Update test
-router.put("/:id", async (req, res) => {
-  try {
-    const test = await Test.findById(req.params.id);
-    if (!test) return res.status(404).json({ error: "Test not found" });
 
-    // Update fields
-    test.name = req.body.name;
-    test.type = req.body.type;
-    test.sections = req.body.sections;
-
-    // Important: tell Mongoose the nested array changed
-    test.markModified("sections");
-
-    await test.save();
-    res.json(test);
-  } catch (err) {
-    console.error("Error updating test:", err);
-    res.status(500).json({ error: "Failed to update test" });
-  }
-});
-*/
 // AUDIO UPLOAD
 // Add audio
 const storage = multer.memoryStorage();
