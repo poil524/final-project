@@ -7,9 +7,26 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import multer from "multer";
 import OpenAI from "openai";
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { authenticate } from '../middlewares/authMiddleware.js';
+//import { Deepgram } from "@deepgram/sdk";
+import speech from '@google-cloud/speech';
+
+
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import { tmpdir } from "os";
+import { pipeline } from "stream";
+import { promisify } from "util";
+const streamPipeline = promisify(pipeline);
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 
 const router = express.Router();
-
+const client = new speech.SpeechClient();
+//const deepgram = new Deepgram(process.env.DEEPGRAM_API_KEY);
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -29,7 +46,7 @@ router.post("/", async (req, res) => {
 // GET all tests, optional filter by type
 router.get("/", async (req, res) => {
   try {
-    const { type } = req.query; 
+    const { type } = req.query;
     let query = {};
     if (type && ["listening", "reading", "writing", "speaking"].includes(type)) {
       query.type = type;
@@ -58,7 +75,7 @@ router.get("/:id", async (req, res) => {
 
 
 // AUDIO UPLOAD
-// Add audio
+
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
@@ -71,7 +88,7 @@ const s3 = new S3Client({
 });
 
 const bucketName = 'final-project-ielts-test'
-
+/* Add audio
 router.post("/upload-audio", upload.single("audio"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
@@ -99,8 +116,47 @@ router.post("/upload-audio", upload.single("audio"), async (req, res) => {
     res.status(500).json({ error: "Failed to upload audio" });
   }
 });
+*/
+router.post("/upload-audio", upload.single("audio"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
-// Load audio
+    const { testId, folderType, studentId } = req.body;
+    const file = req.file;
+
+    // Choose folder based on context
+    const folder =
+      folderType === "student-speaking" ? "student-speaking" : "audio";
+
+    // Include studentId safely if provided
+    const studentPart = studentId ? `${studentId}-` : "";
+
+    const filename = `${studentPart}${testId}-${Date.now()}-${file.originalname}`;
+    const key = `${folder}/${filename}`;
+
+    const params = {
+      Bucket: bucketName,
+      Key: key,
+      Body: file.buffer,
+      ContentType: file.mimetype || "audio/mpeg",
+      ACL: "private",
+    };
+
+    await s3.send(new PutObjectCommand(params));
+
+    res.status(200).json({
+      message: `Audio uploaded successfully to ${folder}`,
+      key,
+    });
+  } catch (err) {
+    console.error("Error uploading audio:", err);
+    res.status(500).json({ error: "Failed to upload audio" });
+  }
+});
+
+
+
+/* Load audio
 router.get("/audio-url/:filename", async (req, res) => {
   try {
     const { filename } = req.params;
@@ -120,6 +176,35 @@ router.get("/audio-url/:filename", async (req, res) => {
     res.status(500).json({ error: "Failed to generate signed URL" });
   }
 });
+*/
+
+router.get("/audio-url/:filename", async (req, res) => {
+  try {
+    const { filename } = req.params;
+
+    // Detect which folder to look in
+    // (the frontend can send either audio/... or student-speaking/...)
+    let key = filename;
+    if (!key.startsWith("audio/") && !key.startsWith("student-speaking/")) {
+      key = `audio/${key}`; // fallback default
+    }
+
+    const command = new GetObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+    });
+
+    const url = await getSignedUrl(s3, command, { expiresIn: 3600 });
+    res.json({ url });
+  } catch (err) {
+    console.error("Error generating signed URL:", err);
+    res.status(404).json({ error: `${req.params.filename} not found` });
+  }
+});
+
+
+
+
 
 const imageUpload = multer({ storage: multer.memoryStorage() });
 
@@ -258,6 +343,119 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+// Evaluate speaking
+router.post("/evaluate-speaking", async (req, res) => {
+  try {
+    console.log("[DEBUG] /evaluate-speaking called");
+    const { sections } = req.body;
+
+    if (!sections || !Array.isArray(sections) || sections.length === 0) {
+      return res.status(400).json({ error: "No speaking sections provided" });
+    }
+
+    const results = [];
+
+    for (const section of sections) {
+      const { requirement, audioKey } = section;
+
+      if (!audioKey) {
+        results.push({
+          requirement,
+          error: "No audio file provided",
+        });
+        continue;
+      }
+
+      // Download audio from S3
+      const command = new GetObjectCommand({
+        Bucket: bucketName,
+        Key: audioKey,
+      });
+      const audioObj = await s3.send(command);
+
+      // Write to temp file
+      const tempFilePath = path.join(tmpdir(), `temp_${Date.now()}.mp3`);
+      if (audioObj.Body instanceof Buffer) {
+        fs.writeFileSync(tempFilePath, audioObj.Body);
+      } else if (audioObj.Body.pipe) {
+        await streamPipeline(audioObj.Body, fs.createWriteStream(tempFilePath));
+      } else {
+        throw new Error("Unexpected S3 Body type");
+      }
+
+      // Convert to Base64
+      const audioBytes = fs.readFileSync(tempFilePath).toString("base64");
+
+      // Transcribe with Google Cloud Speech
+      const [response] = await client.recognize({
+        audio: { content: audioBytes },
+        config: {
+          encoding: "MP3",       // MP3 file
+          languageCode: "en-US", // English
+        },
+      });
+
+      const transcript = response.results
+        .map((r) => r.alternatives[0].transcript)
+        .join(" ");
+
+      console.log("[DEBUG] Transcript:", transcript);
+
+      // Evaluate transcript using OpenAI GPT
+      const prompt = `
+You are an IELTS Speaking examiner. Evaluate the following student's speaking performance based on IELTS Speaking Band Descriptors.
+
+Task requirement:
+"${requirement || "No specific requirement"}"
+
+Student transcript:
+${transcript}
+
+Provide JSON output with these fields:
+{
+  "band": number (0–9),
+  "feedback": {
+    "fluency_coherence": string,
+    "lexical_resource": string,
+    "grammatical_range_accuracy": string,
+    "pronunciation": string,
+    "summary": string
+  }
+}
+`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+      });
+
+      const text = completion.choices?.[0]?.message?.content?.trim();
+      console.log("[DEBUG] OpenAI response:", text);
+
+      let evaluation;
+      try {
+        evaluation = JSON.parse(text);
+      } catch {
+        evaluation = { band: null, feedback: { summary: text } };
+      }
+
+      results.push({
+        requirement,
+        transcript,
+        ...evaluation,
+      });
+
+      // Clean up temp file
+      fs.unlink(tempFilePath, () => {});
+    }
+
+    res.json({ evaluations: results });
+  } catch (err) {
+    console.error("[ERROR] Speaking evaluation failed:", err);
+    res.status(500).json({ error: "Failed to evaluate speaking" });
+  }
+});
+
 
 // Evaluate Writing
 router.post("/evaluate-writing", async (req, res) => {
@@ -343,6 +541,66 @@ Return JSON with fields:
   }
 });
 
+// Save test result to student
+// Save test result to student
+router.post("/:id/save-result", authenticate, async (req, res) => {
+  try {
+    const testId = req.params.id;
+    const {
+      score,
+      total,
+      band,
+      feedback,
+      speakingAudioKey,
+      transcript
+    } = req.body; // include speakingAudioKey + transcript
+    const user = req.user; // from authMiddleware
+
+    // Only allow if user is NOT admin/teacher
+    if (user.isAdmin || user.isTeacher) {
+      return res.status(403).json({ error: "Admins/Teachers cannot save test results." });
+    }
+
+    const test = await Test.findById(testId);
+    if (!test) return res.status(404).json({ error: "Test not found" });
+
+    // Create result entry
+    const resultEntry = {
+      testId,
+      testName: test.name,
+      type: test.type,
+      score,
+      total,
+      band,
+      feedback,
+      speakingAudioKey,
+      transcript,
+      createdAt: new Date()
+    };
+
+    // Push or update existing result for the same test
+    const existingIndex = user.testResults.findIndex(
+      (r) => r.testId.toString() === testId.toString()
+    );
+
+    if (existingIndex >= 0) {
+      user.testResults[existingIndex] = resultEntry;
+    } else {
+      user.testResults.push(resultEntry);
+    }
+
+    await user.save();
+
+    // Increment test’s studentsTaken count safely
+    test.studentsTaken = (test.studentsTaken || 0) + 1;
+    await test.save();
+
+    res.json({ message: "Result saved successfully", testResults: user.testResults });
+  } catch (err) {
+    console.error("Error saving test result:", err);
+    res.status(500).json({ error: "Failed to save test result" });
+  }
+});
 
 
 export default router;

@@ -3,10 +3,20 @@ import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import AudioPlayer from "../components/AudioPlayer";
 import Image from "../components/Image";
+import AudioRecorder from "../components/AudioRecorder";
 import './TestTakingView.css';
 import { GoArrowSwitch } from "react-icons/go";
 
-const QuestionBlock = ({ question: q, section, answers, handleAnswerChange, setHighlightText, questionCounter }) => {
+const stripHTML = (str) => str.replace(/<[^>]+>/g, '');
+const QuestionBlock = ({
+  question: q,
+  section,
+  answers,
+  handleAnswerChange,
+  setHighlightText,
+  questionCounter,
+  showAnswers,
+}) => {
   const headingDisplayItems =
     q.shuffledItems?.length > 0
       ? q.shuffledItems.map((si) => ({
@@ -25,105 +35,92 @@ const QuestionBlock = ({ question: q, section, answers, handleAnswerChange, setH
       ? q.shuffledEnds.map((e) => (typeof e === "string" ? e : e.value))
       : (q.answers || []).map((a) => a.value);
 
+  const getCorrectAnswer = (itemId) => {
+    const correctObj = (q.answers || []).find((a) => a.id === itemId);
+    return correctObj?.value || "";
+  };
+
+  const getSourceText = (itemId) => {
+    const correctObj = (q.answers || []).find((a) => a.id === itemId);
+    return correctObj?.sourceText || "";
+  };
+
+  const renderAnswer = (itemId) => {
+    const studentAnswer = answers[q._id]?.[itemId] || "";
+    const correctAnswer = getCorrectAnswer(itemId);
+    const sourceText = getSourceText(itemId); // full DB text
+    const isCorrect = studentAnswer === correctAnswer;
+
+    return (
+      <span
+        className={isCorrect ? "" : "incorrect-answer"}
+        onMouseEnter={() => {
+          if (showAnswers && sourceText) {
+            const cleanText = stripHTML(sourceText).trim();
+            setHighlightText(cleanText);
+          }
+        }}
+
+
+        onMouseLeave={() => {
+          if (showAnswers) {
+            setHighlightText(null);
+          }
+        }}
+      >
+        {studentAnswer || <em>(No answer)</em>}
+        {!isCorrect && ` → Correct: ${correctAnswer}`}
+      </span>
+    );
+  };
+
+
+
   return (
     <div className="question-block">
       <h4>{q.requirement}</h4>
 
-      {q.type === "matching_paragraph_information" &&
-        (q.questionItems || []).map((item) => {
-          questionCounter.current++;
-          return (
-            <div key={item.id}>
-              <label>
-                {questionCounter.current}. {item.text}
-              </label>
-              <select
-                value={answers[q._id]?.[item.id] || ""}
-                onChange={(e) => handleAnswerChange(q._id, item.id, e.target.value)}
-              >
-                <option value="">-- Select Paragraph --</option>
-                {section.passages.map((p) => (
-                  <option key={p.header} value={p.header}>
-                    {p.header}
-                  </option>
-                ))}
-              </select>
-            </div>
-          );
-        })}
+      {(q.questionItems || []).map((item) => {
+        questionCounter.current++;
 
-      {q.type === "matching_headings" &&
-        headingDisplayItems.map((disp) => {
-          const original = (q.questionItems || []).find((it) => it.id === disp.key) || {};
-          const studentAnswer = answers[q._id]?.[original.id] || "";
-          questionCounter.current++;
-          return (
-            <div key={disp.key} style={{ marginBottom: 8 }}>
-              <label>
-                {questionCounter.current}. {disp.text}
-              </label>
-              <select
-                value={studentAnswer}
-                onChange={(e) => handleAnswerChange(q._id, original.id, e.target.value)}
-              >
-                <option value="">-- Select Paragraph --</option>
-                {section.passages?.map((p) => (
-                  <option key={p.header} value={p.header}>
-                    {p.header}
-                  </option>
-                ))}
-              </select>
-            </div>
-          );
-        })}
-
-      {q.type === "matching_sentence_endings" &&
-        (q.questionItems || []).map((item) => {
-          questionCounter.current++;
-          const studentAnswer = answers[q._id]?.[item.id] || "";
+        // === Show answers mode ===
+        if (showAnswers) {
           return (
             <div key={item.id} style={{ marginBottom: 8 }}>
               <label>
-                {questionCounter.current}. {item.text}
+                {questionCounter.current}. {item.text}: {renderAnswer(item.id)}
               </label>
-              <select
-                value={studentAnswer}
-                onChange={(e) => handleAnswerChange(q._id, item.id, e.target.value)}
-              >
-                <option value="">-- Select Ending --</option>
-                {endingOptions.map((opt, i) => (
-                  <option key={i} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
             </div>
           );
-        })}
+        }
 
-      {q.type === "matching_features" && (
-        <div className="feature-list-box" style={{ marginBottom: 12 }}>
-          <div
-            style={{
-              border: "1px solid #ccc",
-              padding: "10px",
-              marginBottom: "12px",
-              borderRadius: "6px",
-              background: "#f9f9f9",
-            }}
-          >
-            <strong>{q.featureListTitle || "Feature List"}:</strong>
-            <ul style={{ margin: "5px 0 0 0", paddingLeft: "20px" }}>
-              {(q.features || []).map((feature, idx) => {
-                const label = q.featureLabelType === "i" ? ["i", "ii", "iii", "iv", "v", "vi", "vii"][idx] : String.fromCharCode(65 + idx);
-                return <li key={idx}>{label}. {feature}</li>;
-              })}
-            </ul>
-          </div>
+        // === Normal input mode ===
+        switch (q.type) {
+          case "matching_paragraph_information":
+            return (
+              <div key={item.id}>
+                <label>
+                  {questionCounter.current}. {item.text}
+                </label>
+                <select
+                  value={answers[q._id]?.[item.id] || ""}
+                  onChange={(e) =>
+                    handleAnswerChange(q._id, item.id, e.target.value)
+                  }
+                >
+                  <option value="">-- Select Paragraph --</option>
+                  {section.passages.map((p) => (
+                    <option key={p.header} value={p.header}>
+                      {p.header}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            );
 
-          {(q.questionItems || []).map((item) => {
-            questionCounter.current++;
-            const studentAnswer = answers[q._id]?.[item.id] || "";
+          case "matching_headings":
+            const original = (q.questionItems || []).find((it) => it.id === item.id) || {};
+            const studentAnswer = answers[q._id]?.[original.id] || "";
             return (
               <div key={item.id} style={{ marginBottom: 8 }}>
                 <label>
@@ -131,11 +128,56 @@ const QuestionBlock = ({ question: q, section, answers, handleAnswerChange, setH
                 </label>
                 <select
                   value={studentAnswer}
+                  onChange={(e) => handleAnswerChange(q._id, original.id, e.target.value)}
+                >
+                  <option value="">-- Select Paragraph --</option>
+                  {section.passages?.map((p) => (
+                    <option key={p.header} value={p.header}>
+                      {p.header}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            );
+
+          case "matching_sentence_endings":
+            const studentAns = answers[q._id]?.[item.id] || "";
+            return (
+              <div key={item.id} style={{ marginBottom: 8 }}>
+                <label>
+                  {questionCounter.current}. {item.text}
+                </label>
+                <select
+                  value={studentAns}
+                  onChange={(e) => handleAnswerChange(q._id, item.id, e.target.value)}
+                >
+                  <option value="">-- Select Ending --</option>
+                  {endingOptions.map((opt, i) => (
+                    <option key={i} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            );
+
+          case "matching_features":
+            const studentFeature = answers[q._id]?.[item.id] || "";
+            return (
+              <div key={item.id} style={{ marginBottom: 8 }}>
+                <label>
+                  {questionCounter.current}. {item.text}
+                </label>
+                <select
+                  value={studentFeature}
                   onChange={(e) => handleAnswerChange(q._id, item.id, e.target.value)}
                 >
                   <option value="">-- Select Feature --</option>
                   {(q.features || []).map((feature, fIdx) => {
-                    const label = q.featureLabelType === "i" ? ["i", "ii", "iii", "iv", "v", "vi", "vii"][fIdx] : String.fromCharCode(65 + fIdx);
+                    const label =
+                      q.featureLabelType === "i"
+                        ? ["i", "ii", "iii", "iv", "v", "vi", "vii"][fIdx]
+                        : String.fromCharCode(65 + fIdx);
                     return (
                       <option key={fIdx} value={feature}>
                         {label}. {feature}
@@ -145,99 +187,83 @@ const QuestionBlock = ({ question: q, section, answers, handleAnswerChange, setH
                 </select>
               </div>
             );
-          })}
-        </div>
-      )}
 
-      {q.type === "multiple_choice" &&
-        (q.questionItems || []).map((item) => {
-          questionCounter.current++;
-          return (
-            <div key={item.id}>
-              <p>{questionCounter.current}. {item.text}</p>
-              {(item.options || []).map((option, optIdx) => (
-                <label key={optIdx} style={{ display: "block" }}>
-                  <input
-                    type="radio"
-                    name={`${q._id}_${item.id}`}
-                    value={option}
-                    checked={answers[q._id]?.[item.id] === option}
-                    onChange={(e) => handleAnswerChange(q._id, item.id, e.target.value)}
-                  />
-                  {option}
+          case "multiple_choice":
+            return (
+              <div key={item.id}>
+                <p>
+                  {questionCounter.current}. {item.text}
+                </p>
+                {(item.options || []).map((option, optIdx) => (
+                  <label key={optIdx} style={{ display: "block" }}>
+                    <input
+                      type="radio"
+                      name={`${q._id}_${item.id}`}
+                      value={option}
+                      checked={answers[q._id]?.[item.id] === option}
+                      onChange={(e) =>
+                        handleAnswerChange(q._id, item.id, e.target.value)
+                      }
+                    />
+                    {option}
+                  </label>
+                ))}
+              </div>
+            );
+
+          case "true_false_not_given":
+            return (
+              <div key={item.id}>
+                <label>
+                  {questionCounter.current}. {item.text}
                 </label>
-              ))}
-            </div>
-          );
-        })}
+                <select
+                  value={answers[q._id]?.[item.id] || ""}
+                  onChange={(e) => handleAnswerChange(q._id, item.id, e.target.value)}
+                >
+                  <option value="">-- Select --</option>
+                  <option value="True">True</option>
+                  <option value="False">False</option>
+                  <option value="Not Given">Not Given</option>
+                </select>
+              </div>
+            );
 
-      {q.type === "true_false_not_given" &&
-        (q.questionItems || []).map((item) => {
-          questionCounter.current++;
-          return (
-            <div key={item.id}>
-              <label>{questionCounter.current}. {item.text}</label>
-              <select
-                value={answers[q._id]?.[item.id] || ""}
-                onChange={(e) => handleAnswerChange(q._id, item.id, e.target.value)}
-              >
-                <option value="">-- Select --</option>
-                <option value="True">True</option>
-                <option value="False">False</option>
-                <option value="Not Given">Not Given</option>
-              </select>
-            </div>
-          );
-        })}
+          case "yes_no_not_given":
+            return (
+              <div key={item.id}>
+                <label>
+                  {questionCounter.current}. {item.text}
+                </label>
+                <select
+                  value={answers[q._id]?.[item.id] || ""}
+                  onChange={(e) => handleAnswerChange(q._id, item.id, e.target.value)}
+                >
+                  <option value="">-- Select --</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                  <option value="Not Given">Not Given</option>
+                </select>
+              </div>
+            );
 
-      {q.type === "yes_no_not_given" &&
-        (q.questionItems || []).map((item) => {
-          questionCounter.current++;
-          return (
-            <div key={item.id}>
-              <label>{questionCounter.current}. {item.text}</label>
-              <select
-                value={answers[q._id]?.[item.id] || ""}
-                onChange={(e) => handleAnswerChange(q._id, item.id, e.target.value)}
-              >
-                <option value="">-- Select --</option>
-                <option value="Yes">Yes</option>
-                <option value="No">No</option>
-                <option value="Not Given">Not Given</option>
-              </select>
-            </div>
-          );
-        })}
-
-      {q.type === "short_answer" &&
-        (q.questionItems || []).map((item) => {
-          questionCounter.current++;
-          return (
-            <div key={item.id}>
-              <label>{questionCounter.current}. {item.text}</label>
-              <input
-                type="text"
-                value={answers[q._id]?.[item.id] || ""}
-                onChange={(e) => handleAnswerChange(q._id, item.id, e.target.value)}
-              />
-            </div>
-          );
-        })}
-      {q.type === "summary_completion" &&
-        (q.answers || []).map((ans, idx) => {
-          questionCounter.current++;
-          const studentAns = answers[q._id]?.[ans.id] || "";
-          return (
-            <div key={ans.id}>
-              <label>{questionCounter.current}. Blank {idx + 1}</label>
-              <input
-                type="text"
-                value={studentAns}
-                onChange={(e) => handleAnswerChange(q._id, ans.id, e.target.value)}
-              />
-            </div>
-          );
-        })}
+          case "short_answer":
+          case "summary_completion":
+          default:
+            return (
+              <div key={item.id}>
+                <label>
+                  {questionCounter.current}. {item.text}
+                </label>
+                <input
+                  type="text"
+                  value={answers[q._id]?.[item.id] || ""}
+                  onChange={(e) => handleAnswerChange(q._id, item.id, e.target.value)}
+                />
+              </div>
+            );
+        }
+      })}
     </div>
   );
 };
@@ -280,6 +306,7 @@ const StudentTestView = () => {
         }));
 
         setTest({ ...fetchedTest, sections: updatedSections });
+
       } catch (err) {
         if (active) setError(err.response?.data?.message || err.message);
         console.error("Fetch test failed:", err);
@@ -307,17 +334,19 @@ const StudentTestView = () => {
     }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!window.confirm("Are you sure you want to finish this test?")) return;
 
     let score = 0;
     let total = 0;
     if (!test) return;
 
+    // ===== Calculate score =====
     if (["reading", "listening"].includes(test.type)) {
       test.sections.forEach((section) => {
         section.questions.forEach((q) => {
           if (!q) return;
+
           if (q.type === "matching_headings") {
             (q.questionItems || []).forEach((item, idx) => {
               total++;
@@ -328,6 +357,7 @@ const StudentTestView = () => {
             });
             return;
           }
+
           if (q.type === "summary_completion") {
             (q.answers || []).forEach((correct) => {
               total++;
@@ -341,6 +371,7 @@ const StudentTestView = () => {
             });
             return;
           }
+
           (q.questionItems || []).forEach((item) => {
             total++;
             const correctObj = (q.answers || []).find((a) => a.id === item.id);
@@ -360,25 +391,109 @@ const StudentTestView = () => {
         });
       });
     }
-    setResult({ score, total });
+
+    const resultData = { score, total };
+    setResult(resultData);
+
+    //Save to backend if user is a student
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.warn("No token found, skipping save result.");
+        return;
+      }
+
+      await axios.post(
+        `${BASE_URL}/api/tests/${testId}/save-result`,
+        resultData,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      console.log("Test result saved successfully.");
+    } catch (err) {
+      console.error("Failed to save test result:", err.response?.data || err);
+    }
   };
+
 
 
   const handleWritingSubmit = async () => {
     if (!test || !test.sections) return;
+
     const writingSections = test.type === "writing" ? test.sections : [];
     const payload = writingSections.map((section, idx) => ({
       requirement: section.requirement,
       content: answers[`writing_${idx}`] || "",
     }));
+
     try {
+      // Evaluate writing using OpenAI 
       const res = await axios.post(`${BASE_URL}/api/tests/evaluate-writing`, { sections: payload });
       setResult(res.data);
+
+      // Extract band and feedback from evaluation result
+      const firstEval = res.data?.evaluations?.[0];
+      const band = firstEval?.band || null;
+      const feedback = firstEval?.feedback || {};
+
+      // Save writing result if user is a student
+      const token = localStorage.getItem("token");
+      if (token) {
+        await axios.post(
+          `${BASE_URL}/api/tests/${testId}/save-result`,
+          { band, feedback },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        console.log("Writing result saved successfully.");
+      } else {
+        console.warn("No token found, skipping result save.");
+      }
     } catch (err) {
-      console.error("[DEBUG] Evaluation request failed:", err);
-      alert("Error evaluating writing");
+      console.error("Evaluation or saving failed:", err.response?.data || err);
+      alert("Error evaluating or saving writing result");
     }
   };
+
+  const handleSpeakingSubmit = async () => {
+    if (!test || !test.sections) return;
+
+    const speakingSections = test.type === "speaking" ? test.sections : [];
+    const payload = speakingSections.map((section) => ({
+      requirement: section.requirement,
+      audioKey: section.audioKey,
+    }));
+
+    try {
+      const res = await axios.post(`${BASE_URL}/api/tests/evaluate-speaking`, { sections: payload });
+      setResult(res.data);
+
+      // Extract first evaluation (you can expand for multi-part speaking)
+      const firstEval = res.data?.evaluations?.[0];
+      const band = firstEval?.band || null;
+      const feedback = firstEval?.feedback || {};
+      const transcript = firstEval?.transcript || "";
+
+      // Save speaking result to backend
+      const token = localStorage.getItem("token");
+      if (token) {
+        await axios.post(
+          `${BASE_URL}/api/tests/${testId}/save-result`,
+          { band, feedback, transcript },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        console.log("Speaking result saved successfully.");
+      } else {
+        console.warn("No token found, skipping result save.");
+      }
+    } catch (err) {
+      console.error("Evaluation or saving failed:", err.response?.data || err);
+      alert("Error evaluating or saving speaking result");
+    }
+  };
+
+
 
   if (error) return <div>Error: {error}</div>;
   if (!test) return <div>Loading...</div>;
@@ -388,6 +503,7 @@ const StudentTestView = () => {
   const readingSections = test.type === "reading" ? test.sections : [];
   const listeningSections = test.type === "listening" ? test.sections : [];
   const writingSections = test.type === "writing" ? test.sections : [];
+  const speakingSections = test.type === "speaking" ? test.sections : [];
 
   return (
     <div className={`test-taking-container ${twoViewMode ? "two-view-layout-active" : ""}`}>
@@ -419,17 +535,96 @@ const StudentTestView = () => {
         <button onClick={handleWritingSubmit}>Submit Writing</button>
       )}
 
+      {/* === Speaking Sections === */}
+      {speakingSections.length > 0 && (
+        <div>
+          {speakingSections.map((section, secIdx) => (
+            <div key={secIdx} className="speaking-section">
+              <h3>{section.sectionTitle}</h3>
+
+              {section.requirement && (
+                <p><b>Task:</b> {section.requirement}</p>
+              )}
+
+              <AudioRecorder
+                testId={testId}
+                sectionIndex={secIdx}
+                onUploadComplete={(key, clearLocalPreview) => {
+                  if (clearLocalPreview) clearLocalPreview();
+
+                  setTest((prev) => {
+                    const updatedSections = [...prev.sections];
+                    updatedSections[secIdx] = { ...updatedSections[secIdx], audioKey: key };
+                    return { ...prev, sections: updatedSections };
+                  });
+
+                  const token = localStorage.getItem("token");
+                  if (token) {
+                    axios.post(
+                      `${BASE_URL}/api/tests/${testId}/save-result`,
+                      { speakingAudioKey: key },
+                      { headers: { Authorization: `Bearer ${token}` } }
+                    );
+                  }
+                }}
+              />
+
+              {section.audioKey && (
+                <div style={{ marginTop: "10px" }}>
+                  <AudioPlayer s3Key={section.audioKey} />
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* 🟩 Add the Submit button here */}
+          <button onClick={handleSpeakingSubmit} style={{ marginTop: "20px" }}>
+            Submit Speaking
+          </button>
+
+          {/* 🟩 Show result if available */}
+          {result?.evaluations && (
+            <div className="speaking-result" style={{ marginTop: "15px" }}>
+              <h3>Speaking Evaluation Result</h3>
+              {result.evaluations.map((evalData, idx) => (
+                <div key={idx}>
+                  <p><b>Requirement:</b> {evalData.requirement}</p>
+                  {evalData.transcript && (
+                    <details>
+                      <summary>View Transcript</summary>
+                      <p>{evalData.transcript}</p>
+                    </details>
+                  )}
+                  <p><b>Band:</b> {evalData.band || "N/A"}</p>
+                  {evalData.feedback && (
+                    <ul>
+                      <li><b>Fluency & Coherence:</b> {evalData.feedback.fluency_coherence}</li>
+                      <li><b>Lexical Resource:</b> {evalData.feedback.lexical_resource}</li>
+                      <li><b>Grammar Range & Accuracy:</b> {evalData.feedback.grammatical_range_accuracy}</li>
+                      <li><b>Pronunciation:</b> {evalData.feedback.pronunciation}</li>
+                      <li><b>Summary:</b> {evalData.feedback.summary}</li>
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+
+
       {/* === Toggle Button for Reading/Listening View Mode === */}
-{(readingSections.length > 0 || listeningSections.length > 0) && (
-  <div className="toggle-button">
-    <button 
-      onClick={() => setTwoViewMode(!twoViewMode)} 
-      title={twoViewMode ? "Switch to One View" : "Switch to Two View"}
-    >
-      <GoArrowSwitch size={20} />
-    </button>
-  </div>
-)}
+      {(readingSections.length > 0 || listeningSections.length > 0) && (
+        <div className="toggle-button">
+          <button
+            onClick={() => setTwoViewMode(!twoViewMode)}
+            title={twoViewMode ? "Switch to One View" : "Switch to Two View"}
+          >
+            <GoArrowSwitch size={20} />
+          </button>
+        </div>
+      )}
 
 
       {/* === Two-View Mode (Split Screen) === */}
@@ -441,22 +636,28 @@ const StudentTestView = () => {
               <div key={`passage-${secIdx}`} className="section-block">
                 <h3>{section.sectionTitle}</h3>
                 {section.passages?.map((passage, idx) => (
+
                   <div key={idx} className="passage-block">
-                    <h4>{passage.header}</h4>
                     <p>
-                      {highlightText && passage.text.includes(highlightText)
-                        ? passage.text.split(highlightText).map((part, i, arr) =>
-                          i < arr.length - 1 ? (
-                            <React.Fragment key={i}>
-                              {part}
-                              <span className="highlight-active">{highlightText}</span>
-                            </React.Fragment>
-                          ) : (
-                            part
-                          )
-                        )
+                      {highlightText
+                        ? (() => {
+                          const plainText = passage.text.replace(/\s+/g, ' ').trim();
+                          const highlight = highlightText.replace(/\s+/g, ' ').trim();
+
+                          const parts = plainText.split(new RegExp(`(${highlight})`, 'gi')); // case-insensitive
+                          return parts.map((part, i) =>
+                            part.toLowerCase() === highlight.toLowerCase() ? (
+                              <span key={i} className="highlight-active">{part}</span>
+                            ) : (
+                              part
+                            )
+                          );
+                        })()
                         : passage.text}
                     </p>
+
+
+
                   </div>
                 ))}
               </div>
@@ -477,6 +678,7 @@ const StudentTestView = () => {
                     handleAnswerChange={handleAnswerChange}
                     setHighlightText={setHighlightText}
                     questionCounter={questionCounter}
+                    showAnswers={showAnswers}
                   />
                 ))}
               </div>
@@ -499,19 +701,23 @@ const StudentTestView = () => {
                     <div key={idx}>
                       <h4>{passage.header}</h4>
                       <p>
-                        {highlightText && passage.text.includes(highlightText)
-                          ? passage.text.split(highlightText).map((part, i, arr) =>
-                            i < arr.length - 1 ? (
-                              <React.Fragment key={i}>
-                                {part}
-                                <span className="highlight-active">{highlightText}</span>
-                              </React.Fragment>
-                            ) : (
-                              part
-                            )
-                          )
+                        {highlightText
+                          ? (() => {
+                            const plainText = passage.text.replace(/\s+/g, ' ').trim();
+                            const highlight = highlightText.replace(/\s+/g, ' ').trim();
+
+                            const parts = plainText.split(new RegExp(`(${highlight})`, 'gi')); // case-insensitive
+                            return parts.map((part, i) =>
+                              part.toLowerCase() === highlight.toLowerCase() ? (
+                                <span key={i} className="highlight-active">{part}</span>
+                              ) : (
+                                part
+                              )
+                            );
+                          })()
                           : passage.text}
                       </p>
+
                     </div>
                   ))}
 
@@ -526,6 +732,7 @@ const StudentTestView = () => {
                       handleAnswerChange={handleAnswerChange}
                       setHighlightText={setHighlightText}
                       questionCounter={questionCounter}
+                      showAnswers={showAnswers}
                     />
                   ))}
                 </div>
@@ -537,8 +744,15 @@ const StudentTestView = () => {
       {/* === Result Display === */}
       {(readingSections.length > 0 || listeningSections.length > 0) && (
         <>
-          <button onClick={handleSubmit}>Submit Answers</button>
-          {result && result.score !== undefined && result.total !== undefined && (
+          {/* Only show Submit button if test not submitted yet */}
+          {!result && (
+            <button onClick={handleSubmit}>
+              Submit Answers
+            </button>
+          )}
+
+          {/* After submission, show result + toggle button */}
+          {result && (
             <div>
               <h3>
                 Result: {result.score} / {result.total}
@@ -550,6 +764,7 @@ const StudentTestView = () => {
           )}
         </>
       )}
+
     </div>
   );
 

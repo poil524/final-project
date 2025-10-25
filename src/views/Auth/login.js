@@ -14,6 +14,7 @@ const LoginForm = () => {
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
+    /*
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
@@ -33,6 +34,35 @@ const LoginForm = () => {
             setLoading(false);
         }
     };
+    */
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError("");
+        setLoading(true);
+
+        try {
+            const res = await axios.post(
+                "http://localhost:5000/api/users/login",
+                { email, password },
+                { withCredentials: true }
+            );
+
+            // Save token for authenticated requests
+            localStorage.setItem("token", res.data.token);
+            localStorage.setItem("user", JSON.stringify(res.data.user));
+
+            // Update global context
+            setUser(res.data.user);
+
+            // Redirect
+            navigate("/");
+        } catch (err) {
+            setError(err.response?.data?.message || "Login failed. Check credentials.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
 
     return (
         <div className="login-container">
