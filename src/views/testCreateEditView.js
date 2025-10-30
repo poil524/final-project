@@ -20,7 +20,8 @@ const TestCreateEditView = () => {
         sections: [],
     });
 
-    const summaryRef = useRef({})
+    const summaryRef = useRef({});
+    const [selectedCell, setSelectedCell] = useState({ row: 0, col: 0 });
     const BASE_URL = "http://localhost:5000";
 
     useEffect(() => {
@@ -245,6 +246,45 @@ const TestCreateEditView = () => {
             const updatedSection = syncMatchingHeadingsItems(section);
 
             sections[secIdx] = updatedSection;
+            return { ...prev, sections };
+        });
+    };
+
+    const addTableRow = (secIdx, qIdx) => {
+        setTestData(prev => {
+            const sections = [...prev.sections];
+            const section = { ...sections[secIdx] };
+            const question = { ...section.questions[qIdx] };
+
+            const newRow = {
+                id: uuidv4(),
+                cells: question.tableCols.map(() => ({ id: uuidv4(), value: "", sourceText: "" }))
+            };
+
+            question.tableRows = [...(question.tableRows || []), newRow];
+            section.questions[qIdx] = question;
+            sections[secIdx] = section;
+            return { ...prev, sections };
+        });
+    };
+
+    const addTableColumn = (secIdx, qIdx) => {
+        setTestData(prev => {
+            const sections = [...prev.sections];
+            const section = { ...sections[secIdx] };
+            const question = { ...section.questions[qIdx] };
+
+            const newColName = `Column ${((question.tableCols?.length || 0) + 1)}`;
+            question.tableCols = [...(question.tableCols || []), newColName];
+
+            // Add new cell for existing rows
+            question.tableRows = (question.tableRows || []).map(row => ({
+                ...row,
+                cells: [...row.cells, { id: uuidv4(), value: "", sourceText: "" }]
+            }));
+
+            section.questions[qIdx] = question;
+            sections[secIdx] = section;
             return { ...prev, sections };
         });
     };
@@ -510,6 +550,8 @@ const TestCreateEditView = () => {
                                             <option value="yes_no_not_given">Yes/No/Not Given</option>
                                             <option value="short_answer">Short Answer</option>
                                             <option value="summary_completion">Summary Completion</option>
+                                            <option value="table_completion">Table Completion</option>
+
                                         </>
                                     ) : testData.type === "listening" ? (
                                         <>
@@ -517,6 +559,7 @@ const TestCreateEditView = () => {
                                             <option value="multiple_choice">Multiple Choice</option>
                                             <option value="summary_completion">Summary Completion</option>
                                             <option value="sentence_completion">Sentence Completion</option>
+                                            <option value="table_completion">Table Completion</option>
                                             <option value="short_answer">Short Answer</option>
                                         </>
                                     ) : null}
@@ -1239,6 +1282,161 @@ const TestCreateEditView = () => {
                                         </div>
                                     </div>
                                 )}
+
+                                {q.type === "table_completion" && (() => {
+                                    const { row, col } = selectedCell;
+
+                                    return (
+                                        <div style={{ marginTop: "10px" }}>
+                                            <h4>Table Completion</h4>
+
+                                            {/* --- Toolbar --- */}
+                                            <div style={{ marginBottom: "10px" }}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const updatedTable = [...(q.tableData || [])];
+                                                        const cols = updatedTable[0]?.length || 1;
+                                                        updatedTable.push(Array(cols).fill(""));
+                                                        const updatedQ = { ...q, tableData: updatedTable };
+                                                        const updatedQuestions = [...section.questions];
+                                                        updatedQuestions[qIdx] = updatedQ;
+                                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                    }}
+                                                >
+                                                    + Add Row
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const updatedTable = (q.tableData || []).map((row) => [...row, ""]);
+                                                        const updatedQ = { ...q, tableData: updatedTable };
+                                                        const updatedQuestions = [...section.questions];
+                                                        updatedQuestions[qIdx] = updatedQ;
+                                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                    }}
+                                                    style={{ marginLeft: "8px" }}
+                                                >
+                                                    + Add Column
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const updatedTable = [...(q.tableData || [])];
+                                                        updatedTable.pop(); // remove last row
+                                                        const updatedQ = { ...q, tableData: updatedTable };
+                                                        const updatedQuestions = [...section.questions];
+                                                        updatedQuestions[qIdx] = updatedQ;
+                                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                    }}
+                                                    style={{ marginLeft: "8px", color: "red" }}
+                                                >
+                                                    − Remove Row
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const updatedTable = (q.tableData || []).map((row) => row.slice(0, -1)); // remove last col
+                                                        const updatedQ = { ...q, tableData: updatedTable };
+                                                        const updatedQuestions = [...section.questions];
+                                                        updatedQuestions[qIdx] = updatedQ;
+                                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                    }}
+                                                    style={{ marginLeft: "8px", color: "red" }}
+                                                >
+                                                    − Remove Column
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const { row, col } = selectedCell;
+                                                        const updatedTable = [...(q.tableData || [])];
+                                                        updatedTable[row][col] += " [BLANK]";
+                                                        const updatedQ = { ...q, tableData: updatedTable };
+
+                                                        // keep answers array synced
+                                                        const updatedAnswers = [...(q.answers || []), { value: "" }];
+                                                        updatedQ.answers = updatedAnswers;
+
+                                                        const updatedQuestions = [...section.questions];
+                                                        updatedQuestions[qIdx] = updatedQ;
+                                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                    }}
+                                                    style={{ marginLeft: "8px", backgroundColor: "#eee" }}
+                                                >
+                                                    + Add Blank
+                                                </button>
+                                            </div>
+
+                                            {/* --- Editable table --- */}
+                                            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                                <tbody>
+                                                    {(q.tableData || [[]]).map((rowData, rIdx) => (
+                                                        <tr key={rIdx}>
+                                                            {rowData.map((cell, cIdx) => (
+                                                                <td
+                                                                    key={cIdx}
+                                                                    style={{
+                                                                        border: "1px solid #ddd",
+                                                                        padding: "5px",
+                                                                        backgroundColor:
+                                                                            selectedCell.row === rIdx && selectedCell.col === cIdx
+                                                                                ? "#f0f8ff"
+                                                                                : "transparent",
+                                                                    }}
+                                                                    onClick={() => setSelectedCell({ row: rIdx, col: cIdx })}
+                                                                >
+                                                                    <textarea
+                                                                        value={cell}
+                                                                        onChange={(e) => {
+                                                                            const updatedTable = [...(q.tableData || [])];
+                                                                            updatedTable[rIdx][cIdx] = e.target.value;
+                                                                            const updatedQ = { ...q, tableData: updatedTable };
+                                                                            const updatedQuestions = [...section.questions];
+                                                                            updatedQuestions[qIdx] = updatedQ;
+                                                                            updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                                        }}
+                                                                        style={{ width: "100%", border: "none", resize: "none" }}
+                                                                    />
+                                                                </td>
+                                                            ))}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+
+                                            {/* --- Preview --- */}
+                                            <h4 style={{ marginTop: "10px" }}>Preview</h4>
+                                            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                                <tbody>
+                                                    {(() => {
+                                                        let globalIdx = 0;
+                                                        return (q.tableData || [[]]).map((rowData, rIdx) => (
+                                                            <tr key={rIdx}>
+                                                                {rowData.map((cell, cIdx) => (
+                                                                    <td key={cIdx} style={{ border: "1px solid #ddd", padding: "5px" }}>
+                                                                        {cell.replace(/\[BLANK\]/g, () => {
+                                                                            const val = q.answers?.[globalIdx]?.value || "[BLANK]";
+                                                                            globalIdx++;
+                                                                            return val;
+                                                                        })}
+                                                                    </td>
+                                                                ))}
+                                                            </tr>
+                                                        ));
+                                                    })()}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    );
+                                })()}
+
+
+
                             </div>
 
                         ))}

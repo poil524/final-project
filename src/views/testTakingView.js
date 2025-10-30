@@ -577,18 +577,17 @@ const StudentTestView = () => {
             </div>
           ))}
 
-          {/* 🟩 Add the Submit button here */}
+          {/* Add the Submit button here */}
           <button onClick={handleSpeakingSubmit} style={{ marginTop: "20px" }}>
             Submit Speaking
           </button>
 
-          {/* 🟩 Show result if available */}
+          {/* Show result if available */}
           {result?.evaluations && (
             <div className="speaking-result" style={{ marginTop: "15px" }}>
               <h3>Speaking Evaluation Result</h3>
               {result.evaluations.map((evalData, idx) => (
                 <div key={idx}>
-                  <p><b>Requirement:</b> {evalData.requirement}</p>
                   {evalData.transcript && (
                     <details>
                       <summary>View Transcript</summary>

@@ -14,6 +14,18 @@ const answerSchema = new mongoose.Schema({
     sourceText: { type: String, default: "" },
 });
 
+// For table completion
+const tableCellSchema = new mongoose.Schema({
+    id: { type: String, default: () => uuidv4(), required: true },
+    value: { type: String, default: "" },
+    sourceText: { type: String, default: "" },
+});
+
+const tableRowSchema = new mongoose.Schema({
+    id: { type: String, default: () => uuidv4(), required: true },
+    cells: { type: [tableCellSchema], default: [] },
+});
+
 const questionSchema = new mongoose.Schema({
     type: { type: String, default: "multiple_choice" },
     requirement: { type: String, default: "" },
@@ -21,10 +33,12 @@ const questionSchema = new mongoose.Schema({
     questionItems: { type: [questionItemSchema], default: [] },
     answers: { type: [answerSchema], default: [] },
 
-    // For matching_features
-  featureListTitle: { type: String, default: "" }, // e.g. "List of countries"
-  featureLabelType: { type: String, enum: ["A", "i"], default: "A" },
-  features: { type: [String], default: [] }, // determines label style
+    featureListTitle: { type: String, default: "" },
+    featureLabelType: { type: String, enum: ["A", "i"], default: "A" },
+    features: { type: [String], default: [] },
+
+    // Table Completion fields
+    tableData: { type: [[String]], default: [] },
 });
 
 const passageSchema = new mongoose.Schema({

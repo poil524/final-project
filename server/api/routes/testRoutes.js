@@ -8,8 +8,8 @@ import multer from "multer";
 import OpenAI from "openai";
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { authenticate } from '../middlewares/authMiddleware.js';
-//import { Deepgram } from "@deepgram/sdk";
-import speech from '@google-cloud/speech';
+import { createClient } from "@deepgram/sdk";
+//import speech from '@google-cloud/speech';
 
 
 import fs from "fs";
@@ -25,8 +25,8 @@ const __dirname = path.dirname(__filename);
 
 
 const router = express.Router();
-const client = new speech.SpeechClient();
-//const deepgram = new Deepgram(process.env.DEEPGRAM_API_KEY);
+//const client = new speech.SpeechClient();
+const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -88,35 +88,7 @@ const s3 = new S3Client({
 });
 
 const bucketName = 'final-project-ielts-test'
-/* Add audio
-router.post("/upload-audio", upload.single("audio"), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
-    const { testId } = req.body;
-    const file = req.file;
-    const filename = `${testId}-${Date.now()}-${file.originalname}`;
-
-    const params = {
-      Bucket: bucketName,
-      Key: `audio/${filename}`,
-      Body: file.buffer,
-      ContentType: file.mimetype || "audio/mpeg",
-      ACL: "private",
-    };
-
-    await s3.send(new PutObjectCommand(params));
-
-    res.status(200).json({
-      message: "Audio uploaded successfully",
-      key: `audio/${filename}`,
-    });
-  } catch (err) {
-    console.error("Error uploading audio:", err);
-    res.status(500).json({ error: "Failed to upload audio" });
-  }
-});
-*/
 router.post("/upload-audio", upload.single("audio"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
@@ -155,29 +127,6 @@ router.post("/upload-audio", upload.single("audio"), async (req, res) => {
 });
 
 
-
-/* Load audio
-router.get("/audio-url/:filename", async (req, res) => {
-  try {
-    const { filename } = req.params;
-
-    // if you’re storing with "audio/" prefix, include it:
-    const key = `audio/${filename}`;
-
-    const command = new GetObjectCommand({
-      Bucket: bucketName,
-      Key: key,
-    });
-
-    const url = await getSignedUrl(s3, command, { expiresIn: 3600 }); // TODO: Temp URL. Increase expire time
-    res.json({ url });
-  } catch (err) {
-    console.error("Error generating signed URL:", err);
-    res.status(500).json({ error: "Failed to generate signed URL" });
-  }
-});
-*/
-
 router.get("/audio-url/:filename", async (req, res) => {
   try {
     const { filename } = req.params;
@@ -201,10 +150,6 @@ router.get("/audio-url/:filename", async (req, res) => {
     res.status(404).json({ error: `${req.params.filename} not found` });
   }
 });
-
-
-
-
 
 const imageUpload = multer({ storage: multer.memoryStorage() });
 
@@ -384,20 +329,26 @@ router.post("/evaluate-speaking", async (req, res) => {
       }
 
       // Convert to Base64
-      const audioBytes = fs.readFileSync(tempFilePath).toString("base64");
+      //const audioBytes = fs.readFileSync(tempFilePath).toString("base64");
 
-      // Transcribe with Google Cloud Speech
-      const [response] = await client.recognize({
-        audio: { content: audioBytes },
-        config: {
-          encoding: "MP3",       // MP3 file
-          languageCode: "en-US", // English
-        },
-      });
+      // Transcribe with Deepgram
 
-      const transcript = response.results
-        .map((r) => r.alternatives[0].transcript)
-        .join(" ");
+      const audioBuffer = fs.readFileSync(tempFilePath);
+
+      const { result, error } = await deepgram.listen.prerecorded.transcribeFile(
+        audioBuffer,
+        {
+          model: "nova-3",
+          smart_format: true,
+          language: "en-US",
+        }
+      );
+
+      if (error) throw error;
+
+      // Extract transcript
+      const transcript =
+        result?.results?.channels?.[0]?.alternatives?.[0]?.transcript || "";
 
       console.log("[DEBUG] Transcript:", transcript);
 
@@ -446,7 +397,7 @@ Provide JSON output with these fields:
       });
 
       // Clean up temp file
-      fs.unlink(tempFilePath, () => {});
+      fs.unlink(tempFilePath, () => { });
     }
 
     res.json({ evaluations: results });
@@ -541,7 +492,6 @@ Return JSON with fields:
   }
 });
 
-// Save test result to student
 // Save test result to student
 router.post("/:id/save-result", authenticate, async (req, res) => {
   try {
