@@ -1,0 +1,122 @@
+.home-page {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 50px;
+}
+
+/* Carousel */
+.carousel-container img {
+    height: 350px;
+    object-fit: cover;
+    width: 100%;
+}
+.link-card {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Signup cards */
+.signup-options {
+  display: flex;
+  justify-content: center;
+  gap: 25px;
+  padding: 30px 0;
+}
+
+.signup-card {
+  width: 230px;
+  border: 2px solid var(--color-border);
+  padding: 24px 18px;
+  background: #fff;
+  border-radius: 12px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  transition: 0.2s;
+  cursor: pointer;
+}
+
+.signup-card:hover {
+  border-color: var(--color-border-hover);
+  transform: translateY(-2px);
+}
+
+.signup-card::before {
+  content: "";
+  width: 55px;
+  height: 55px;
+  border: 2px solid #000;
+  border-radius: 50%;
+}
+
+.btn-primary {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: none;
+  background: #000;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  transition: 0.15s;
+}
+
+.btn-primary:hover {
+  background: #333;
+}
+
+
+
+/* Skills grid */
+.skills-section {
+  text-align: center;
+  margin-top: 30px;
+}
+
+.skills-grid {
+  display: flex;
+  justify-content: center;
+  gap: 35px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.skill-box {
+  width: 200px;
+  height: 160px;
+  border: 2px solid var(--color-border);       /* light red outline */
+  background: #fafafa;             
+  border-radius: 14px;
+  text-decoration: none;
+  color: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  transition: 0.2s;
+}
+
+.skill-box:hover {
+  border-color: var(--color-border-hover);           /* stronger red hover */
+  transform: translateY(-3px);
+}
+
+/* round red icon placeholder */
+.skill-box::before {
+  content: "";
+  width: 48px;
+  height: 48px;
+  border: 3px solid ;       /* red circle */
+  border-radius: 15%;
+}
+
+
+/* Footer */
+.footer {
+    text-align: center;
+    padding: 20px;
+    border-top: 1px solid #ddd;
+}

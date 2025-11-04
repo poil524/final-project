@@ -287,7 +287,10 @@ const StudentTestView = () => {
     let active = true;
     const fetchTest = async () => {
       try {
-        const res = await axios.get(`${BASE_URL}/api/tests/${testId}`);
+        const res = await axios.get(`${BASE_URL}/api/tests/${testId}`, {
+          withCredentials: true,
+        });
+
         if (!active) return;
         const fetchedTest = res.data;
         const shuffle = (arr) => (arr ? [...arr].sort(() => Math.random() - 0.5) : []);
@@ -312,6 +315,29 @@ const StudentTestView = () => {
         console.error("Fetch test failed:", err);
       }
     };
+    // After setTest(...)
+    const fetchExistingResult = async () => {
+      try {
+        const res2 = await axios.get(`${BASE_URL}/api/tests/${testId}/get-result`, {
+          withCredentials: true
+        });
+
+        const existing = res2.data;
+        if (!existing) return;
+
+        // restore previous answers & score
+        setAnswers(existing.answers || {});
+        setResult({ score: existing.score, total: existing.total });
+        setShowAnswers(true); // auto reveal answers
+        console.log("Loaded previous attempt:", existing);
+      } catch (err) {
+        console.log("No previous result or error:", err.response?.data || err.message);
+      }
+    };
+
+    fetchExistingResult();
+
+
     if (testId) fetchTest();
     return () => {
       active = false;
@@ -403,13 +429,20 @@ const StudentTestView = () => {
         return;
       }
 
-      await axios.post(
+      /*await axios.post(
         `${BASE_URL}/api/tests/${testId}/save-result`,
         resultData,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true,
+          //headers: { Authorization: `Bearer ${token}` },
         }
+      );*/
+      await axios.post(
+        `${BASE_URL}/api/tests/${testId}/save-result`,
+        { ...resultData, answers },  // attach full answers
+        { withCredentials: true }
       );
+
 
       console.log("Test result saved successfully.");
     } catch (err) {
@@ -430,7 +463,12 @@ const StudentTestView = () => {
 
     try {
       // Evaluate writing using OpenAI 
-      const res = await axios.post(`${BASE_URL}/api/tests/evaluate-writing`, { sections: payload });
+      const res = await axios.post(
+        `${BASE_URL}/api/tests/evaluate-writing`,
+        { sections: payload },
+        { withCredentials: true }
+      );
+
       setResult(res.data);
 
       // Extract band and feedback from evaluation result
@@ -441,11 +479,17 @@ const StudentTestView = () => {
       // Save writing result if user is a student
       const token = localStorage.getItem("token");
       if (token) {
-        await axios.post(
+        /*await axios.post(
           `${BASE_URL}/api/tests/${testId}/save-result`,
           { band, feedback },
           { headers: { Authorization: `Bearer ${token}` } }
+        );*/
+        await axios.post(
+          `${BASE_URL}/api/tests/${testId}/save-result`,
+          { band, feedback },
+          { withCredentials: true }
         );
+
         console.log("Writing result saved successfully.");
       } else {
         console.warn("No token found, skipping result save.");
@@ -466,7 +510,12 @@ const StudentTestView = () => {
     }));
 
     try {
-      const res = await axios.post(`${BASE_URL}/api/tests/evaluate-speaking`, { sections: payload });
+      const res = await axios.post(
+        `${BASE_URL}/api/tests/evaluate-writing`,
+        { sections: payload },
+        { withCredentials: true }
+      );
+
       setResult(res.data);
 
       // Extract first evaluation (you can expand for multi-part speaking)
@@ -478,11 +527,19 @@ const StudentTestView = () => {
       // Save speaking result to backend
       const token = localStorage.getItem("token");
       if (token) {
-        await axios.post(
+        /*await axios.post(
           `${BASE_URL}/api/tests/${testId}/save-result`,
           { band, feedback, transcript },
           { headers: { Authorization: `Bearer ${token}` } }
+        );*/
+        await axios.post(
+          `${BASE_URL}/api/tests/${testId}/save-result`,
+          { speakingAudioKey: payload[0]?.audioKey || null },
+          { withCredentials: true }
         );
+
+
+
         console.log("Speaking result saved successfully.");
       } else {
         console.warn("No token found, skipping result save.");
@@ -744,11 +801,12 @@ const StudentTestView = () => {
       {(readingSections.length > 0 || listeningSections.length > 0) && (
         <>
           {/* Only show Submit button if test not submitted yet */}
-          {!result && (
-            <button onClick={handleSubmit}>
-              Submit Answers
-            </button>
+          {!result ? (
+            <button onClick={handleSubmit}>Submit</button>
+          ) : (
+            <p><i>You have already completed this test.</i></p>
           )}
+
 
           {/* After submission, show result + toggle button */}
           {result && (

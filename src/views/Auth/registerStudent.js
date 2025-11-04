@@ -28,10 +28,11 @@ const RegisterForm = () => {
         setLoading(true);
         try {
             const res = await axios.post(
-    "http://localhost:5000/api/users",
-    { username, email, password },
-    { withCredentials: true }
-);
+                "http://localhost:5000/api/users/register/student",
+                { username, email, password },
+                { withCredentials: true }
+            );
+
 
             setUser(res.data.user);
             navigate("/"); // redirect to main page

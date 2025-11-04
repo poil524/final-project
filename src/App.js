@@ -4,14 +4,27 @@ import Navigation from "./views/Auth/navigation";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+import Profile from "./views/Profile.jsx";
 import StudentTestView from "./views/testTakingView";
 import TeacherTestCreateView from "./views/testCreateEditView";
 import TestListView from "./views/testListView";
 import EditTestView from "./views/testCreateEditView";
 import Login from "./views/Auth/login";
-import Register from "./views/Auth/register";
+import RegisterStudent from "./views/Auth/registerStudent";
+import RegisterTeacher from "./views/Auth/registerTeacher";
+
+import AdminLayout from "./views/Admin/AdminLayout";
+import AdminHome from "./views/Admin/Home";
+import AdminStudents from "./views/Admin/Students";
+import AdminTeachers from "./views/Admin/Teachers";
+import AdminTests from "./views/Admin/Tests";
+import AdminTeacherRequests from "./views/Admin/TeacherRequests";
+import AdminTestEditDeleteRequests from "./views/Admin/TestEditDeleteRequests";
+import AdminEvaluationRequests from "./views/Admin/EvaluationRequests";
+
 
 import "./App.css";
+import Home from "./views/Home.jsx";
 
 const Layout = ({ children }) => (
   <>
@@ -27,7 +40,18 @@ const App = () => {
       <Routes>
         {/* Auth pages */}
         <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        <Route path="/register/student" element={<RegisterStudent />} />
+        <Route path="/register/teacher" element={<RegisterTeacher />} />
+        {/* Admin section (separate layout, no Navigation) */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route path="home" element={<AdminHome />} />
+          <Route path="users/students" element={<AdminStudents />} />
+          <Route path="users/teachers" element={<AdminTeachers />} />
+          <Route path="tests" element={<AdminTests />} />
+          <Route path="requests/teacher-approval" element={<AdminTeacherRequests />} />
+          <Route path="requests/test-edit-delete" element={<AdminTestEditDeleteRequests />} />
+          <Route path="requests/evaluations" element={<AdminEvaluationRequests />} />
+        </Route>
 
         {/* Main layout */}
         <Route
@@ -36,18 +60,9 @@ const App = () => {
             <Layout>
               <Routes>
                 {/* Homepage */}
-                <Route
-                  path="/"
-                  element={
-                    <div className="home">
-                      <h1>Welcome</h1>
-                      <div className="home-actions">
-                        <a className="home-link" href="/tests">View Tests</a>
-                        <a className="home-link" href="/create/reading">Create Reading Test</a>
-                      </div>
-                    </div>
-                  }
-                />
+                <Route path="/" element={<Home />} />
+                <Route path="/profile" element={<Profile />} />
+
 
                 {/* Test list and taking */}
                 <Route path="/tests" element={<TestListView />} />

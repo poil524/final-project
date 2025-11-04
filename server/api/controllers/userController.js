@@ -21,7 +21,7 @@ const generateTokenAndSetCookie = (user, res) => {
     return token;
 };
 
-// Register or auto-login if user exists
+/* Register or auto-login if user exists
 const createUser = asyncHandler(async (req, res) => {
     const { username, email, password } = req.body;
 
@@ -59,6 +59,44 @@ const createUser = asyncHandler(async (req, res) => {
         throw new Error("Invalid user data.");
     }
 });
+*/
+const createUser = asyncHandler(async (req, res) => {
+    const { username, email, password } = req.body;
+    const isTeacher = req.body.isTeacher === true || req.body.isTeacher === "true";
+
+    if (!username || !email || !password) {
+        res.status(400);
+        throw new Error("Please fill all the fields.");
+    }
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+        const token = generateTokenAndSetCookie(existingUser, res);
+        return res.status(200).json({
+            message: "User already exists. Logged in automatically.",
+            user: existingUser,
+            token,
+        });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const newUser = await User.create({
+        username,
+        email,
+        password: hashedPassword,
+        isTeacher, // now explicitly boolean
+    });
+
+    const token = generateTokenAndSetCookie(newUser, res);
+    res.status(201).json({
+        message: "User registered successfully.",
+        user: newUser,
+        token,
+    });
+});
+
 
 // Login existing user
 const loginUser = asyncHandler(async (req, res) => {
@@ -108,20 +146,16 @@ const getAllUsers = asyncHandler(async (req, res) => {
 })
 
 const getCurrentUserProfile = asyncHandler(async (req, res) => {
-    const user = await User.findById(req.user._id)
+    const user = await User.findById(req.user._id).select("-password");
 
     if (user) {
-        res.json({
-            _id: user._id,
-            username: user.username,
-            email: user.email
-        })
+        res.json(user);
+    } else {
+        res.status(404);
+        throw new Error("User not found");
     }
-    else {
-        res.status(404)
-        throw new Error("User not found")
-    }
-})
+});
+
 
 const updateCurrentProfile = asyncHandler(async (req, res) => {
     const user = await User.findById(req.user._id)
@@ -201,6 +235,67 @@ const updateUserById = asyncHandler(async (req, res) => {
         throw new Error("User not found");
     }
 })
+
+const getAllTeachers = asyncHandler(async (req, res) => {
+    const teachers = await User.find({ isTeacher: true });
+    res.json(teachers);
+});
+
+
+const approveTeacher = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.params.id);
+    if (!user || !user.isTeacher) {
+        res.status(404);
+        throw new Error("Teacher not found");
+    }
+
+    user.status = "approved";
+    await user.save();
+    res.json({ message: "Teacher approved" });
+});
+
+const rejectTeacher = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.params.id);
+    if (!user || !user.isTeacher) {
+        res.status(404);
+        throw new Error("Teacher not found");
+    }
+
+    user.status = "rejected";
+    await user.save();
+    res.json({ message: "Teacher rejected" });
+});
+
+const getProfile = async (req, res) => {
+    console.log("Get Profile");
+    try {
+        const user = await User.findById(req.user.id).lean().exec();
+        console.log("[DEBUG] Raw user from DB:", user);
+
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        const profileData = {
+            ...user,
+            createdAt: user.createdAt?.toISOString() || null,
+            testResults: (user.testResults || []).map(tr => ({
+                ...tr,
+                takenAt: tr.takenAt?.toISOString() || null,
+                createdAt: tr.createdAt?.toISOString() || null
+            })),
+        };
+
+        console.log("[DEBUG] Profile data sent to client:", profileData);
+
+        res.json(profileData);
+    } catch (err) {
+        console.error("[DEBUG] Error fetching profile:", err);
+        res.status(500).json({ error: "Server error" });
+    }
+};
+
+
+
+
 export {
     createUser,
     loginUser,
@@ -210,5 +305,10 @@ export {
     updateCurrentProfile,
     deleteUserById,
     getUserById,
-    updateUserById
+    updateUserById,
+    getAllTeachers,
+    approveTeacher,
+    rejectTeacher,
+    getProfile
 };
+

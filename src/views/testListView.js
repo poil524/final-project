@@ -12,6 +12,7 @@ const TestListView = () => {
     const [error, setError] = useState(null);
     const [modalOpen, setModalOpen] = useState(false);
     const [sortOption, setSortOption] = useState("newest");
+    const [currentUser, setCurrentUser] = useState(null); // <-- new
 
     const BASE_URL = "http://localhost:5000";
     const navigate = useNavigate();
@@ -25,15 +26,24 @@ const TestListView = () => {
                     path.includes("/tests/speaking") ? "speaking" :
                         null;
 
+    // Fetch current logged-in user
+    const fetchCurrentUser = async () => {
+        try {
+            const res = await axios.get(`${BASE_URL}/api/users/profile`, { withCredentials: true });
+            setCurrentUser(res.data);
+        } catch (err) {
+            console.error("Error fetching current user:", err);
+        }
+    };
+
     const fetchTests = async () => {
         try {
             const url = filterType
                 ? `${BASE_URL}/api/tests?type=${filterType}`
                 : `${BASE_URL}/api/tests`;
-            const res = await axios.get(url);
+            const res = await axios.get(url, { withCredentials: true });
             let data = res.data || [];
 
-            // Sorting logic
             data.sort((a, b) => {
                 switch (sortOption) {
                     case "newest": return new Date(b.createdAt) - new Date(a.createdAt);
@@ -51,10 +61,6 @@ const TestListView = () => {
         }
     };
 
-    useEffect(() => {
-        fetchTests();
-    }, [filterType, sortOption, location.pathname]);
-
     const handleDelete = async (id) => {
         if (!window.confirm("Are you sure you want to delete this test?")) return;
         try {
@@ -65,6 +71,15 @@ const TestListView = () => {
             alert("Failed to delete test.");
         }
     };
+
+    useEffect(() => {
+        fetchCurrentUser();
+        fetchTests();
+    }, [filterType, sortOption, location.pathname]);
+
+    // Check if the user can add a test
+    const canAddTest = currentUser && (currentUser.isAdmin || currentUser.status === "approved");
+    console.log("DEBUG canAddTest:", currentUser, canAddTest);
 
     return (
         <div style={{ padding: "20px" }}>
@@ -99,16 +114,18 @@ const TestListView = () => {
                 </select>
             </div>
 
-            {/* Add New Exam */}
-            <button
-                className="add-button"
-                onClick={() => {
-                    if (filterType) navigate(`/create/${filterType}`);
-                    else setModalOpen(true);
-                }}
-            >
-                Add New Exam
-            </button>
+            {/* Add New Exam (conditional) */}
+            {canAddTest && (
+                <button
+                    className="add-button"
+                    onClick={() => {
+                        if (filterType) navigate(`/create/${filterType}`);
+                        else setModalOpen(true);
+                    }}
+                >
+                    Add New Exam
+                </button>
+            )}
 
             {modalOpen && (
                 <div className="modal-backdrop" onClick={() => setModalOpen(false)}>
@@ -127,7 +144,6 @@ const TestListView = () => {
                         </div>
                         <button className="close-button" onClick={() => setModalOpen(false)}>Close</button>
                     </div>
-
                 </div>
             )}
 
@@ -141,13 +157,17 @@ const TestListView = () => {
                         className="test-card"
                         onClick={() => navigate(`/tests/${test._id}`)}
                     >
-                        <h3 className="test-name">{test.name}</h3> {/* label, not a link */}
+                        <h3 className="test-name">{test.name}</h3>
                         <p>Type: {test.type.charAt(0).toUpperCase() + test.type.slice(1)}</p>
                         <p>Created: {new Date(test.createdAt).toLocaleString()}</p>
-                        <div className="card-actions" onClick={e => e.stopPropagation()}>
-                            <button onClick={() => navigate(`/edit/${test._id}`)}>Edit</button>
-                            <button onClick={() => handleDelete(test._id)}>Delete</button>
-                        </div>
+
+                        {/* Card actions */}
+                        {canAddTest && (
+                            <div className="card-actions" onClick={e => e.stopPropagation()}>
+                                <button onClick={() => navigate(`/edit/${test._id}`)}>Edit</button>
+                                <button onClick={() => handleDelete(test._id)}>Delete</button>
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>

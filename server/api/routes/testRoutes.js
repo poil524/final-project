@@ -9,7 +9,6 @@ import OpenAI from "openai";
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { authenticate } from '../middlewares/authMiddleware.js';
 import { createClient } from "@deepgram/sdk";
-//import speech from '@google-cloud/speech';
 
 
 import fs from "fs";
@@ -20,21 +19,29 @@ import { pipeline } from "stream";
 import { promisify } from "util";
 const streamPipeline = promisify(pipeline);
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-
 const router = express.Router();
-//const client = new speech.SpeechClient();
+
 const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Create new test
-router.post("/", async (req, res) => {
+// Create new test — only teachers or admins
+router.post("/", authenticate, async (req, res) => {
   try {
-    const newTest = new Test(req.body);
+    const user = req.user;
+    if (user.isTeacher && user.status !== "approved") {
+      return res.status(403).json({ error: "Teacher approval pending." });
+    }
+    if (!user.isTeacher && !user.isAdmin) {
+      return res.status(403).json({ error: "Only teachers or admins can create tests." });
+    }
+
+    const newTest = new Test({
+      ...req.body,
+      createdBy: user._id, // track creator
+    });
+
     await newTest.save();
     res.status(201).json(newTest);
   } catch (err) {
@@ -42,6 +49,7 @@ router.post("/", async (req, res) => {
     res.status(500).json({ error: "Failed to create test" });
   }
 });
+
 
 // GET all tests, optional filter by type
 router.get("/", async (req, res) => {
@@ -202,7 +210,7 @@ router.get("/image-url/:filename", async (req, res) => {
   }
 });
 
-// Update test
+/* Update test
 router.put("/:id", async (req, res) => {
   try {
     const test = await Test.findById(req.params.id);
@@ -255,12 +263,85 @@ router.put("/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to update test" });
   }
 });
-
-// Delete test
-router.delete("/:id", async (req, res) => {
+*/
+// Update test — admins can edit any; teachers only their own
+router.put("/:id", authenticate, async (req, res) => {
   try {
+    const user = req.user;
     const test = await Test.findById(req.params.id);
     if (!test) return res.status(404).json({ error: "Test not found" });
+
+    // Permission check
+    if (!user.isAdmin) {
+      if (!user.isTeacher) {
+        return res.status(403).json({ error: "Only teachers or admins can edit tests." });
+      }
+      if (user.isTeacher && user.status !== "approved") {
+        return res.status(403).json({ error: "Teacher approval pending." });
+      }
+      if (test.createdBy?.toString() !== user._id.toString()) {
+        return res.status(403).json({ error: "Teachers can only edit their own tests." });
+      }
+    }
+
+    const oldSections = test.sections || [];
+    const newSections = req.body.sections || [];
+    const keysToDelete = [];
+
+    oldSections.forEach((old, i) => {
+      const fresh = newSections[i] || {};
+      const oldAudio = old.audioKey?.trim() || "";
+      const newAudio = fresh.audioKey?.trim() || "";
+      const oldImage = old.images?.trim() || "";
+      const newImage = fresh.images?.trim() || "";
+
+      if (oldAudio && oldAudio !== newAudio) keysToDelete.push(oldAudio);
+      if (oldImage && oldImage !== newImage) keysToDelete.push(oldImage);
+    });
+
+    // Apply updates
+    test.name = req.body.name;
+    test.type = req.body.type;
+    test.sections = newSections;
+    test.markModified("sections");
+    await test.save();
+
+    // Cleanup S3
+    for (const key of keysToDelete) {
+      try {
+        await s3.send(new DeleteObjectCommand({ Bucket: bucketName, Key: key }));
+        console.log(`[CLEANUP] Deleted old S3 object: ${key}`);
+      } catch (err) {
+        console.warn(`[WARN] Failed to delete S3 object: ${key}`, err.message);
+      }
+    }
+
+    res.json(test);
+  } catch (err) {
+    console.error("[ERROR] Updating test failed:", err);
+    res.status(500).json({ error: "Failed to update test" });
+  }
+});
+
+// Delete test — admins can delete any; teachers only their own
+router.delete("/:id", authenticate, async (req, res) => {
+  try {
+    const user = req.user;
+    const test = await Test.findById(req.params.id);
+    if (!test) return res.status(404).json({ error: "Test not found" });
+
+    // Permission check
+    if (!user.isAdmin) {
+      if (!user.isTeacher) {
+        return res.status(403).json({ error: "Only teachers or admins can delete tests." });
+      }
+      if (user.isTeacher && user.status !== "approved") {
+        return res.status(403).json({ error: "Teacher approval pending." });
+      }
+      if (test.createdBy?.toString() !== user._id.toString()) {
+        return res.status(403).json({ error: "Teachers can only delete their own tests." });
+      }
+    }
 
     // Collect all S3 keys to remove
     const keys = [];
@@ -271,7 +352,7 @@ router.delete("/:id", async (req, res) => {
 
     await Test.findByIdAndDelete(req.params.id);
 
-    // Delete each S3 object
+    // Delete media from S3
     for (const key of keys) {
       try {
         await s3.send(new DeleteObjectCommand({ Bucket: bucketName, Key: key }));
@@ -281,7 +362,7 @@ router.delete("/:id", async (req, res) => {
       }
     }
 
-    res.json({ message: "Test and associated media deleted" });
+    res.json({ message: "Test and media deleted" });
   } catch (err) {
     console.error("Error deleting test:", err);
     res.status(500).json({ error: "Failed to delete test" });
@@ -502,8 +583,9 @@ router.post("/:id/save-result", authenticate, async (req, res) => {
       band,
       feedback,
       speakingAudioKey,
-      transcript
-    } = req.body; // include speakingAudioKey + transcript
+      transcript,
+      answers
+    } = req.body;
     const user = req.user; // from authMiddleware
 
     // Only allow if user is NOT admin/teacher
@@ -519,14 +601,16 @@ router.post("/:id/save-result", authenticate, async (req, res) => {
       testId,
       testName: test.name,
       type: test.type,
+      answers: answers || {}, // store student answers
       score,
       total,
       band,
       feedback,
       speakingAudioKey,
       transcript,
-      createdAt: new Date()
+      takenAt: new Date()
     };
+
 
     // Push or update existing result for the same test
     const existingIndex = user.testResults.findIndex(
@@ -550,6 +634,16 @@ router.post("/:id/save-result", authenticate, async (req, res) => {
     console.error("Error saving test result:", err);
     res.status(500).json({ error: "Failed to save test result" });
   }
+});
+
+router.get("/:id/get-result", authenticate, async (req, res) => {
+  const user = req.user;
+  const testId = req.params.id;
+
+  const result = user.testResults.find(r => r.testId.toString() === testId);
+
+  if (!result) return res.json(null);
+  return res.json(result);
 });
 
 
