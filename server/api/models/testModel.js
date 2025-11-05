@@ -51,7 +51,7 @@ const sectionSchema = new mongoose.Schema({
     sectionTitle: { type: String, default: "" },
     passages: { type: [passageSchema], default: [] },
     questions: { type: [questionSchema], default: [] },
-    images: { type: String, default: "" },
+    images: { type: [String], default: [] },
     audioKey: { type: String, default: "" },  // for listening
     transcript: { type: String, default: "" },     // for listening
     requirement: { type: String, default: "" },    // for writing/speaking

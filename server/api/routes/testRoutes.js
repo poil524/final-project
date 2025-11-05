@@ -210,60 +210,7 @@ router.get("/image-url/:filename", async (req, res) => {
   }
 });
 
-/* Update test
-router.put("/:id", async (req, res) => {
-  try {
-    const test = await Test.findById(req.params.id);
-    if (!test) return res.status(404).json({ error: "Test not found" });
 
-    const oldSections = test.sections || [];
-    const newSections = req.body.sections || [];
-
-    const keysToDelete = [];
-
-    oldSections.forEach((old, i) => {
-      const fresh = newSections[i] || {};
-
-      // Normalize empty values
-      const oldAudio = old.audioKey?.trim() || "";
-      const newAudio = fresh.audioKey?.trim() || "";
-      const oldImage = old.images?.trim() || "";
-      const newImage = fresh.images?.trim() || "";
-
-      if (oldAudio && oldAudio !== newAudio) {
-        keysToDelete.push(oldAudio);
-        console.log(`[DEBUG] Audio changed: ${oldAudio} → ${newAudio}`);
-      }
-      if (oldImage && oldImage !== newImage) {
-        keysToDelete.push(oldImage);
-        console.log(`[DEBUG] Image changed: ${oldImage} → ${newImage}`);
-      }
-    });
-
-    // Apply updates
-    test.name = req.body.name;
-    test.type = req.body.type;
-    test.sections = newSections;
-    test.markModified("sections");
-    await test.save();
-
-    // Delete obsolete files from S3
-    for (const key of keysToDelete) {
-      try {
-        await s3.send(new DeleteObjectCommand({ Bucket: bucketName, Key: key }));
-        console.log(`[CLEANUP] Deleted old S3 object: ${key}`);
-      } catch (err) {
-        console.warn(`[WARN] Failed to delete S3 object: ${key}`, err.message);
-      }
-    }
-
-    res.json(test);
-  } catch (err) {
-    console.error("[ERROR] Updating test failed:", err);
-    res.status(500).json({ error: "Failed to update test" });
-  }
-});
-*/
 // Update test — admins can edit any; teachers only their own
 router.put("/:id", authenticate, async (req, res) => {
   try {
@@ -292,11 +239,19 @@ router.put("/:id", authenticate, async (req, res) => {
       const fresh = newSections[i] || {};
       const oldAudio = old.audioKey?.trim() || "";
       const newAudio = fresh.audioKey?.trim() || "";
-      const oldImage = old.images?.trim() || "";
-      const newImage = fresh.images?.trim() || "";
 
       if (oldAudio && oldAudio !== newAudio) keysToDelete.push(oldAudio);
-      if (oldImage && oldImage !== newImage) keysToDelete.push(oldImage);
+
+      // Handle images (arrays)
+      const oldImages = Array.isArray(old.images) ? old.images : (old.images ? [old.images] : []);
+      const newImages = Array.isArray(fresh.images) ? fresh.images : (fresh.images ? [fresh.images] : []);
+
+      // Find deleted images
+      oldImages.forEach(img => {
+        if (!newImages.includes(img)) keysToDelete.push(img);
+      });
+
+
     });
 
     // Apply updates
@@ -310,15 +265,14 @@ router.put("/:id", authenticate, async (req, res) => {
     for (const key of keysToDelete) {
       try {
         await s3.send(new DeleteObjectCommand({ Bucket: bucketName, Key: key }));
-        console.log(`[CLEANUP] Deleted old S3 object: ${key}`);
       } catch (err) {
-        console.warn(`[WARN] Failed to delete S3 object: ${key}`, err.message);
+        console.warn(`Failed to delete S3 object: ${key}`, err.message);
       }
     }
 
     res.json(test);
   } catch (err) {
-    console.error("[ERROR] Updating test failed:", err);
+    console.error("Updating test failed:", err);
     res.status(500).json({ error: "Failed to update test" });
   }
 });
@@ -347,8 +301,10 @@ router.delete("/:id", authenticate, async (req, res) => {
     const keys = [];
     test.sections.forEach((s) => {
       if (s.audioKey) keys.push(s.audioKey);
-      if (s.images) keys.push(s.images);
+      if (Array.isArray(s.images)) keys.push(...s.images);
+      else if (s.images) keys.push(s.images);
     });
+
 
     await Test.findByIdAndDelete(req.params.id);
 

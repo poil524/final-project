@@ -189,3 +189,29 @@
     border-radius: 6px;
     background: #fafafa;
 }
+
+.test-section-block {
+    margin-bottom: 40px;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background-color: #fafafa;
+}
+
+.section-images {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin: 15px 0;
+    justify-content: flex-start;
+}
+
+.image-wrapper {
+    flex: 0 0 auto;
+    max-width: 300px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    overflow: hidden;
+    background-color: white;
+    padding: 5px;
+}

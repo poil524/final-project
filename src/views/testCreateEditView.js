@@ -73,7 +73,6 @@ const TestCreateEditView = () => {
         };
 
         createEmptyTest();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // run only once
 
 
@@ -453,118 +452,72 @@ const TestCreateEditView = () => {
                                     placeholder={
                                         testData.type === "writing"
                                             ? "Enter writing task requirement..."
-                                            : "Enter speaking task prompt..."
+                                            : "Enter speaking topic..."
                                     }
                                     rows={5}
                                     style={{ width: "100%" }}
                                 />
                             </div>
                         )}
-
-
-                        <h3>Image</h3>
-                        <input
-                            type="file"
-                            accept="image/*"
-                            onChange={async (e) => {
-                                const file = e.target.files[0];
-                                if (!file) return;
-
-                                const formData = new FormData();
-                                formData.append("image", file);
-                                formData.append("testId", testData._id);
-                                try {
-                                    const res = await axios.post(
-                                        "http://localhost:5000/api/tests/upload-image",
-                                        formData,
-                                        { headers: { "Content-Type": "multipart/form-data" } }
-                                    );
-
-                                    const key = res.data.key;
-
-                                    // Update section in local state
-                                    const updatedSection = { ...section, images: key };
-                                    updateSection(secIdx, updatedSection);
-
-                                    // Immediately persist to MongoDB
-                                    await axios.put(`${BASE_URL}/api/tests/${testData._id}`, {
-                                        ...testData,
-                                        sections: testData.sections.map((s, i) => (i === secIdx ? updatedSection : s)),
-                                    });
-
-                                } catch (err) {
-                                    console.error("Image upload failed:", err);
-                                }
-                            }}
-
-                        />
-
-                        {section.images && (
-                            <div style={{ marginTop: "10px" }}>
-                                <p>Uploaded Image Key: {section.images}</p>
-                                <button
-                                    type="button"
-                                    onClick={() => updateSection(secIdx, { ...section, images: "" })}
-                                >
-                                    Remove Image
-                                </button>
-                            </div>
-                        )}
-
                         <h3>Questions</h3>
                         {section.questions?.map((q, qIdx) => (
                             <div key={qIdx} className="question-card">
-                                <label>Type: </label>
-                                <select
-                                    value={q.type}
-                                    onChange={(e) => {
-                                        const newType = e.target.value;
-                                        let updatedQ = { ...q, type: newType };
+                                {testData.type !== "speaking" && (
+                                    <>
+                                        <label>Type: </label>
+                                        <select
+                                            value={q.type}
+                                            onChange={(e) => {
+                                                const newType = e.target.value;
+                                                let updatedQ = { ...q, type: newType };
 
-                                        if (newType === "matching_headings" && testData.type === "reading") {
-                                            const updatedSection = syncMatchingHeadingsItems({
-                                                ...section,
-                                                questions: section.questions?.map((qq, idx) =>
-                                                    idx === qIdx ? { ...qq, type: newType } : qq
-                                                ),
-                                            });
-                                            updateSection(secIdx, updatedSection);
-                                            return;
-                                        } else {
-                                            updatedQ.questionItems = [];
-                                        }
+                                                if (newType === "matching_headings" && testData.type === "reading") {
+                                                    const updatedSection = syncMatchingHeadingsItems({
+                                                        ...section,
+                                                        questions: section.questions?.map((qq, idx) =>
+                                                            idx === qIdx ? { ...qq, type: newType } : qq
+                                                        ),
+                                                    });
+                                                    updateSection(secIdx, updatedSection);
+                                                    return;
+                                                } else {
+                                                    updatedQ.questionItems = [];
+                                                }
 
-                                        const updatedQuestions = [...section.questions];
-                                        updatedQuestions[qIdx] = updatedQ;
-                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                    }}
-                                >
-                                    {testData.type === "reading" ? (
-                                        <>
-                                            <option value="matching_paragraph_information">Matching Paragraph Information</option>
-                                            <option value="matching_headings">Matching Headings</option>
-                                            <option value="matching_sentence_endings">Matching Sentence Endings</option>
-                                            <option value="matching_features">Matching Features</option>
-                                            <option value="multiple_choice">Multiple Choice</option>
-                                            <option value="true_false_not_given">True/False/Not Given</option>
-                                            <option value="yes_no_not_given">Yes/No/Not Given</option>
-                                            <option value="short_answer">Short Answer</option>
-                                            <option value="summary_completion">Summary Completion</option>
-                                            <option value="table_completion">Table Completion</option>
+                                                const updatedQuestions = [...section.questions];
+                                                updatedQuestions[qIdx] = updatedQ;
+                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                            }}
+                                        >
+                                            {testData.type === "reading" ? (
+                                                <>
+                                                    <option value="matching_paragraph_information">Matching Paragraph Information</option>
+                                                    <option value="matching_headings">Matching Headings</option>
+                                                    <option value="matching_sentence_endings">Matching Sentence Endings</option>
+                                                    <option value="matching_features">Matching Features</option>
+                                                    <option value="multiple_choice">Multiple Choice</option>
+                                                    <option value="true_false_not_given">True/False/Not Given</option>
+                                                    <option value="yes_no_not_given">Yes/No/Not Given</option>
+                                                    <option value="short_answer">Short Answer</option>
+                                                    <option value="summary_completion">Summary Completion</option>
+                                                    <option value="table_completion">Table Completion</option>
+                                                    <option value="diagram_completion">Diagram Completion</option>
+                                                </>
+                                            ) : testData.type === "listening" ? (
+                                                <>
+                                                    <option value="matching_features">Matching Features</option>
+                                                    <option value="multiple_choice">Multiple Choice</option>
+                                                    <option value="summary_completion">Summary Completion</option>
+                                                    <option value="sentence_completion">Sentence Completion</option>
+                                                    <option value="table_completion">Table Completion</option>
+                                                    <option value="short_answer">Short Answer</option>
+                                                    <option value="diagram_completion">Diagram Completion</option>
+                                                </>
+                                            ) : null}
+                                        </select>
+                                    </>
+                                )}
 
-                                        </>
-                                    ) : testData.type === "listening" ? (
-                                        <>
-                                            <option value="matching_features">Matching Features</option>
-                                            <option value="multiple_choice">Multiple Choice</option>
-                                            <option value="summary_completion">Summary Completion</option>
-                                            <option value="sentence_completion">Sentence Completion</option>
-                                            <option value="table_completion">Table Completion</option>
-                                            <option value="short_answer">Short Answer</option>
-                                        </>
-                                    ) : null}
-
-                                </select>
 
                                 <button
                                     type="button"
@@ -591,11 +544,12 @@ const TestCreateEditView = () => {
                                 />
                                 <br />
 
-                                {q.type !== "summary_completion" && (
+                                {testData.type !== "speaking" && q.type !== "summary_completion" (
                                     <button type="button" onClick={() => addQuestionItem(secIdx, qIdx)}>
                                         Add Question Item
                                     </button>
                                 )}
+
 
                                 {q.questionItems.map((item, itemIdx) => (
                                     <div key={itemIdx} style={{ marginLeft: "15px" }}>
@@ -662,9 +616,6 @@ const TestCreateEditView = () => {
 
                                             </div>
                                         )}
-
-
-
                                         {q.type === "matching_sentence_endings" && (
                                             <div key={item.id} style={{ marginBottom: "8px" }}>
                                                 <input
@@ -754,10 +705,6 @@ const TestCreateEditView = () => {
                                                 </select>
                                             </div>
                                         )}
-
-
-
-
                                         {q.type === "multiple_choice" && (
                                             <div>
                                                 <input
@@ -961,7 +908,7 @@ const TestCreateEditView = () => {
 
                                         {/* Globally Component */}
                                         {/* sourceText input */}
-                                        {q.type !== "summary_completion" && (
+                                        {q.type !== "summary_completion" && q.type !== "diagram_completion" && (
                                             <input
                                                 type="text"
                                                 placeholder="Answer comes from..."
@@ -991,7 +938,7 @@ const TestCreateEditView = () => {
 
                                         )}
 
-                                        {q.type !== "summary_completion" && q.type !== "summary_completion_list" && (
+                                        {q.type !== "summary_completion" && q.type !== "diagram_completion" && (
                                             <button
                                                 type="button"
                                                 onClick={() => {
@@ -1434,6 +1381,165 @@ const TestCreateEditView = () => {
                                         </div>
                                     );
                                 })()}
+                                {q.type === "diagram_completion" && (
+                                    <div style={{ marginTop: "10px" }}>
+                                        <h4>Diagram Completion Setup</h4>
+
+                                        {/* Image Upload */}
+                                        <h3>Image</h3>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={async (e) => {
+                                                const file = e.target.files[0];
+                                                if (!file) return;
+
+                                                const formData = new FormData();
+                                                formData.append("image", file);
+                                                formData.append("testId", testData._id);
+
+                                                try {
+                                                    const res = await axios.post(
+                                                        "http://localhost:5000/api/tests/upload-image",
+                                                        formData,
+                                                        { headers: { "Content-Type": "multipart/form-data" } }
+                                                    );
+
+                                                    // Extract key from backend response
+                                                    const key = res.data.key;
+
+                                                    // Append it to section.images
+                                                    const updatedSection = {
+                                                        ...section,
+                                                        images: [...(section.images || []), key],
+                                                    };
+
+                                                    updateSection(secIdx, updatedSection);
+
+                                                    // Save to DB
+                                                    await axios.put(`${BASE_URL}/api/tests/${testData._id}`, {
+                                                        ...testData,
+                                                        sections: testData.sections.map((s, i) =>
+                                                            i === secIdx ? updatedSection : s
+                                                        ),
+                                                    });
+                                                } catch (err) {
+                                                    console.error("Image upload failed:", err);
+                                                }
+                                            }}
+                                        />
+
+                                        {(section.images || []).length > 0 && (
+                                            <div style={{ marginTop: "10px" }}>
+                                                <h4>Uploaded Images:</h4>
+                                                <ul>
+                                                    {section.images.map((imgKey, imgIdx) => (
+                                                        <li key={imgIdx}>
+                                                            {imgKey}
+                                                            <button
+                                                                type="button"
+                                                                style={{ marginLeft: "10px" }}
+                                                                onClick={() => {
+                                                                    const updatedSection = {
+                                                                        ...section,
+                                                                        images: section.images.filter((_, i) => i !== imgIdx),
+                                                                    };
+                                                                    updateSection(secIdx, updatedSection);
+                                                                }}
+                                                            >
+                                                                Remove
+                                                            </button>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+
+
+
+                                        {/* Number of Blanks */}
+                                        <label>Number of Blanks/Answers:</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={q.questionItems?.length || 0}
+                                            onChange={(e) => {
+                                                const count = parseInt(e.target.value) || 0;
+
+                                                let items = q.questionItems ? [...q.questionItems] : [];
+                                                let answers = q.answers ? [...q.answers] : [];
+
+                                                if (count > items.length) {
+                                                    for (let i = items.length; i < count; i++) {
+                                                        const newId = uuidv4();
+                                                        items.push({ id: newId, text: "" });
+                                                        answers.push({ id: newId, value: "", sourceText: "" });
+                                                    }
+                                                } else {
+                                                    items = items.slice(0, count);
+                                                    answers = answers.slice(0, count);
+                                                }
+
+                                                const updatedQ = { ...q, questionItems: items, answers };
+                                                const updatedQuestions = [...section.questions];
+                                                updatedQuestions[qIdx] = updatedQ;
+                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                            }}
+                                            style={{ width: "60px", marginLeft: "8px" }}
+                                        />
+
+                                        {/* Editable blanks + correct answers */}
+                                        <h5 style={{ marginTop: "15px" }}>Blanks / Answers</h5>
+                                        {(q.questionItems || []).map((item, idx) => {
+                                            const ans = q.answers[idx];
+                                            return (
+                                                <div key={item.id} style={{ marginBottom: "8px", display: "flex", gap: "8px" }}>
+                                                    <label style={{ width: "30px", fontWeight: "bold" }}>{idx + 1}.</label>
+
+
+
+                                                    {/* Correct answer */}
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Correct Answer"
+                                                        value={ans.value}
+                                                        onChange={(e) => {
+                                                            const answers = q.answers.map((a) =>
+                                                                a.id === ans.id ? { ...a, value: e.target.value } : a
+                                                            );
+                                                            updateSection(secIdx, {
+                                                                ...section,
+                                                                questions: section.questions.map((qq, i) =>
+                                                                    i === qIdx ? { ...q, answers } : qq
+                                                                ),
+                                                            });
+                                                        }}
+                                                        style={{ flex: 1 }}
+                                                    />
+
+                                                    {/* Source text */}
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Answer comes from..."
+                                                        value={ans.sourceText}
+                                                        onChange={(e) => {
+                                                            const answers = q.answers.map((a) =>
+                                                                a.id === ans.id ? { ...a, sourceText: e.target.value } : a
+                                                            );
+                                                            updateSection(secIdx, {
+                                                                ...section,
+                                                                questions: section.questions.map((qq, i) =>
+                                                                    i === qIdx ? { ...q, answers } : qq
+                                                                ),
+                                                            });
+                                                        }}
+                                                        style={{ flex: 1 }}
+                                                    />
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
 
 
 

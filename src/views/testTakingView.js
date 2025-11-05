@@ -17,18 +17,6 @@ const QuestionBlock = ({
   questionCounter,
   showAnswers,
 }) => {
-  const headingDisplayItems =
-    q.shuffledItems?.length > 0
-      ? q.shuffledItems.map((si) => ({
-        key: si.key ?? si.id,
-        headingLabel: si.headingLabel,
-        text: si.text,
-      }))
-      : (q.questionItems || []).map((it) => ({
-        key: it.id,
-        headingLabel: it.headingLabel,
-        text: it.text,
-      }));
 
   const endingOptions =
     q.shuffledEnds?.length > 0
@@ -244,6 +232,21 @@ const QuestionBlock = ({
                   <option value="No">No</option>
                   <option value="Not Given">Not Given</option>
                 </select>
+              </div>
+            );
+
+          case "diagram_completion":
+            return (
+              <div key={item.id} style={{ marginBottom: 8 }}>
+                <label>
+                  {questionCounter.current}. {item.text}
+                </label>
+                <input
+                  type="text"
+                  value={answers[q._id]?.[item.id] || ""}
+                  placeholder="Enter your answer"
+                  onChange={(e) => handleAnswerChange(q._id, item.id, e.target.value)}
+                />
               </div>
             );
 
@@ -602,6 +605,19 @@ const StudentTestView = () => {
               {section.requirement && (
                 <p><b>Task:</b> {section.requirement}</p>
               )}
+              {/* Speaking Question */}
+              {section.questions?.length > 0 && (
+                <div className="speaking-questions">
+                  <h4>Questions:</h4>
+                  <ul>
+                    {section.questions.map((q, qIdx) => (
+                      <li key={q._id || qIdx}>
+                        <strong>Q{qIdx + 1}:</strong> {q.requirement || q.text || "No question text"}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               <AudioRecorder
                 testId={testId}
@@ -777,7 +793,15 @@ const StudentTestView = () => {
                     </div>
                   ))}
 
-                  {section.images && <Image img={{ url: section.images }} />}
+                  {Array.isArray(section.images) && section.images.length > 0 && (
+                    <div className="section-images">
+                      {section.images.map((imgKey, idx) => (
+                        <div key={idx} className="image-wrapper">
+                          <Image img={{ url: imgKey }} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   {section.questions?.map((q) => (
                     <QuestionBlock
