@@ -6,6 +6,8 @@ import "./TestCreateEditView.css";
 import { Reorder, motion } from "framer-motion";
 import { BiTrash } from "react-icons/bi";
 
+
+
 axios.defaults.withCredentials = true;
 
 const TestCreateEditView = () => {
@@ -248,75 +250,89 @@ const TestCreateEditView = () => {
             return { ...prev, sections };
         });
     };
-
-    const addTableRow = (secIdx, qIdx) => {
-        setTestData(prev => {
-            const sections = [...prev.sections];
-            const section = { ...sections[secIdx] };
-            const question = { ...section.questions[qIdx] };
-
-            const newRow = {
-                id: uuidv4(),
-                cells: question.tableCols.map(() => ({ id: uuidv4(), value: "", sourceText: "" }))
-            };
-
-            question.tableRows = [...(question.tableRows || []), newRow];
-            section.questions[qIdx] = question;
-            sections[secIdx] = section;
-            return { ...prev, sections };
-        });
-    };
-
-    const addTableColumn = (secIdx, qIdx) => {
-        setTestData(prev => {
-            const sections = [...prev.sections];
-            const section = { ...sections[secIdx] };
-            const question = { ...section.questions[qIdx] };
-
-            const newColName = `Column ${((question.tableCols?.length || 0) + 1)}`;
-            question.tableCols = [...(question.tableCols || []), newColName];
-
-            // Add new cell for existing rows
-            question.tableRows = (question.tableRows || []).map(row => ({
-                ...row,
-                cells: [...row.cells, { id: uuidv4(), value: "", sourceText: "" }]
-            }));
-
-            section.questions[qIdx] = question;
-            sections[secIdx] = section;
-            return { ...prev, sections };
-        });
+    /*
+        const addTableRow = (secIdx, qIdx) => {
+            setTestData(prev => {
+                const sections = [...prev.sections];
+                const section = { ...sections[secIdx] };
+                const question = { ...section.questions[qIdx] };
+    
+                const newRow = {
+                    id: uuidv4(),
+                    cells: question.tableCols.map(() => ({ id: uuidv4(), value: "", sourceText: "" }))
+                };
+    
+                question.tableRows = [...(question.tableRows || []), newRow];
+                section.questions[qIdx] = question;
+                sections[secIdx] = section;
+                return { ...prev, sections };
+            });
+        };
+    
+        const addTableColumn = (secIdx, qIdx) => {
+            setTestData(prev => {
+                const sections = [...prev.sections];
+                const section = { ...sections[secIdx] };
+                const question = { ...section.questions[qIdx] };
+    
+                const newColName = `Column ${((question.tableCols?.length || 0) + 1)}`;
+                question.tableCols = [...(question.tableCols || []), newColName];
+    
+                // Add new cell for existing rows
+                question.tableRows = (question.tableRows || []).map(row => ({
+                    ...row,
+                    cells: [...row.cells, { id: uuidv4(), value: "", sourceText: "" }]
+                }));
+    
+                section.questions[qIdx] = question;
+                sections[secIdx] = section;
+                return { ...prev, sections };
+            });
+        };
+    */
+    const defaultRequirements = {
+        matching_sentence_endings:
+            "Choose the correct ending from the list A–{LETTER_MAX}. Write the correct letter in boxes {START}-{END}.",
+        summary_completion:
+            "Complete the summary. Write ONE WORD ONLY for each answer in boxes {START}-{END}.",
+        short_answer:
+            "Answer the questions. Write your answers in boxes {START}-{END}.",
+        diagram_completion:
+            "Label the diagram. Write ONE WORD ONLY in boxes {START}-{END}.",
     };
 
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        // Clean up empty answers before saving
-        const cleanedData = {
-            ...testData,
-            sections: testData.sections.map(section => ({
-                ...section,
-                questions: section.questions.map(q => ({
-                    ...q,
-                    answers: (q.answers || []).filter(a => a.value || a.sourceText),
-                })),
-            })),
-        };
 
         try {
-            if (id) {
-                await axios.put(`${BASE_URL}/api/tests/${id}`, testData);
-                alert("Test updated successfully");
-            } else {
-                await axios.post(`${BASE_URL}/api/tests`, testData);
-                alert("Test created successfully");
+            // Always update since test already exists
+            await axios.put(`${BASE_URL}/api/tests/${id}`, testData);
+
+            alert("Test updated successfully");
+
+            if (testData.type === "speaking") {
+                try {
+                    const res = await axios.post(
+                        `${BASE_URL}/api/tests/${id}/generate-speaking-audio`,
+                        {},
+                        { withCredentials: true }
+                    );
+                    console.log("TTS audio generated:", res.data);
+                    alert("Speaking question audio generated successfully.");
+                } catch (ttsErr) {
+                    console.error("TTS generation failed:", ttsErr);
+                    alert("Test saved, but failed to generate speaking audio.");
+                }
             }
-            navigate("/tests");
+
+            navigate(-1);
         } catch (err) {
             console.error("Error saving test:", err);
             alert("Error saving test");
         }
     };
+
 
     if (loading) return <div>Loading...</div>;
 
@@ -471,6 +487,11 @@ const TestCreateEditView = () => {
                                                 const newType = e.target.value;
                                                 let updatedQ = { ...q, type: newType };
 
+                                                // Auto-set requirement only if requirement is currently empty
+                                                if (!updatedQ.requirement && defaultRequirements[newType]) {
+                                                    updatedQ.requirement = defaultRequirements[newType];
+                                                }
+
                                                 if (newType === "matching_headings" && testData.type === "reading") {
                                                     const updatedSection = syncMatchingHeadingsItems({
                                                         ...section,
@@ -544,11 +565,17 @@ const TestCreateEditView = () => {
                                 />
                                 <br />
 
-                                {testData.type !== "speaking" && q.type !== "summary_completion" (
-                                    <button type="button" onClick={() => addQuestionItem(secIdx, qIdx)}>
-                                        Add Question Item
-                                    </button>
-                                )}
+                                {testData.type !== "speaking" &&
+                                    testData.type !== "writing" &&
+                                    q.type !== "summary_completion" &&
+                                    q.type !== "table_completion" &&
+                                    q.type !== "diagram_completion" && (
+                                        <button type="button" onClick={() => addQuestionItem(secIdx, qIdx)}>
+                                            Add Question Item
+                                        </button>
+                                    )}
+
+
 
 
                                 {q.questionItems.map((item, itemIdx) => (
@@ -1302,12 +1329,23 @@ const TestCreateEditView = () => {
                                                     onClick={() => {
                                                         const { row, col } = selectedCell;
                                                         const updatedTable = [...(q.tableData || [])];
-                                                        updatedTable[row][col] += " [BLANK]";
-                                                        const updatedQ = { ...q, tableData: updatedTable };
+                                                        updatedTable[row][col] = (updatedTable[row][col] || "") + " [BLANK]";
 
-                                                        // keep answers array synced
-                                                        const updatedAnswers = [...(q.answers || []), { value: "" }];
-                                                        updatedQ.answers = updatedAnswers;
+                                                        // Count blanks
+                                                        const flat = updatedTable.flat();
+                                                        const blankCount = flat.join(" ").match(/\[BLANK\]/g)?.length || 0;
+
+                                                        // Sync `answers` length
+                                                        let answers = q.answers ? [...q.answers] : [];
+                                                        if (blankCount > answers.length) {
+                                                            for (let i = answers.length; i < blankCount; i++) {
+                                                                answers.push({ id: uuidv4(), value: "", sourceText: "" });
+                                                            }
+                                                        } else if (blankCount < answers.length) {
+                                                            answers = answers.slice(0, blankCount);
+                                                        }
+
+                                                        const updatedQ = { ...q, tableData: updatedTable, answers };
 
                                                         const updatedQuestions = [...section.questions];
                                                         updatedQuestions[qIdx] = updatedQ;
@@ -1315,8 +1353,9 @@ const TestCreateEditView = () => {
                                                     }}
                                                     style={{ marginLeft: "8px", backgroundColor: "#eee" }}
                                                 >
-                                                    + Add Blank
+                                                    Add Blank
                                                 </button>
+
                                             </div>
 
                                             {/* --- Editable table --- */}
@@ -1355,6 +1394,48 @@ const TestCreateEditView = () => {
                                                     ))}
                                                 </tbody>
                                             </table>
+                                            {/* Answer Inputs */}
+                                            <div style={{ marginTop: "15px" }}>
+                                                <h4>Answers</h4>
+
+                                                {(q.answers || []).map((ans, idx) => (
+                                                    <div key={ans.id} style={{ display: "flex", gap: "10px", marginBottom: "6px" }}>
+                                                        <label style={{ width: "40px" }}>{idx + 1}.</label>
+
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Correct answer"
+                                                            value={ans.value}
+                                                            onChange={(e) => {
+                                                                const answers = q.answers.map(a =>
+                                                                    a.id === ans.id ? { ...a, value: e.target.value } : a
+                                                                );
+                                                                const updatedQ = { ...q, answers };
+                                                                const updatedQuestions = [...section.questions];
+                                                                updatedQuestions[qIdx] = updatedQ;
+                                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                            }}
+                                                            style={{ flex: 1 }}
+                                                        />
+
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Answer comes from..."
+                                                            value={ans.sourceText}
+                                                            onChange={(e) => {
+                                                                const answers = q.answers.map(a =>
+                                                                    a.id === ans.id ? { ...a, sourceText: e.target.value } : a
+                                                                );
+                                                                const updatedQ = { ...q, answers };
+                                                                const updatedQuestions = [...section.questions];
+                                                                updatedQuestions[qIdx] = updatedQ;
+                                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                            }}
+                                                            style={{ flex: 1 }}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
 
                                             {/* --- Preview --- */}
                                             <h4 style={{ marginTop: "10px" }}>Preview</h4>
@@ -1559,6 +1640,31 @@ const TestCreateEditView = () => {
 
                 <br />
                 <button type="submit" className="save-button">Complete Creation</button>
+                <button
+                    type="button"
+                    className="cancel-button"
+                    onClick={async () => {
+                        if (!id) {
+                            navigate("/tests");
+                            return;
+                        }
+
+                        const confirmed = window.confirm("Cancel test creation? This test will be deleted.");
+                        if (!confirmed) return;
+
+                        try {
+                            await axios.delete(`${BASE_URL}/api/tests/${id}`);
+                        } catch (err) {
+                            console.error("Failed to delete test:", err);
+                            alert("Failed to delete temporary test.");
+                        }
+
+                        navigate("/tests");
+                    }}
+                >
+                    Cancel
+                </button>
+
             </form >
         </div >
     );

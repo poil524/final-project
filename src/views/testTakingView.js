@@ -23,6 +23,21 @@ const QuestionBlock = ({
       ? q.shuffledEnds.map((e) => (typeof e === "string" ? e : e.value))
       : (q.answers || []).map((a) => a.value);
 
+  // Auto-generate questionItems if missing (summary & diagram completion)
+  let generatedItems = q.questionItems;
+  if (
+    (q.type === "summary_completion" ||
+      q.type === "diagram_completion" ||
+      q.type === "table_completion") &&
+    (!generatedItems || generatedItems.length === 0)
+  ) {
+    generatedItems = (q.answers || []).map((ans, idx) => ({
+      id: ans.id,
+      text: `[${idx + 1}]`, // same behavior
+    }));
+  }
+
+
   const getCorrectAnswer = (itemId) => {
     const correctObj = (q.answers || []).find((a) => a.id === itemId);
     return correctObj?.value || "";
@@ -36,7 +51,7 @@ const QuestionBlock = ({
   const renderAnswer = (itemId) => {
     const studentAnswer = answers[q._id]?.[itemId] || "";
     const correctAnswer = getCorrectAnswer(itemId);
-    const sourceText = getSourceText(itemId); // full DB text
+    const sourceText = getSourceText(itemId);
     const isCorrect = studentAnswer === correctAnswer;
 
     return (
@@ -48,8 +63,6 @@ const QuestionBlock = ({
             setHighlightText(cleanText);
           }
         }}
-
-
         onMouseLeave={() => {
           if (showAnswers) {
             setHighlightText(null);
@@ -64,11 +77,112 @@ const QuestionBlock = ({
 
 
 
+  const itemCount = generatedItems.length;
+  const start = questionCounter.current + 1; // first index of this question group
+  const end = start + itemCount - 1;        // last index in this question group
+  const letterMax = String.fromCharCode(64 + itemCount); // A, B, C, D...
+
+  const requirementText = (q.requirement || "")
+    .replace("{START}", start)
+    .replace("{END}", end)
+    .replace("{LETTER_MAX}", letterMax);
+
+
+  const renderSummaryText = () => {
+    if (q.type !== "summary_completion") return null;
+    if (!q.summary) return null;
+
+    const parts = q.summary.split(/\[BLANK\]/g);
+
+    return (
+      <p style={{ marginBottom: "15px", whiteSpace: "pre-wrap" }}>
+        {parts.map((part, idx) => {
+          const item = generatedItems[idx];
+          if (!item) return part;
+
+          const studentAnswer = answers[q._id]?.[item.id] || "";
+
+          return (
+            <React.Fragment key={idx}>
+              {part}
+              {/* Add numbering here */}
+              <span style={{ marginRight: "4px" }}>{idx + 1}.</span>
+              <span
+                style={{
+                  display: "inline-block",
+                  minWidth: "60px",
+                  borderBottom: "1px solid black",
+                  textAlign: "center",
+                  marginRight: "4px"
+                }}
+              >
+                {studentAnswer}
+              </span>
+            </React.Fragment>
+          );
+        })}
+      </p>
+    );
+  };
+
+  const renderTableCompletion = () => {
+    if (q.type !== "table_completion") return null;
+
+    let blankIndex = 0;
+
+    return (
+      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "12px" }}>
+        <tbody>
+          {(q.tableData || []).map((row, rIdx) => (
+            <tr key={rIdx}>
+              {row.map((cell, cIdx) => {
+                const parts = cell.split(/\[BLANK\]/g);
+                return (
+                  <td key={cIdx} style={{ border: "1px solid #ccc", padding: "6px" }}>
+                    {parts.map((part, i) => {
+                      if (i === parts.length - 1) return part;
+
+                      const item = generatedItems[blankIndex];
+                      const itemId = item?.id;
+                      const studentAnswer = answers[q._id]?.[itemId] || "";
+
+                      blankIndex++;
+
+                      return (
+                        <React.Fragment key={i}>
+                          {part}
+                          {/* numbering + underline (like summary) */}
+                          <span style={{ marginRight: "4px" }}>{blankIndex}.</span>
+                          <span
+                            style={{
+                              display: "inline-block",
+                              minWidth: "60px",
+                              borderBottom: "1px solid black",
+                              textAlign: "center",
+                              marginRight: "6px"
+                            }}
+                          >
+                            {studentAnswer}
+                          </span>
+                        </React.Fragment>
+                      );
+                    })}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  };
+
   return (
     <div className="question-block">
-      <h4>{q.requirement}</h4>
-
-      {(q.questionItems || []).map((item) => {
+      <h4>{requirementText}</h4>
+      {renderSummaryText()}
+      {renderTableCompletion()}
+      {generatedItems.map((item) => {
         questionCounter.current++;
 
         // === Show answers mode ===
@@ -76,11 +190,12 @@ const QuestionBlock = ({
           return (
             <div key={item.id} style={{ marginBottom: 8 }}>
               <label>
-                {questionCounter.current}. {item.text}: {renderAnswer(item.id)}
+                {questionCounter.current}. {renderAnswer(item.id)}
               </label>
             </div>
           );
         }
+
 
         // === Normal input mode ===
         switch (q.type) {
@@ -252,6 +367,47 @@ const QuestionBlock = ({
 
           case "short_answer":
           case "summary_completion":
+            return (
+              <div
+                key={item.id}
+                style={{
+                  marginBottom: 8,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px" // spacing between number and input
+                }}
+              >
+                <span>{questionCounter.current}.</span>
+                <input
+                  type="text"
+                  value={answers[q._id]?.[item.id] || ""}
+                  placeholder="Enter answer"
+                  onChange={(e) => handleAnswerChange(q._id, item.id, e.target.value)}
+                  style={{ flex: "0 0 200px" }} // optional: sets width
+                />
+              </div>
+            );
+          case "table_completion":
+            return (
+              <div
+                key={item.id}
+                style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: "6px" }}
+              >
+                <span>{questionCounter.current}.</span>
+                {showAnswers ? (
+                  renderAnswer(item.id)
+                ) : (
+                  <input
+                    type="text"
+                    value={answers[q._id]?.[item.id] || ""}
+                    onChange={(e) => handleAnswerChange(q._id, item.id, e.target.value)}
+                    style={{ flex: "0 0 200px" }}
+                    placeholder="Enter answer"
+                  />
+                )}
+              </div>
+            );
+
           default:
             return (
               <div key={item.id}>
@@ -401,7 +557,14 @@ const StudentTestView = () => {
             return;
           }
 
-          (q.questionItems || []).forEach((item) => {
+          (q.questionItems && q.questionItems.length > 0
+            ? q.questionItems
+            : (q.answers || []).map((ans, idx) => ({
+              id: ans.id,
+              text: `[${idx + 1}]`,
+            }))
+          ).forEach((item) => {
+
             total++;
             const correctObj = (q.answers || []).find((a) => a.id === item.id);
             const correctValue = correctObj?.value ?? "";
@@ -432,14 +595,6 @@ const StudentTestView = () => {
         return;
       }
 
-      /*await axios.post(
-        `${BASE_URL}/api/tests/${testId}/save-result`,
-        resultData,
-        {
-          withCredentials: true,
-          //headers: { Authorization: `Bearer ${token}` },
-        }
-      );*/
       await axios.post(
         `${BASE_URL}/api/tests/${testId}/save-result`,
         { ...resultData, answers },  // attach full answers
@@ -482,11 +637,7 @@ const StudentTestView = () => {
       // Save writing result if user is a student
       const token = localStorage.getItem("token");
       if (token) {
-        /*await axios.post(
-          `${BASE_URL}/api/tests/${testId}/save-result`,
-          { band, feedback },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );*/
+
         await axios.post(
           `${BASE_URL}/api/tests/${testId}/save-result`,
           { band, feedback },
@@ -503,55 +654,52 @@ const StudentTestView = () => {
     }
   };
 
+
   const handleSpeakingSubmit = async () => {
     if (!test || !test.sections) return;
 
-    const speakingSections = test.type === "speaking" ? test.sections : [];
-    const payload = speakingSections.map((section) => ({
-      requirement: section.requirement,
-      audioKey: section.audioKey,
-    }));
+    // Build payload for backend
+    const speakingSections = test.type === "speaking" ? test.sections.map((section) => ({
+      sectionTitle: section.sectionTitle,
+      questions: section.questions.map((q) => ({
+        requirement: q.requirement,
+        studentAudioKey: q.studentAudioKey,
+      })),
+    })) : [];
 
     try {
       const res = await axios.post(
-        `${BASE_URL}/api/tests/evaluate-writing`,
-        { sections: payload },
+        `${BASE_URL}/api/tests/evaluate-speaking`,
+        { sections: speakingSections },
         { withCredentials: true }
       );
 
       setResult(res.data);
 
-      // Extract first evaluation (you can expand for multi-part speaking)
       const firstEval = res.data?.evaluations?.[0];
       const band = firstEval?.band || null;
       const feedback = firstEval?.feedback || {};
-      const transcript = firstEval?.transcript || "";
+      const transcript = firstEval?.fullConversation?.map(
+        (c) => `Q: ${c.question}\nA: ${c.transcript}`
+      ).join("\n\n");
 
-      // Save speaking result to backend
+      // Save result
       const token = localStorage.getItem("token");
       if (token) {
-        /*await axios.post(
-          `${BASE_URL}/api/tests/${testId}/save-result`,
-          { band, feedback, transcript },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );*/
         await axios.post(
           `${BASE_URL}/api/tests/${testId}/save-result`,
-          { speakingAudioKey: payload[0]?.audioKey || null },
+          { band, feedback, transcript },
           { withCredentials: true }
         );
-
-
-
-        console.log("Speaking result saved successfully.");
-      } else {
-        console.warn("No token found, skipping result save.");
       }
+
+      console.log("Speaking evaluation completed successfully.");
     } catch (err) {
-      console.error("Evaluation or saving failed:", err.response?.data || err);
-      alert("Error evaluating or saving speaking result");
+      console.error("Speaking evaluation failed:", err.response?.data || err);
+      alert("Error evaluating speaking test");
     }
   };
+
 
 
 
@@ -595,7 +743,94 @@ const StudentTestView = () => {
         <button onClick={handleWritingSubmit}>Submit Writing</button>
       )}
 
-      {/* === Speaking Sections === */}
+      {/*
+  Speaking Sections
+  {speakingSections.length > 0 && (
+    <div>
+      {speakingSections.map((section, secIdx) => (
+        <div key={secIdx} className="speaking-section">
+          <h3>{section.sectionTitle}</h3>
+
+          {section.requirement && (
+            <p><b>Task:</b> {section.requirement}</p>
+          )}
+          {section.questions?.length > 0 && (
+            <div className="speaking-questions">
+              <h4>Questions:</h4>
+              <ul>
+                {section.questions.map((q, qIdx) => (
+                  <li key={q._id || qIdx}>
+                    <strong>Q{qIdx + 1}:</strong> {q.requirement || q.text || "No question text"}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <AudioRecorder
+            testId={testId}
+            sectionIndex={secIdx}
+            onUploadComplete={(key, clearLocalPreview) => {
+              if (clearLocalPreview) clearLocalPreview();
+
+              setTest((prev) => {
+                const updatedSections = [...prev.sections];
+                updatedSections[secIdx] = { ...updatedSections[secIdx], audioKey: key };
+                return { ...prev, sections: updatedSections };
+              });
+
+              const token = localStorage.getItem("token");
+              if (token) {
+                axios.post(
+                  `${BASE_URL}/api/tests/${testId}/save-result`,
+                  { speakingAudioKey: key },
+                  { headers: { Authorization: `Bearer ${token}` } }
+                );
+              }
+            }}
+          />
+
+          {section.audioKey && (
+            <div style={{ marginTop: "10px" }}>
+              <AudioPlayer s3Key={section.audioKey} />
+            </div>
+          )}
+        </div>
+      ))}
+
+      <button onClick={handleSpeakingSubmit} style={{ marginTop: "20px" }}>
+        Submit Speaking
+      </button>
+
+      {result?.evaluations && (
+        <div className="speaking-result" style={{ marginTop: "15px" }}>
+          <h3>Speaking Evaluation Result</h3>
+          {result.evaluations.map((evalData, idx) => (
+            <div key={idx}>
+              {evalData.transcript && (
+                <details>
+                  <summary>View Transcript</summary>
+                  <p>{evalData.transcript}</p>
+                </details>
+              )}
+              <p><b>Band:</b> {evalData.band || "N/A"}</p>
+              {evalData.feedback && (
+                <ul>
+                  <li><b>Fluency & Coherence:</b> {evalData.feedback.fluency_coherence}</li>
+                  <li><b>Lexical Resource:</b> {evalData.feedback.lexical_resource}</li>
+                  <li><b>Grammar Range & Accuracy:</b> {evalData.feedback.grammatical_range_accuracy}</li>
+                  <li><b>Pronunciation:</b> {evalData.feedback.pronunciation}</li>
+                  <li><b>Summary:</b> {evalData.feedback.summary}</li>
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )}
+*/}
+
       {speakingSections.length > 0 && (
         <div>
           {speakingSections.map((section, secIdx) => (
@@ -605,52 +840,71 @@ const StudentTestView = () => {
               {section.requirement && (
                 <p><b>Task:</b> {section.requirement}</p>
               )}
-              {/* Speaking Question */}
+
               {section.questions?.length > 0 && (
                 <div className="speaking-questions">
                   <h4>Questions:</h4>
                   <ul>
                     {section.questions.map((q, qIdx) => (
-                      <li key={q._id || qIdx}>
-                        <strong>Q{qIdx + 1}:</strong> {q.requirement || q.text || "No question text"}
+                      <li key={q._id || qIdx} style={{ marginBottom: "25px" }}>
+                        <strong>Q{qIdx + 1}:</strong>{" "}
+                        {q.requirement || q.text || "No question text"}
+
+                        {/* 🎧 Question Audio */}
+                        {q.ttsKey && (
+                          <div style={{ marginTop: "8px" }}>
+                            <AudioPlayer s3Key={q.ttsKey} autoPlay={false} />
+                          </div>
+                        )}
+                        {/* 🎙️ Individual Recorder for this Question */}
+                        {/* 🎙️ Individual Recorder for this Question */}
+                        <AudioRecorder
+                          testId={testId}
+                          sectionIndex={secIdx}
+                          questionIndex={qIdx}
+                          onUploadComplete={(key, clearLocalPreview) => {
+                            if (clearLocalPreview) clearLocalPreview();
+
+                            setTest((prev) => {
+                              const updatedSections = [...prev.sections];
+                              const updatedQuestions = [...updatedSections[secIdx].questions];
+                              updatedQuestions[qIdx] = {
+                                ...updatedQuestions[qIdx],
+                                studentAudioKey: key, // ✅ save under the new field
+                              };
+                              updatedSections[secIdx] = {
+                                ...updatedSections[secIdx],
+                                questions: updatedQuestions,
+                              };
+                              return { ...prev, sections: updatedSections };
+                            });
+
+                            const token = localStorage.getItem("token");
+                            if (token) {
+                              axios.post(
+                                `${BASE_URL}/api/tests/${testId}/save-result`,
+                                { speakingAudioKey: key },
+                                { headers: { Authorization: `Bearer ${token}` } }
+                              );
+                            }
+                          }}
+                        />
+
+                        {/* ✅ Student's Recorded Answer Playback */}
+                        {q.studentAudioKey && (
+                          <div style={{ marginTop: "8px" }}>
+                            <AudioPlayer s3Key={q.studentAudioKey} />
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>
                 </div>
               )}
-
-              <AudioRecorder
-                testId={testId}
-                sectionIndex={secIdx}
-                onUploadComplete={(key, clearLocalPreview) => {
-                  if (clearLocalPreview) clearLocalPreview();
-
-                  setTest((prev) => {
-                    const updatedSections = [...prev.sections];
-                    updatedSections[secIdx] = { ...updatedSections[secIdx], audioKey: key };
-                    return { ...prev, sections: updatedSections };
-                  });
-
-                  const token = localStorage.getItem("token");
-                  if (token) {
-                    axios.post(
-                      `${BASE_URL}/api/tests/${testId}/save-result`,
-                      { speakingAudioKey: key },
-                      { headers: { Authorization: `Bearer ${token}` } }
-                    );
-                  }
-                }}
-              />
-
-              {section.audioKey && (
-                <div style={{ marginTop: "10px" }}>
-                  <AudioPlayer s3Key={section.audioKey} />
-                </div>
-              )}
             </div>
           ))}
 
-          {/* Add the Submit button here */}
+          {/* Submit entire speaking test */}
           <button onClick={handleSpeakingSubmit} style={{ marginTop: "20px" }}>
             Submit Speaking
           </button>
@@ -683,6 +937,8 @@ const StudentTestView = () => {
           )}
         </div>
       )}
+
+
 
 
 

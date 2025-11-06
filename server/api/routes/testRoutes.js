@@ -135,6 +135,60 @@ router.post("/upload-audio", upload.single("audio"), async (req, res) => {
 });
 
 
+// Generate TTS audio for speaking test questions
+router.post("/:id/generate-speaking-audio", authenticate, async (req, res) => {
+  try {
+    const test = await Test.findById(req.params.id);
+    if (!test) return res.status(404).json({ error: "Test not found" });
+    if (test.type !== "speaking") {
+      return res.status(400).json({ error: "Only speaking tests need TTS generation" });
+    }
+
+    for (const [secIdx, section] of test.sections.entries()) {
+      for (const [qIdx, q] of section.questions.entries()) {
+        if (!q.requirement?.trim()) continue;
+
+        // === Use Deepgram TTS ===
+        const ttsResponse = await deepgram.speak.request(
+          { text: q.requirement },
+          {
+            model: "aura-asteria-en",
+            encoding: "linear16",
+            container: "wav",
+          }
+        );
+
+        const audioStream = await ttsResponse.getStream();
+        if (!audioStream) throw new Error("Failed to get TTS audio stream from Deepgram");
+
+        // Save to temp .wav file
+        const tmpPath = path.join(tmpdir(), `tts_${Date.now()}.wav`);
+        await streamPipeline(audioStream, fs.createWriteStream(tmpPath));
+
+        // Upload to S3
+        const key = `audio/${test._id}_${secIdx}_${qIdx}_${Date.now()}.wav`;
+        await s3.send(new PutObjectCommand({
+          Bucket: bucketName,
+          Key: key,
+          Body: fs.createReadStream(tmpPath),
+          ContentType: "audio/wav",
+          ACL: "private",
+        }));
+
+        q.ttsKey = key;
+        fs.unlinkSync(tmpPath);
+      }
+    }
+
+    await test.save();
+    res.json({ message: "TTS audio generated successfully for all speaking questions.", test });
+  } catch (err) {
+    console.error("[ERROR] TTS generation failed:", err);
+    res.status(500).json({ error: "Failed to generate TTS audio for speaking test" });
+  }
+});
+
+
 router.get("/audio-url/:filename", async (req, res) => {
   try {
     const { filename } = req.params;
@@ -299,11 +353,20 @@ router.delete("/:id", authenticate, async (req, res) => {
 
     // Collect all S3 keys to remove
     const keys = [];
+
     test.sections.forEach((s) => {
+      // section-level audio + images
       if (s.audioKey) keys.push(s.audioKey);
       if (Array.isArray(s.images)) keys.push(...s.images);
       else if (s.images) keys.push(s.images);
+
+      // question-level audio (TTS + student recordings)
+      s.questions?.forEach((q) => {
+        if (q.ttsKey) keys.push(q.ttsKey);
+        if (q.studentAudioKey) keys.push(q.studentAudioKey);
+      });
     });
+
 
 
     await Test.findByIdAndDelete(req.params.id);
@@ -325,7 +388,7 @@ router.delete("/:id", authenticate, async (req, res) => {
   }
 });
 
-// Evaluate speaking
+/* Evaluate speaking
 router.post("/evaluate-speaking", async (req, res) => {
   try {
     console.log("[DEBUG] /evaluate-speaking called");
@@ -364,10 +427,6 @@ router.post("/evaluate-speaking", async (req, res) => {
       } else {
         throw new Error("Unexpected S3 Body type");
       }
-
-      // Convert to Base64
-      //const audioBytes = fs.readFileSync(tempFilePath).toString("base64");
-
       // Transcribe with Deepgram
 
       const audioBuffer = fs.readFileSync(tempFilePath);
@@ -441,6 +500,115 @@ Provide JSON output with these fields:
   } catch (err) {
     console.error("[ERROR] Speaking evaluation failed:", err);
     res.status(500).json({ error: "Failed to evaluate speaking" });
+  }
+});
+*/
+router.post("/evaluate-speaking", async (req, res) => {
+  try {
+    console.log("[DEBUG] /evaluate-speaking called");
+
+    const { sections } = req.body;
+    if (!sections || !Array.isArray(sections) || sections.length === 0) {
+      return res.status(400).json({ error: "No speaking sections provided" });
+    }
+
+    const fullConversation = []; // we'll collect (question + transcript) pairs
+    const bucketName = process.env.AWS_BUCKET_NAME || "final-project-ielts-test";
+
+    for (const section of sections) {
+      for (const q of section.questions || []) {
+        const audioKey = q.studentAudioKey;
+        if (!audioKey) continue;
+
+        console.log(`[DEBUG] Transcribing question: ${q.requirement}`);
+
+        // 1️⃣ Download audio from S3
+        const command = new GetObjectCommand({ Bucket: bucketName, Key: audioKey });
+        const audioObj = await s3.send(command);
+
+        // Write to temp
+        const tmpFile = path.join(tmpdir(), `sp_${Date.now()}.wav`);
+        if (audioObj.Body instanceof Buffer) {
+          fs.writeFileSync(tmpFile, audioObj.Body);
+        } else if (audioObj.Body.pipe) {
+          await streamPipeline(audioObj.Body, fs.createWriteStream(tmpFile));
+        }
+
+        // 2️⃣ Transcribe with Deepgram
+        const audioBuffer = fs.readFileSync(tmpFile);
+        const { result } = await deepgram.listen.prerecorded.transcribeFile(audioBuffer, {
+          model: "nova-3",
+          smart_format: true,
+          language: "en-US",
+        });
+
+        const transcript = result?.results?.channels?.[0]?.alternatives?.[0]?.transcript || "";
+        fullConversation.push({
+          question: q.requirement,
+          transcript,
+        });
+
+        fs.unlinkSync(tmpFile);
+      }
+    }
+
+    if (fullConversation.length === 0) {
+      return res.status(400).json({ error: "No valid audio found for any speaking question." });
+    }
+
+    // 3️⃣ Build a unified evaluation prompt
+    const prompt = `
+You are an IELTS Speaking examiner. Evaluate the student's *entire speaking test* below.
+Consider fluency, coherence, lexical resource, grammar, and pronunciation holistically.
+
+Each question and transcript is shown below:
+
+${fullConversation.map(
+  (c, i) => `Q${i + 1}: ${c.question}\nStudent: ${c.transcript}\n`
+).join("\n")}
+
+Provide one combined evaluation as JSON:
+{
+  "band": number (0–9),
+  "feedback": {
+    "fluency_coherence": string,
+    "lexical_resource": string,
+    "grammatical_range_accuracy": string,
+    "pronunciation": string,
+    "summary": string
+  }
+}
+`;
+
+    // 4️⃣ Send to OpenAI
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const text = completion.choices?.[0]?.message?.content?.trim() || "";
+    console.log("[DEBUG] OpenAI response:", text);
+
+    let evaluation;
+    try {
+      evaluation = JSON.parse(text);
+    } catch {
+      evaluation = { band: null, feedback: { summary: text } };
+    }
+
+    // Return combined evaluation + individual transcripts
+    res.json({
+      evaluations: [
+        {
+          band: evaluation.band,
+          feedback: evaluation.feedback,
+          fullConversation,
+        },
+      ],
+    });
+  } catch (err) {
+    console.error("[ERROR] Speaking evaluation failed:", err);
+    res.status(500).json({ error: "Failed to evaluate speaking test" });
   }
 });
 

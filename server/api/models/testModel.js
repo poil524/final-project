@@ -21,11 +21,6 @@ const tableCellSchema = new mongoose.Schema({
     sourceText: { type: String, default: "" },
 });
 
-const tableRowSchema = new mongoose.Schema({
-    id: { type: String, default: () => uuidv4(), required: true },
-    cells: { type: [tableCellSchema], default: [] },
-});
-
 const questionSchema = new mongoose.Schema({
     type: { type: String, default: "multiple_choice" },
     requirement: { type: String, default: "" },
@@ -39,6 +34,10 @@ const questionSchema = new mongoose.Schema({
 
     // Table Completion fields
     tableData: { type: [[String]], default: [] },
+
+    // Speaking (separate keys for system TTS and student response)
+    ttsKey: { type: String, default: "" },
+    studentAudioKey: { type: String, default: "" },
 });
 
 const passageSchema = new mongoose.Schema({
@@ -52,9 +51,9 @@ const sectionSchema = new mongoose.Schema({
     passages: { type: [passageSchema], default: [] },
     questions: { type: [questionSchema], default: [] },
     images: { type: [String], default: [] },
-    audioKey: { type: String, default: "" },  // for listening
-    transcript: { type: String, default: "" },     // for listening
-    requirement: { type: String, default: "" },    // for writing/speaking
+    audioKey: { type: String, default: "" },
+    transcript: { type: String, default: "" },
+    requirement: { type: String, default: "" },
 });
 
 const testSchema = new mongoose.Schema({
@@ -62,7 +61,7 @@ const testSchema = new mongoose.Schema({
     type: { type: String, enum: ["reading", "listening", "writing", "speaking"], required: true },
     sections: { type: [sectionSchema], default: [] },
     createdAt: { type: Date, default: Date.now },
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, 
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     studentsTaken: { type: Number, default: 0 },
 });
 

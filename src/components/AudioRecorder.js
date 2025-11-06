@@ -21,30 +21,7 @@ const AudioRecorder = ({ testId, sectionIndex, onUploadComplete }) => {
                 const blob = new Blob(audioChunks.current, { type: "audio/mp3" });
                 const localPreview = URL.createObjectURL(blob);
                 setAudioURL(localPreview); // Show local preview while uploading
-                /*
-                                const file = new File([blob], `speaking_${Date.now()}.mp3`, { type: "audio/mp3" });
-                                const formData = new FormData();
-                                formData.append("audio", file);
-                                formData.append("testId", testId);
-                
-                                try {
-                                    const res = await axios.post("http://localhost:5000/api/tests/upload-audio", formData, {
-                                        headers: { "Content-Type": "multipart/form-data" },
-                                    });
-                
-                                    const key = res.data.key;
-                
-                                    // Upload success → clear local preview before notifying parent
-                                    setAudioURL(null);
-                
-                                    if (onUploadComplete) {
-                                        onUploadComplete(key);
-                                    }
-                                } catch (err) {
-                                    console.error("Audio upload failed:", err);
-                                    alert("Upload failed");
-                                }
-                                    */
+              
                 const file = new File([blob], `speaking_${Date.now()}.mp3`, { type: "audio/mp3" });
                 const formData = new FormData();
                 formData.append("audio", file);
