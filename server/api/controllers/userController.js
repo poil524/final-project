@@ -21,45 +21,7 @@ const generateTokenAndSetCookie = (user, res) => {
     return token;
 };
 
-/* Register or auto-login if user exists
-const createUser = asyncHandler(async (req, res) => {
-    const { username, email, password } = req.body;
 
-    if (!username || !email || !password) {
-        res.status(400);
-        throw new Error("Please fill all the fields.");
-    }
-
-    const existingUser = await User.findOne({ email });
-
-    if (existingUser) {
-        const token = generateTokenAndSetCookie(existingUser, res);
-        return res.status(200).json({
-            message: "User already exists. Logged in automatically.",
-            user: existingUser,
-            token,
-        });
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    const newUser = await User.create({ username, email, password: hashedPassword });
-
-    if (newUser) {
-        const token = generateTokenAndSetCookie(newUser, res);
-        console.log("[DEBUG] Cookie set for new user:", token.slice(0, 20) + "...");
-        res.status(201).json({
-            message: "User registered successfully.",
-            user: newUser,
-            token,
-        });
-    } else {
-        res.status(400);
-        throw new Error("Invalid user data.");
-    }
-});
-*/
 const createUser = asyncHandler(async (req, res) => {
     const { username, email, password } = req.body;
     const isTeacher = req.body.isTeacher === true || req.body.isTeacher === "true";
@@ -166,7 +128,7 @@ const updateCurrentProfile = asyncHandler(async (req, res) => {
 
         if (req.body.password) {
             const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash(req.body.password, salt); // use req.body.password
+            const hashedPassword = await bcrypt.hash(req.body.password, salt); 
             user.password = hashedPassword;
         }
 
@@ -187,7 +149,7 @@ const updateCurrentProfile = asyncHandler(async (req, res) => {
 });
 
 const deleteUserById = asyncHandler(async (req, res) => {
-    const user = await User.findById(req.params.id); // <-- note 'params'
+    const user = await User.findById(req.params.id); 
 
     if (user) {
         if (user.isAdmin) {
@@ -220,7 +182,6 @@ const updateUserById = asyncHandler(async (req, res) => {
         user.username = req.body.username || user.username
         user.email = req.body.email || user.email
         user.isAdmin = Boolean(req.body.isAdmin)
-        // TODO: Add isTeacher
 
         const updatedUser = await user.save()
 
@@ -292,9 +253,6 @@ const getProfile = async (req, res) => {
         res.status(500).json({ error: "Server error" });
     }
 };
-
-
-
 
 export {
     createUser,

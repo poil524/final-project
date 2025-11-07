@@ -85,6 +85,15 @@ textarea {
   font-weight: bold;
 }
 
+.question-card-header {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+
+
 button {
   background-color: var(--color-primary);
   color: var(--color-primary-text);
@@ -171,3 +180,50 @@ hr {
   border-top: 1px solid #eee;
   margin: 20px 0;
 }
+
+.form-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.form-row label {
+  width: 160px; 
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.form-row select,
+.form-row input[type="text"] {
+  flex: 1;
+}
+
+.type-requirement .form-row {
+  margin-top: 20px;
+  margin-bottom: 2px; 
+}
+
+.question-items-container {
+  border: 2px dashed #888; /* dashed border all sides */
+  border-radius: 8px;       /* rounded corners */
+  padding: 15px;            /* inner spacing */
+  margin: 15px 0;           /* spacing from other elements */
+  
+  display: flex;
+  flex-direction: column;
+  gap: 10px;                /* spacing between items */
+
+  /* Responsive width */
+  width: 100%;
+  max-width: 800px;         /* container won’t be too wide on large screens */
+  box-sizing: border-box;
+}
+
+.question-item {
+  padding: 10px;
+  background-color: red; /* subtle background for items */
+  border-radius: 4px;
+}
+
+
+

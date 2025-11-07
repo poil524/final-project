@@ -2,19 +2,19 @@ import mongoose from 'mongoose';
 const { Schema } = mongoose;
 
 const testResultSchema = new Schema({
-  testId: { type: Schema.Types.ObjectId, ref: "Test" },
-  testName: { type: String },
-  type: { type: String },
+    testId: { type: Schema.Types.ObjectId, ref: "Test" },
+    testName: { type: String },
+    type: { type: String },
 
-  // store entire student answers
-  answers: { type: Schema.Types.Mixed, default: {} },
+    // store entire student answers
+    answers: { type: Schema.Types.Mixed, default: {} },
 
-  score: { type: Number, default: null },
-  total: { type: Number, default: null },
-  band: { type: Number, default: null },
-  feedback: { type: Schema.Types.Mixed, default: {} },
+    score: { type: Number, default: null },
+    total: { type: Number, default: null },
+    band: { type: Number, default: null },
+    feedback: { type: Schema.Types.Mixed, default: {} },
 
-  takenAt: { type: Date, default: Date.now },
+    takenAt: { type: Date, default: Date.now },
 });
 
 

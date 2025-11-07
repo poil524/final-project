@@ -14,12 +14,6 @@ const answerSchema = new mongoose.Schema({
     sourceText: { type: String, default: "" },
 });
 
-// For table completion
-const tableCellSchema = new mongoose.Schema({
-    id: { type: String, default: () => uuidv4(), required: true },
-    value: { type: String, default: "" },
-    sourceText: { type: String, default: "" },
-});
 
 const questionSchema = new mongoose.Schema({
     type: { type: String, default: "multiple_choice" },
