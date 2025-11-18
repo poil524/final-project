@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import AudioPlayer from "../components/AudioPlayer";
@@ -6,6 +6,7 @@ import Image from "../components/Image";
 import AudioRecorder from "../components/AudioRecorder";
 import './TestTakingView.css';
 import { GoArrowSwitch } from "react-icons/go";
+import EssayDisplay from "./EssayDisplay.jsx";
 
 const stripHTML = (str) => str.replace(/<[^>]+>/g, '');
 const QuestionBlock = ({
@@ -36,6 +37,7 @@ const QuestionBlock = ({
       text: `[${idx + 1}]`, // same behavior
     }));
   }
+
 
 
   const getCorrectAnswer = (itemId) => {
@@ -74,6 +76,7 @@ const QuestionBlock = ({
       </span>
     );
   };
+
 
 
 
@@ -437,8 +440,10 @@ const StudentTestView = () => {
   const [showAnswers, setShowAnswers] = useState(false);
   const [highlightText, setHighlightText] = useState(null);
   const [twoViewMode, setTwoViewMode] = useState(false);
+  const [evaluationReady, setEvaluationReady] = useState(false);
+  const [savedResult, setSavedResult] = useState(null);
 
-
+  const writingRefs = useRef([]);
   const BASE_URL = "http://localhost:5000";
 
 
@@ -484,10 +489,18 @@ const StudentTestView = () => {
         const existing = res2.data;
         if (!existing) return;
 
-        // restore previous answers & score
-        setAnswers(existing.answers || {});
+        const newAnswers = { ...existing.answers };
+
+        if (Array.isArray(existing.answers)) {
+          // For writing tests, convert array to keyed object
+          existing.answers.forEach((secAnswer, idx) => {
+            newAnswers[`writing_${idx}`] = secAnswer.content;
+          });
+        }
+
+        setAnswers(newAnswers);
         setResult({ score: existing.score, total: existing.total });
-        setShowAnswers(true); // auto reveal answers
+        setShowAnswers(true);
         console.log("Loaded previous attempt:", existing);
       } catch (err) {
         console.log("No previous result or error:", err.response?.data || err.message);
@@ -503,7 +516,13 @@ const StudentTestView = () => {
     };
   }, [testId]);
 
-
+  useEffect(() => {
+    if (writingRefs.current.length !== (test?.sections?.length || 0)) {
+      writingRefs.current = (test?.sections || []).map(
+        (_, i) => writingRefs.current[i] || React.createRef()
+      );
+    }
+  }, [test]);
 
   const handleAnswerChange = (questionId, itemId, value) => {
     setAnswers((prev) => ({
@@ -620,29 +639,39 @@ const StudentTestView = () => {
     }));
 
     try {
-      // Evaluate writing using OpenAI 
-      const res = await axios.post(
+      // 1️⃣ AI evaluation
+      const aiRes = await axios.post(
         `${BASE_URL}/api/tests/evaluate-writing`,
         { sections: payload },
         { withCredentials: true }
       );
 
-      setResult(res.data);
+      // Display AI evaluation immediately
+      setResult(aiRes.data);
 
-      // Extract band and feedback from evaluation result
-      const firstEval = res.data?.evaluations?.[0];
+      const firstEval = aiRes.data?.evaluations?.[0];
       const band = firstEval?.band || null;
       const feedback = firstEval?.feedback || {};
 
-      // Save writing result if user is a student
+      // 2️⃣ Save result to DB (only if logged in)
       const token = localStorage.getItem("token");
       if (token) {
-
-        await axios.post(
+        const saveRes = await axios.post(
           `${BASE_URL}/api/tests/${testId}/save-result`,
-          { band, feedback },
+          {
+            band,
+            feedback,
+            answers: writingSections.map((section, idx) => ({
+              requirement: section.requirement,
+              content: answers[`writing_${idx}`] || "",
+            })),
+          },
           { withCredentials: true }
         );
+
+        // Make sure saveRes.data has an _id
+        setSavedResult(saveRes.data);
+        setEvaluationReady(true);
 
         console.log("Writing result saved successfully.");
       } else {
@@ -653,6 +682,7 @@ const StudentTestView = () => {
       alert("Error evaluating or saving writing result");
     }
   };
+
 
 
   const handleSpeakingSubmit = async () => {
@@ -685,23 +715,37 @@ const StudentTestView = () => {
 
       // Save result
       const token = localStorage.getItem("token");
+      // Save result
       if (token) {
-        await axios.post(
+        const saveRes = await axios.post(
           `${BASE_URL}/api/tests/${testId}/save-result`,
-          { band, feedback, transcript },
+          {
+            band,
+            feedback,
+            transcript,
+            answers: speakingSections.map((section) => ({
+              sectionTitle: section.sectionTitle,
+              questions: section.questions.map((q) => ({
+                requirement: q.requirement,
+                studentAudioKey: q.studentAudioKey,
+              })),
+            })),
+          },
           { withCredentials: true }
         );
+
+        // Save backend result with _id
+        setSavedResult(saveRes.data);
+        setEvaluationReady(true); // mark AI evaluation done
       }
 
+      setEvaluationReady(true); // mark AI evaluation done
       console.log("Speaking evaluation completed successfully.");
     } catch (err) {
       console.error("Speaking evaluation failed:", err.response?.data || err);
       alert("Error evaluating speaking test");
     }
   };
-
-
-
 
   if (error) return <div>Error: {error}</div>;
   if (!test) return <div>Loading...</div>;
@@ -713,34 +757,99 @@ const StudentTestView = () => {
   const writingSections = test.type === "writing" ? test.sections : [];
   const speakingSections = test.type === "speaking" ? test.sections : [];
 
+  const sanitizeHTML = (html) => {
+    const temp = document.createElement('div');
+    temp.textContent = html;
+    return temp.innerHTML;
+  };
+
+  /* ensure ref array has enough entries
+  if (writingRefs.current.length !== writingSections.length) {
+    writingRefs.current = writingSections.map((_, i) => writingRefs.current[i] || React.createRef());
+  }
+    */
+
+
   return (
     <div className={`test-taking-container ${twoViewMode ? "two-view-layout-active" : ""}`}>
       <h1>{test.name}</h1>
 
       {/* === Writing Sections (Always Shown) === */}
-      {writingSections.map((section, secIdx) => (
-        <div key={secIdx}>
-          <h2>{section.sectionTitle}</h2>
-          <p><b>Requirement:</b> {section.requirement}</p>
-          <div
-            className="writing-box"
-            contentEditable
-            suppressContentEditableWarning
-            onInput={(e) => handleWritingInput(secIdx, e.currentTarget.innerHTML)}
-            onKeyDown={(e) => {
-              if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") e.preventDefault();
-              if (
-                (e.ctrlKey || e.metaKey) &&
-                (e.key.toLowerCase() === "y" || (e.shiftKey && e.key.toLowerCase() === "z"))
-              )
-                e.preventDefault();
-            }}
-          ></div>
-        </div>
-      ))}
+      {writingSections.map((section, secIdx) => {
+        const prevContent = answers[`writing_${secIdx}`] || "";
 
-      {writingSections.length > 0 && (
+        // If there is an existing answer, show it using EssayDisplay
+        if (prevContent) {
+          return (
+            <div key={secIdx}>
+              <h2>{section.sectionTitle}</h2>
+              <p><b>Requirement:</b> {section.requirement}</p>
+              <EssayDisplay content={prevContent} />
+            </div>
+          );
+        }
+
+        // Otherwise, show editable box
+        return (
+          <div key={secIdx}>
+            <h2>{section.sectionTitle}</h2>
+            <p><b>Requirement:</b> {section.requirement}</p>
+            <div
+              ref={writingRefs.current[secIdx]}
+              className="writing-box"
+              contentEditable
+              suppressContentEditableWarning
+              onInput={(e) => handleWritingInput(secIdx, e.currentTarget.innerHTML)}
+              style={{
+                backgroundColor: "white",
+                cursor: "text",
+              }}
+            />
+          </div>
+        );
+      })}
+      {test.type === "writing" && !evaluationReady && writingSections.length > 0 && (
         <button onClick={handleWritingSubmit}>Submit Writing</button>
+      )}
+
+      {evaluationReady && savedResult && (
+        <div style={{ marginTop: "20px" }}>
+          <button
+            onClick={async () => {
+              try {
+                if (!savedResult?._id) return alert("No test result to evaluate yet");
+
+                await axios.post(
+                  `${BASE_URL}/api/tests/request-evaluation`,
+                  { testResultId: savedResult._id },
+                  { withCredentials: true }
+                );
+
+                alert("Teacher evaluation requested successfully!");
+              } catch (err) {
+                console.error(err);
+                alert("Failed to request teacher evaluation");
+              }
+            }}
+          >
+            Request Evaluation
+          </button>
+        </div>
+      )}
+
+      {evaluationReady && writingSections.length > 0 && result && (
+        <div style={{ marginTop: "20px" }}>
+          <h3>Writing AI Evaluation Result</h3>
+          <p><b>Band:</b> {result.band || result.evaluations?.[0]?.band || "N/A"}</p>
+          {result.feedback || result.evaluations?.[0]?.feedback ? (
+            <ul>
+              <li><b>Task Response:</b> {result.feedback?.task_response || result.evaluations[0].feedback?.task_response}</li>
+              <li><b>Coherence & Cohesion:</b> {result.feedback?.coherence_cohesion || result.evaluations[0].feedback?.coherence_cohesion}</li>
+              <li><b>Lexical Resource:</b> {result.feedback?.lexical_resource || result.evaluations[0].feedback?.lexical_resource}</li>
+              <li><b>Grammar:</b> {result.feedback?.grammar || result.evaluations[0].feedback?.grammar}</li>
+            </ul>
+          ) : null}
+        </div>
       )}
 
       {/*
@@ -857,7 +966,6 @@ const StudentTestView = () => {
                           </div>
                         )}
                         {/* 🎙️ Individual Recorder for this Question */}
-                        {/* 🎙️ Individual Recorder for this Question */}
                         <AudioRecorder
                           testId={testId}
                           sectionIndex={secIdx}
@@ -890,7 +998,7 @@ const StudentTestView = () => {
                           }}
                         />
 
-                        {/* ✅ Student's Recorded Answer Playback */}
+                        {/* Student's Recorded Answer Playback */}
                         {q.studentAudioKey && (
                           <div style={{ marginTop: "8px" }}>
                             <AudioPlayer s3Key={q.studentAudioKey} />
@@ -905,9 +1013,37 @@ const StudentTestView = () => {
           ))}
 
           {/* Submit entire speaking test */}
-          <button onClick={handleSpeakingSubmit} style={{ marginTop: "20px" }}>
-            Submit Speaking
-          </button>
+          {!evaluationReady && speakingSections.length > 0 && (
+            <button onClick={handleSpeakingSubmit} style={{ marginTop: "20px" }}>
+              Submit Speaking
+            </button>
+          )}
+          {evaluationReady && (
+            <div style={{ marginTop: "20px" }}>
+              <button
+                onClick={async () => {
+                  try {
+                    const testResultId = result?._id; // or wherever your saved result ID is
+                    if (!testResultId) return alert("No test result to evaluate yet");
+
+                    await
+                      await axios.post(`${BASE_URL}/api/tests/request-evaluation`, {
+                        testResultId: result._id,
+                      }, { withCredentials: true });
+
+
+                    alert("Teacher evaluation requested successfully!");
+                  } catch (err) {
+                    console.error(err);
+                    alert("Failed to request teacher evaluation");
+                  }
+                }}
+              >
+                Request Evaluation
+              </button>
+
+            </div>
+          )}
 
           {/* Show result if available */}
           {result?.evaluations && (

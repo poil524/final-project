@@ -1,4 +1,5 @@
 import User from "../models/userModel.js";
+import Evaluation from "../models/evaluationModel.js";
 import asyncHandler from "../middlewares/asyncHandler.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
@@ -107,6 +108,7 @@ const getAllUsers = asyncHandler(async (req, res) => {
     res.json(users);
 })
 
+/*
 const getCurrentUserProfile = asyncHandler(async (req, res) => {
     const user = await User.findById(req.user._id).select("-password");
 
@@ -117,7 +119,28 @@ const getCurrentUserProfile = asyncHandler(async (req, res) => {
         throw new Error("User not found");
     }
 });
+*/
+const getCurrentUserProfile = asyncHandler(async (req, res) => {
+    // Fetch the user without the password
+    const user = await User.findById(req.user._id)
+        .select("-password")
+        .lean();
 
+    if (!user) {
+        res.status(404);
+        throw new Error("User not found");
+    }
+
+    // Fetch teacher evaluations for this student
+    const evaluations = await Evaluation.find({ student: req.user._id })
+        .populate("assignedTeacher", "username email")
+        .lean();
+
+    // Attach evaluations to the user object
+    user.evaluations = evaluations;
+
+    res.json(user);
+});
 
 const updateCurrentProfile = asyncHandler(async (req, res) => {
     const user = await User.findById(req.user._id)
@@ -128,7 +151,7 @@ const updateCurrentProfile = asyncHandler(async (req, res) => {
 
         if (req.body.password) {
             const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash(req.body.password, salt); 
+            const hashedPassword = await bcrypt.hash(req.body.password, salt);
             user.password = hashedPassword;
         }
 
@@ -149,7 +172,7 @@ const updateCurrentProfile = asyncHandler(async (req, res) => {
 });
 
 const deleteUserById = asyncHandler(async (req, res) => {
-    const user = await User.findById(req.params.id); 
+    const user = await User.findById(req.params.id);
 
     if (user) {
         if (user.isAdmin) {
@@ -254,6 +277,104 @@ const getProfile = async (req, res) => {
     }
 };
 
+// Student requests evaluation with snapshot of answers
+const requestEvaluation = asyncHandler(async (req, res) => {
+    const { testResultId } = req.body;
+
+    // Fetch the user’s test result
+    const testResult = await User.findOne(
+        { "testResults._id": testResultId },
+        { "testResults.$": 1 }
+    );
+
+    if (!testResult) return res.status(404).json({ error: "Test result not found" });
+
+    const answersSnapshot = testResult.testResults[0].answers;
+    const requirementSnapshot = testResult.testResults[0].requirement; // if stored
+
+    const evaluation = await Evaluation.create({
+        student: req.user._id,
+        testResultId,
+        answers: answersSnapshot,
+        requirement: requirementSnapshot,
+    });
+
+    res.status(201).json(evaluation);
+});
+
+
+// Admin assigns teacher
+const assignTeacher = asyncHandler(async (req, res) => {
+    const { teacherId } = req.body;
+    const evaluation = await Evaluation.findById(req.params.id);
+
+    if (!evaluation) return res.status(404).json({ error: "Evaluation not found" });
+
+    evaluation.assignedTeacher = teacherId;
+    evaluation.status = "assigned";
+    evaluation.assignedAt = new Date();
+    await evaluation.save();
+
+    res.json(evaluation);
+});
+
+// Teacher submits feedback
+const completeEvaluation = asyncHandler(async (req, res) => {
+    const evaluation = await Evaluation.findById(req.params.id);
+
+    if (!evaluation) return res.status(404).json({ error: "Evaluation not found" });
+    if (!evaluation.assignedTeacher.equals(req.user._id))
+        return res.status(403).json({ error: "Not authorized" });
+
+    evaluation.feedback = req.body.feedback;
+    evaluation.status = "completed";
+    evaluation.completedAt = new Date();
+    await evaluation.save();
+
+    res.json(evaluation);
+});
+
+// List evaluations for student
+const getStudentEvaluations = asyncHandler(async (req, res) => {
+    const evaluations = await Evaluation.find({ student: req.user._id })
+        .populate("assignedTeacher", "username email")
+        .lean();
+
+    res.json(evaluations);
+});
+
+/* List evaluations for teacher
+const getTeacherAssignments = asyncHandler(async (req, res) => {
+    const evaluations = await Evaluation.find({ assignedTeacher: req.user._id, status: "assigned" })
+        .populate("student", "username email")
+        .lean();
+
+    res.json(evaluations);
+});
+*/
+const getTeacherAssignments = asyncHandler(async (req, res) => {
+    const evaluations = await Evaluation.find({ assignedTeacher: req.user._id, status: "assigned" })
+        .populate("student", "username email")
+        .lean();
+
+    res.json(evaluations);
+});
+
+
+
+
+
+
+
+// Admin: view pending evaluations
+const getPendingEvaluations = asyncHandler(async (req, res) => {
+    const evaluations = await Evaluation.find({ status: "pending" })
+        .populate("student", "username email")
+        .lean();
+
+    res.json(evaluations);
+});
+
 export {
     createUser,
     loginUser,
@@ -267,6 +388,12 @@ export {
     getAllTeachers,
     approveTeacher,
     rejectTeacher,
-    getProfile
+    getProfile,
+    requestEvaluation,
+    assignTeacher,
+    completeEvaluation,
+    getStudentEvaluations,
+    getTeacherAssignments,
+    getPendingEvaluations
 };
 

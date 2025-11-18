@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Outlet, NavLink } from "react-router-dom";
-import "./admin.css";
+import "../Dashboard.css";
 
 export default function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
@@ -38,12 +38,7 @@ export default function AdminLayout() {
         </NavLink>
 
         {!collapsed && <p className="admin-nav-group-title">Request Management</p>}
-        <NavLink to="/admin/requests/teacher-approval" className="admin-nav-link">
-          {collapsed ? "TA" : "Teacher Approvals"}
-        </NavLink>
-        <NavLink to="/admin/requests/test-edit-delete" className="admin-nav-link">
-          {collapsed ? "ED" : "Test Edit/Delete"}
-        </NavLink>
+
         <NavLink to="/admin/requests/evaluations" className="admin-nav-link">
           {collapsed ? "EV" : "Evaluation Requests"}
         </NavLink>

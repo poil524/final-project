@@ -9,7 +9,7 @@ import OpenAI from "openai";
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { authenticate } from '../middlewares/authMiddleware.js';
 import { createClient } from "@deepgram/sdk";
-
+import { requestEvaluation } from '../controllers/userController.js';
 
 import fs from "fs";
 import path from "path";
@@ -135,7 +135,7 @@ router.post("/upload-audio", upload.single("audio"), async (req, res) => {
 });
 
 
-// Generate TTS audio for speaking test questions
+/* Generate TTS audio for speaking test questions
 router.post("/:id/generate-speaking-audio", authenticate, async (req, res) => {
   try {
     const test = await Test.findById(req.params.id);
@@ -182,6 +182,60 @@ router.post("/:id/generate-speaking-audio", authenticate, async (req, res) => {
 
     await test.save();
     res.json({ message: "TTS audio generated successfully for all speaking questions.", test });
+  } catch (err) {
+    console.error("[ERROR] TTS generation failed:", err);
+    res.status(500).json({ error: "Failed to generate TTS audio for speaking test" });
+  }
+});
+*/
+// Generate TTS audio for speaking test questions
+router.post("/:id/generate-speaking-audio", authenticate, async (req, res) => {
+  try {
+    const testId = req.params.id;
+    const test = await Test.findById(testId);
+    if (!test) return res.status(404).json({ error: "Test not found" });
+    if (test.type !== "speaking") {
+      return res.status(400).json({ error: "Only speaking tests need TTS generation" });
+    }
+
+    for (const [secIdx, section] of test.sections.entries()) {
+      for (const [qIdx, question] of (section.questions || []).entries()) {
+        if (!question.requirement?.trim()) continue;
+
+        // Generate TTS with Deepgram
+        const ttsResponse = await deepgram.speak.request(
+          { text: question.requirement },
+          { model: "aura-asteria-en", encoding: "linear16", container: "wav" }
+        );
+
+        const audioStream = await ttsResponse.getStream();
+        if (!audioStream) throw new Error("Failed to get TTS audio stream from Deepgram");
+
+        // Save temp file
+        const tmpPath = path.join(tmpdir(), `tts_${Date.now()}.wav`);
+        await streamPipeline(audioStream, fs.createWriteStream(tmpPath));
+
+        // Upload to S3
+        const key = `audio/${testId}_${secIdx}_${qIdx}_${Date.now()}.wav`;
+        await s3.send(new PutObjectCommand({
+          Bucket: bucketName,
+          Key: key,
+          Body: fs.createReadStream(tmpPath),
+          ContentType: "audio/wav",
+          ACL: "private",
+        }));
+
+        fs.unlinkSync(tmpPath);
+
+        // Update the specific TTS key atomically in DB
+        await Test.findByIdAndUpdate(
+          testId,
+          { $set: { [`sections.${secIdx}.questions.${qIdx}.ttsKey`]: key } }
+        );
+      }
+    }
+
+    res.json({ message: "TTS audio generated successfully for all speaking questions." });
   } catch (err) {
     console.error("[ERROR] TTS generation failed:", err);
     res.status(500).json({ error: "Failed to generate TTS audio for speaking test" });
@@ -388,121 +442,6 @@ router.delete("/:id", authenticate, async (req, res) => {
   }
 });
 
-/* Evaluate speaking
-router.post("/evaluate-speaking", async (req, res) => {
-  try {
-    console.log("[DEBUG] /evaluate-speaking called");
-    const { sections } = req.body;
-
-    if (!sections || !Array.isArray(sections) || sections.length === 0) {
-      return res.status(400).json({ error: "No speaking sections provided" });
-    }
-
-    const results = [];
-
-    for (const section of sections) {
-      const { requirement, audioKey } = section;
-
-      if (!audioKey) {
-        results.push({
-          requirement,
-          error: "No audio file provided",
-        });
-        continue;
-      }
-
-      // Download audio from S3
-      const command = new GetObjectCommand({
-        Bucket: bucketName,
-        Key: audioKey,
-      });
-      const audioObj = await s3.send(command);
-
-      // Write to temp file
-      const tempFilePath = path.join(tmpdir(), `temp_${Date.now()}.mp3`);
-      if (audioObj.Body instanceof Buffer) {
-        fs.writeFileSync(tempFilePath, audioObj.Body);
-      } else if (audioObj.Body.pipe) {
-        await streamPipeline(audioObj.Body, fs.createWriteStream(tempFilePath));
-      } else {
-        throw new Error("Unexpected S3 Body type");
-      }
-      // Transcribe with Deepgram
-
-      const audioBuffer = fs.readFileSync(tempFilePath);
-
-      const { result, error } = await deepgram.listen.prerecorded.transcribeFile(
-        audioBuffer,
-        {
-          model: "nova-3",
-          smart_format: true,
-          language: "en-US",
-        }
-      );
-
-      if (error) throw error;
-
-      // Extract transcript
-      const transcript =
-        result?.results?.channels?.[0]?.alternatives?.[0]?.transcript || "";
-
-      console.log("[DEBUG] Transcript:", transcript);
-
-      // Evaluate transcript using OpenAI GPT
-      const prompt = `
-You are an IELTS Speaking examiner. Evaluate the following student's speaking performance based on IELTS Speaking Band Descriptors.
-
-Task requirement:
-"${requirement || "No specific requirement"}"
-
-Student transcript:
-${transcript}
-
-Provide JSON output with these fields:
-{
-  "band": number (0–9),
-  "feedback": {
-    "fluency_coherence": string,
-    "lexical_resource": string,
-    "grammatical_range_accuracy": string,
-    "pronunciation": string,
-    "summary": string
-  }
-}
-`;
-
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }],
-      });
-
-      const text = completion.choices?.[0]?.message?.content?.trim();
-      console.log("[DEBUG] OpenAI response:", text);
-
-      let evaluation;
-      try {
-        evaluation = JSON.parse(text);
-      } catch {
-        evaluation = { band: null, feedback: { summary: text } };
-      }
-
-      results.push({
-        requirement,
-        transcript,
-        ...evaluation,
-      });
-
-      // Clean up temp file
-      fs.unlink(tempFilePath, () => { });
-    }
-
-    res.json({ evaluations: results });
-  } catch (err) {
-    console.error("[ERROR] Speaking evaluation failed:", err);
-    res.status(500).json({ error: "Failed to evaluate speaking" });
-  }
-});
-*/
 router.post("/evaluate-speaking", async (req, res) => {
   try {
     console.log("[DEBUG] /evaluate-speaking called");
@@ -556,7 +495,7 @@ router.post("/evaluate-speaking", async (req, res) => {
       return res.status(400).json({ error: "No valid audio found for any speaking question." });
     }
 
-    // 3️⃣ Build a unified evaluation prompt
+    // Build a unified evaluation prompt
     const prompt = `
 You are an IELTS Speaking examiner. Evaluate the student's *entire speaking test* below.
 Consider fluency, coherence, lexical resource, grammar, and pronunciation holistically.
@@ -564,8 +503,8 @@ Consider fluency, coherence, lexical resource, grammar, and pronunciation holist
 Each question and transcript is shown below:
 
 ${fullConversation.map(
-  (c, i) => `Q${i + 1}: ${c.question}\nStudent: ${c.transcript}\n`
-).join("\n")}
+      (c, i) => `Q${i + 1}: ${c.question}\nStudent: ${c.transcript}\n`
+    ).join("\n")}
 
 Provide one combined evaluation as JSON:
 {
@@ -580,12 +519,12 @@ Provide one combined evaluation as JSON:
 }
 `;
 
-    // 4️⃣ Send to OpenAI
+    // Send to OpenAI
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
     });
-
+    console.log("[DEBUG] Prompt:", prompt);
     const text = completion.choices?.[0]?.message?.content?.trim() || "";
     console.log("[DEBUG] OpenAI response:", text);
 
@@ -666,7 +605,7 @@ Return JSON with fields:
 }
 `;
 
-      console.log("[DEBUG] Sending prompt to OpenAI for requirement:", requirement);
+      console.log("[DEBUG] Sending prompt to OpenAI for requirement:", prompt);
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
@@ -697,7 +636,7 @@ Return JSON with fields:
   }
 });
 
-// Save test result to student
+/* Save test result to student
 router.post("/:id/save-result", authenticate, async (req, res) => {
   try {
     const testId = req.params.id;
@@ -759,6 +698,70 @@ router.post("/:id/save-result", authenticate, async (req, res) => {
     res.status(500).json({ error: "Failed to save test result" });
   }
 });
+*/
+router.post("/:id/save-result", authenticate, async (req, res) => {
+  try {
+    const testId = req.params.id;
+    const {
+      score,
+      total,
+      band,
+      feedback,
+      speakingAudioKey,
+      transcript,
+      answers
+    } = req.body;
+    const user = req.user;
+
+    if (user.isAdmin || user.isTeacher) {
+      return res.status(403).json({ error: "Admins/Teachers cannot save test results." });
+    }
+
+    const test = await Test.findById(testId);
+    if (!test) return res.status(404).json({ error: "Test not found" });
+
+    const resultEntry = {
+      testId,
+      testName: test.name,
+      type: test.type,
+      answers: answers || {},
+      score,
+      total,
+      band,
+      feedback,
+      speakingAudioKey,
+      transcript,
+      takenAt: new Date()
+    };
+
+    let newResult;
+    const existingIndex = user.testResults.findIndex(
+      (r) => r.testId.toString() === testId.toString()
+    );
+
+    if (existingIndex >= 0) {
+      // update existing
+      user.testResults[existingIndex] = resultEntry;
+      newResult = user.testResults[existingIndex];
+    } else {
+      // push new
+      user.testResults.push(resultEntry);
+      newResult = user.testResults[user.testResults.length - 1];
+    }
+
+    await user.save();
+
+    // Increment test studentsTaken safely
+    test.studentsTaken = (test.studentsTaken || 0) + 1;
+    await test.save();
+
+    // Return the newly saved test result (with _id)
+    res.json(newResult);
+  } catch (err) {
+    console.error("Error saving test result:", err);
+    res.status(500).json({ error: "Failed to save test result" });
+  }
+});
 
 router.get("/:id/get-result", authenticate, async (req, res) => {
   const user = req.user;
@@ -768,6 +771,13 @@ router.get("/:id/get-result", authenticate, async (req, res) => {
 
   if (!result) return res.json(null);
   return res.json(result);
+});
+
+// Student requests evaluation for a test result
+router.post("/request-evaluation", authenticate, async (req, res, next) => {
+  const { testResultId } = req.body;
+  if (!testResultId) return res.status(400).json({ message: "Missing testResultId" });
+  await requestEvaluation(req, res);
 });
 
 
