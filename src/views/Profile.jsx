@@ -10,9 +10,9 @@ const Profile = () => {
 
   const navigate = useNavigate();
   const handleRowClick = (id) => {
-  // Force absolute path
-  navigate(`/tests/${id}`, { replace: false });
-};
+    // Force absolute path
+    navigate(`/tests/${id}`, { replace: false });
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -93,7 +93,7 @@ const Profile = () => {
                         onClick={() => handleRowClick(t.testId)}
                         style={{ borderBottom: "1px solid #ddd", cursor: "pointer" }}
                       >
-                        
+
                         <td style={{ padding: 8 }}>{t.testName}</td>
                         <td style={{ padding: 8 }}>{t.type}</td>
                         <td style={{ padding: 8 }}>{t.score} / {t.total}</td>
@@ -103,37 +103,58 @@ const Profile = () => {
                         </td>
                         <td style={{ padding: 8 }} onClick={(e) => e.stopPropagation()}>
                           {t.type === "writing" || t.type === "speaking" ? (
-                            teacherFeedback ? (
-                              <button
-                                onClick={() => alert(teacherFeedback)}
-                                style={{ background: "#4ade80", padding: "6px 12px", borderRadius: "6px" }}
-                              >
-                                View Feedback
-                              </button>
-                            ) : (
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    await axios.post(
-                                      "http://localhost:5000/api/evaluations/request",
-                                      { testResultId: t._id },
-                                      { withCredentials: true }
-                                    );
-                                    alert("Teacher evaluation requested successfully!");
-                                  } catch (err) {
-                                    console.error("[DEBUG] Failed to request evaluation:", err);
-                                    alert("Failed to request teacher evaluation");
-                                  }
-                                }}
-                                style={{ padding: "6px 12px", borderRadius: "6px" }}
-                              >
-                                Request Evaluation
-                              </button>
-                            )
+                            (() => {
+                              const evalStatus = t.isEvaluated || { requested: false, resultReceived: false };
+
+                              if (!evalStatus.requested && !evalStatus.resultReceived) {
+                                // Request Evaluation
+                                return (
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        await axios.post(
+                                          "http://localhost:5000/api/evaluations/request",
+                                          { testResultId: t._id },
+                                          { withCredentials: true }
+                                        );
+                                        alert("Teacher evaluation requested successfully!");
+                                      } catch (err) {
+                                        console.error("[DEBUG] Failed to request evaluation:", err);
+                                        alert("Failed to request teacher evaluation");
+                                      }
+                                    }}
+                                    style={{ padding: "6px 12px", borderRadius: "6px" }}
+                                  >
+                                    Request Evaluation
+                                  </button>
+                                );
+                              } else if (evalStatus.requested && !evalStatus.resultReceived) {
+                                // Pending (disabled)
+                                return (
+                                  <button
+                                    disabled
+                                    style={{ padding: "6px 12px", borderRadius: "6px", background: "#facc15", cursor: "not-allowed" }}
+                                  >
+                                    Pending
+                                  </button>
+                                );
+                              } else if (evalStatus.requested && evalStatus.resultReceived) {
+                                // See Result
+                                return (
+                                  <button
+                                    onClick={() => navigate(`/tests/${t.testId}`)}
+                                    style={{ padding: "6px 12px", borderRadius: "6px", background: "#4ade80" }}
+                                  >
+                                    See Result
+                                  </button>
+                                );
+                              }
+                            })()
                           ) : (
                             "-"
                           )}
                         </td>
+
                       </tr>
                     );
                   })}

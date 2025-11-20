@@ -495,7 +495,7 @@ const StudentTestView = () => {
           setIsSubmitted(existing.isSubmitted || false);
           setResult(existing);
 
-
+          setSavedResult(existing);
 
           // If answers is an array (older format for writing/speaking), convert to keyed object for answers state
           const newAnswersState = {};
@@ -800,7 +800,6 @@ const StudentTestView = () => {
 
         // Save the result ID
         setSavedResult(saveRes.data);
-        setEvaluationReady(true);
 
       }
 
@@ -994,33 +993,63 @@ const StudentTestView = () => {
           )}
         </div>
       )}
+{/* === Teacher Feedback Display === */}
+{savedResult?.isEvaluated?.resultReceived && savedResult?.teacherFeedback && (
+  <div style={{ marginTop: "25px", padding: "15px", border: "1px solid #ccc", borderRadius: "8px" }}>
+    <h3>Teacher Evaluation Feedback</h3>
+
+    {typeof savedResult.teacherFeedback === "string" ? (
+      <p style={{ whiteSpace: "pre-wrap" }}>{savedResult.teacherFeedback}</p>
+    ) : (
+      <ul>
+        {Object.entries(savedResult.teacherFeedback).map(([k, v]) => (
+          <li key={k}>
+            <b>{k.replace(/_/g, " ").toUpperCase()}:</b> {v}
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+)}
 
       <div style={{ marginTop: "20px" }}>
-        <button
-          onClick={async () => {
-            try {
-              if (!savedResult?._id) {
-                console.log("[DEBUG] No savedResult yet:", savedResult);
-                return alert("No test result to evaluate yet");
+        {savedResult?.feedback && Object.keys(savedResult.feedback).length > 0 && !savedResult?.isEvaluated?.requested && (
+          <button
+            onClick={async () => {
+              try {
+                if (!savedResult?._id) {
+                  console.log("[DEBUG] No savedResult yet:", savedResult);
+                  return alert("No test result to evaluate yet");
+                }
+
+                // Send request to backend
+                await axios.post(
+                  `${BASE_URL}/api/tests/request-evaluation`,
+                  { testId: savedResult.testId },
+                  { withCredentials: true }
+                );
+
+                // Update local state to mark as requested
+                setSavedResult(prev => ({
+                  ...prev,
+                  isEvaluated: {
+                    ...prev.isEvaluated,
+                    requested: true,
+                  },
+                }));
+
+                alert("Teacher evaluation requested successfully!");
+              } catch (err) {
+                console.error(err);
+                alert("Failed to request teacher evaluation");
               }
-
-              await axios.post(
-                `${BASE_URL}/api/tests/request-evaluation`,
-                { testId: savedResult.testId },
-                { withCredentials: true }
-              );
-
-
-              alert("Teacher evaluation requested successfully!");
-            } catch (err) {
-              console.error(err);
-              alert("Failed to request teacher evaluation");
-            }
-          }}
-        >
-          Request Evaluation
-        </button>
+            }}
+          >
+            Request Evaluation
+          </button>
+        )}
       </div>
+
 
 
 

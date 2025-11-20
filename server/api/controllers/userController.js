@@ -306,7 +306,7 @@ const assignTeacher = asyncHandler(async (req, res) => {
     res.json(evaluation);
 });
 
-// Teacher submits feedback
+/* Teacher submits feedback
 const completeEvaluation = asyncHandler(async (req, res) => {
     const evaluation = await Evaluation.findById(req.params.id);
 
@@ -321,6 +321,58 @@ const completeEvaluation = asyncHandler(async (req, res) => {
 
     res.json(evaluation);
 });
+*/
+const completeEvaluation = asyncHandler(async (req, res) => {
+    const evaluationId = req.params.id;
+    const { feedback } = req.body;
+
+    // 1️⃣ Find the evaluation request
+    const evaluation = await Evaluation.findById(evaluationId);
+
+    if (!evaluation) return res.status(404).json({ error: "Evaluation not found" });
+    if (!evaluation.assignedTeacher.equals(req.user._id))
+        return res.status(403).json({ error: "Not authorized" });
+
+    // 2️⃣ Find the student and the specific test result
+    const student = await User.findById(evaluation.student);
+
+    if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+    }
+
+    const testResult = student.testResults.find(
+        (r) => r._id.toString() === evaluation.testResultId.toString()
+    );
+
+    if (!testResult) {
+        return res.status(404).json({ error: "Student test result not found" });
+    }
+
+    // 3️⃣ Write teacher feedback into student result
+    testResult.teacherFeedback = feedback; // keep AI feedback untouched
+
+
+    // 4️⃣ Mark evaluation completed
+    testResult.isEvaluated = {
+        requested: true,
+        resultReceived: true,
+    };
+
+    // 5️⃣ Save student and evaluation entry
+    await student.save();
+
+    evaluation.status = "completed";
+    evaluation.teacherFeedback = feedback;
+    evaluation.completedAt = new Date();
+    await evaluation.save();
+
+    res.json({
+        message: "Evaluation completed successfully",
+        evaluation,
+        updatedTestResult: testResult,
+    });
+});
+
 
 // List evaluations for student
 const getStudentEvaluations = asyncHandler(async (req, res) => {

@@ -11,11 +11,17 @@ const testResultSchema = new Schema({
 
     score: { type: Number, default: null }, // TODO: remove this
     total: { type: Number, default: null }, // TODO: remove this
-    band: { type: Number, default: null }, 
+    band: { type: Number, default: null },
     feedback: { type: Schema.Types.Mixed, default: {} },
+    teacherFeedback: { type: Schema.Types.Mixed, default: null },
 
     isSubmitted: { type: Boolean, default: false },
     takenAt: { type: Date, default: Date.now },
+
+    isEvaluated: {
+        type: Schema.Types.Mixed,
+        default: { requested: false, resultReceived: false }
+    },
 });
 
 
@@ -48,7 +54,7 @@ const userSchema = new Schema(
         },
         testResults: { type: [testResultSchema], default: [] },
         status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
-        
+
     },
     { timestamps: true })
 // Create and export the User model based on the UserSchema

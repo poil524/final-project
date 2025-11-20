@@ -680,7 +680,6 @@ router.post("/request-evaluation", authenticate, async (req, res) => {
     return res.status(400).json({ message: "Missing testId" });
   }
 
-  // Find the matching result inside the student account
   const user = req.user;
 
   const testResult = user.testResults.find(
@@ -691,11 +690,20 @@ router.post("/request-evaluation", authenticate, async (req, res) => {
     return res.status(404).json({ error: "Test result not found for this testId" });
   }
 
-  // Now pass the correct testResultId internally
+  // --- NEW: Add evaluation request flags ---
+  testResult.isEvaluated = {
+    requested: true,
+    resultReceived: false
+  };
+
+  await user.save(); // persist changes
+
+  // Pass correct testResultId to controller
   req.body.testResultId = testResult._id;
 
   return requestEvaluation(req, res);
 });
+
 
 
 
