@@ -459,8 +459,7 @@ Provide one combined evaluation as JSON:
     "fluency_coherence": string,
     "lexical_resource": string,
     "grammatical_range_accuracy": string,
-    "pronunciation": string,
-    "summary": string
+    "pronunciation": string
   }
 }
 `;
@@ -582,69 +581,7 @@ Return JSON with fields:
   }
 });
 
-/* Save test result to student
-router.post("/:id/save-result", authenticate, async (req, res) => {
-  try {
-    const testId = req.params.id;
-    const {
-      score,
-      total,
-      band,
-      feedback,
-      speakingAudioKey,
-      transcript,
-      answers
-    } = req.body;
-    const user = req.user; // from authMiddleware
-
-    // Only allow if user is NOT admin/teacher
-    if (user.isAdmin || user.isTeacher) {
-      return res.status(403).json({ error: "Admins/Teachers cannot save test results." });
-    }
-
-    const test = await Test.findById(testId);
-    if (!test) return res.status(404).json({ error: "Test not found" });
-
-    // Create result entry
-    const resultEntry = {
-      testId,
-      testName: test.name,
-      type: test.type,
-      answers: answers || {}, // store student answers
-      score,
-      total,
-      band,
-      feedback,
-      speakingAudioKey,
-      transcript,
-      takenAt: new Date()
-    };
-
-
-    // Push or update existing result for the same test
-    const existingIndex = user.testResults.findIndex(
-      (r) => r.testId.toString() === testId.toString()
-    );
-
-    if (existingIndex >= 0) {
-      user.testResults[existingIndex] = resultEntry;
-    } else {
-      user.testResults.push(resultEntry);
-    }
-
-    await user.save();
-
-    // Increment test’s studentsTaken count safely
-    test.studentsTaken = (test.studentsTaken || 0) + 1;
-    await test.save();
-
-    res.json({ message: "Result saved successfully", testResults: user.testResults });
-  } catch (err) {
-    console.error("Error saving test result:", err);
-    res.status(500).json({ error: "Failed to save test result" });
-  }
-});
-*/
+//Save test result to student
 router.post("/:id/save-result", authenticate, async (req, res) => {
   try {
     const testId = req.params.id;
@@ -677,7 +614,8 @@ router.post("/:id/save-result", authenticate, async (req, res) => {
       feedback,
       speakingAudioKey,
       transcript,
-      takenAt: new Date()
+      takenAt: new Date(),
+      isSubmitted: true
     };
 
     let newResult;
@@ -687,7 +625,10 @@ router.post("/:id/save-result", authenticate, async (req, res) => {
 
     if (existingIndex >= 0) {
       // update existing
-      user.testResults[existingIndex] = resultEntry;
+      user.testResults[existingIndex] = {
+        ...resultEntry,
+        isSubmitted: true  
+      };
       newResult = user.testResults[existingIndex];
     } else {
       // push new
@@ -710,21 +651,52 @@ router.post("/:id/save-result", authenticate, async (req, res) => {
 });
 
 router.get("/:id/get-result", authenticate, async (req, res) => {
+
   const user = req.user;
   const testId = req.params.id;
+  user.testResults.forEach((r, index) => {
 
-  const result = user.testResults.find(r => r.testId.toString() === testId);
+  });
 
-  if (!result) return res.json(null);
+  const result = user.testResults.find(r => {
+    const match = r.testId.toString() === testId.toString();
+    return match;
+  });
+
+  
+  if (!result) {
+    return res.json(null);
+  }
+
   return res.json(result);
 });
 
+
 // Student requests evaluation for a test result
-router.post("/request-evaluation", authenticate, async (req, res, next) => {
-  const { testResultId } = req.body;
-  if (!testResultId) return res.status(400).json({ message: "Missing testResultId" });
-  await requestEvaluation(req, res);
+router.post("/request-evaluation", authenticate, async (req, res) => {
+  const { testId } = req.body;
+
+  if (!testId) {
+    return res.status(400).json({ message: "Missing testId" });
+  }
+
+  // Find the matching result inside the student account
+  const user = req.user;
+
+  const testResult = user.testResults.find(
+    (r) => r.testId.toString() === testId.toString()
+  );
+
+  if (!testResult) {
+    return res.status(404).json({ error: "Test result not found for this testId" });
+  }
+
+  // Now pass the correct testResultId internally
+  req.body.testResultId = testResult._id;
+
+  return requestEvaluation(req, res);
 });
+
 
 
 export default router;

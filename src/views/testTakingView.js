@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import useNavigationBlocker from "../components/NavigationBlocker.jsx";
 import AudioPlayer from "../components/AudioPlayer";
 import Image from "../components/Image";
 import AudioRecorder from "../components/AudioRecorder";
@@ -432,7 +433,6 @@ const QuestionBlock = ({
 
 const StudentTestView = () => {
   const { id: testId } = useParams();
-
   const [test, setTest] = useState(null);
   const [error, setError] = useState(null);
   const [answers, setAnswers] = useState({});
@@ -440,15 +440,20 @@ const StudentTestView = () => {
   const [showAnswers, setShowAnswers] = useState(false);
   const [highlightText, setHighlightText] = useState(null);
   const [twoViewMode, setTwoViewMode] = useState(false);
-  const [evaluationReady, setEvaluationReady] = useState(false);
+  const [evaluationReady, setEvaluationReady] = useState(false); // Teacher Evaluation is ready after user submit to AI Evaluation. TODO: Change variable name
   const [savedResult, setSavedResult] = useState(null);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  // If not submitted, warn user on return
+  useNavigationBlocker(!result?.isSubmitted);
 
   const writingRefs = useRef([]);
   const BASE_URL = "http://localhost:5000";
 
 
+
+
   useEffect(() => {
-    console.log("Fetching test for testId:", testId);
 
     let active = true;
     const shuffle = (arr) => (arr ? [...arr].sort(() => Math.random() - 0.5) : []);
@@ -460,7 +465,7 @@ const StudentTestView = () => {
           axios.get(`${BASE_URL}/api/tests/${testId}`, { withCredentials: true }),
           axios.get(`${BASE_URL}/api/tests/${testId}/get-result`, { withCredentials: true }),
         ]);
-
+        console.log("Fetched result:", resultRes.value?.data);
         if (!active) return;
 
         // --- process test ---
@@ -487,12 +492,10 @@ const StudentTestView = () => {
         // --- process existing result (if any) ---
         if (resultRes.status === "fulfilled" && resultRes.value?.data) {
           const existing = resultRes.value.data;
+          setIsSubmitted(existing.isSubmitted || false);
+          setResult(existing);
 
-          // If existing has score/total, set result and show answers where appropriate
-          if (existing.score != null || existing.total != null) {
-            setResult({ score: existing.score, total: existing.total });
-            setShowAnswers(true);
-          }
+
 
           // If answers is an array (older format for writing/speaking), convert to keyed object for answers state
           const newAnswersState = {};
@@ -572,6 +575,10 @@ const StudentTestView = () => {
       active = false;
     };
   }, [testId]);
+
+
+
+
 
 
   useEffect(() => {
@@ -674,7 +681,7 @@ const StudentTestView = () => {
 
       await axios.post(
         `${BASE_URL}/api/tests/${testId}/save-result`,
-        { ...resultData, answers },  // attach full answers
+        { ...resultData, answers, isSubmitted: true },  // attach full answers
         { withCredentials: true }
       );
 
@@ -704,8 +711,8 @@ const StudentTestView = () => {
         { withCredentials: true }
       );
 
-      // Display AI evaluation immediately
-      setResult(aiRes.data);
+      // Display AI evaluation 
+      setResult({ ...aiRes.data, isSubmitted: true });
 
       const firstEval = aiRes.data?.evaluations?.[0];
       const band = firstEval?.band || null;
@@ -719,6 +726,7 @@ const StudentTestView = () => {
           {
             band,
             feedback,
+            isSubmitted: true,
             answers: writingSections.map((section, idx) => ({
               requirement: section.requirement,
               content: answers[`writing_${idx}`] || "",
@@ -817,7 +825,6 @@ const StudentTestView = () => {
   return (
     <div className={`test-taking-container ${twoViewMode ? "two-view-layout-active" : ""}`}>
       <h1>{test.name}</h1>
-
       {/* === Writing Sections (Always Shown) === */}
       {writingSections.map((section, secIdx) => {
         const prevContent = answers[`writing_${secIdx}`] || "";
@@ -852,23 +859,31 @@ const StudentTestView = () => {
           </div>
         );
       })}
-      {test.type === "writing" && !evaluationReady && writingSections.length > 0 && (
+      {test.type === "writing" && !evaluationReady && writingSections.length > 0 && !result?.isSubmitted && (
         <button onClick={handleWritingSubmit}>Submit Writing</button>
       )}
-
-
-      {evaluationReady && writingSections.length > 0 && result && (
+      {test.type === "writing" && result && (
         <div style={{ marginTop: "20px" }}>
           <h3>Writing AI Evaluation Result</h3>
-          <p><b>Band:</b> {result.band || result.evaluations?.[0]?.band || "N/A"}</p>
-          {result.feedback || result.evaluations?.[0]?.feedback ? (
+          <p>
+            <b>Band:</b> {result.band || result.evaluations?.[0]?.band || "N/A"}
+          </p>
+          {(result.feedback || (result.evaluations && result.evaluations.length > 0)) && (
             <ul>
-              <li><b>Task Response:</b> {result.feedback?.task_response || result.evaluations[0].feedback?.task_response}</li>
-              <li><b>Coherence & Cohesion:</b> {result.feedback?.coherence_cohesion || result.evaluations[0].feedback?.coherence_cohesion}</li>
-              <li><b>Lexical Resource:</b> {result.feedback?.lexical_resource || result.evaluations[0].feedback?.lexical_resource}</li>
-              <li><b>Grammar:</b> {result.feedback?.grammar || result.evaluations[0].feedback?.grammar}</li>
+              <li>
+                <b>Task Response:</b> {result.feedback?.task_response ?? result.evaluations?.[0]?.feedback?.task_response ?? "N/A"}
+              </li>
+              <li>
+                <b>Coherence & Cohesion:</b> {result.feedback?.coherence_cohesion ?? result.evaluations?.[0]?.feedback?.coherence_cohesion ?? "N/A"}
+              </li>
+              <li>
+                <b>Lexical Resource:</b> {result.feedback?.lexical_resource ?? result.evaluations?.[0]?.feedback?.lexical_resource ?? "N/A"}
+              </li>
+              <li>
+                <b>Grammar:</b> {result.feedback?.grammar ?? result.evaluations?.[0]?.feedback?.grammar ?? "N/A"}
+              </li>
             </ul>
-          ) : null}
+          )}
         </div>
       )}
       {speakingSections.length > 0 && (
@@ -946,87 +961,66 @@ const StudentTestView = () => {
               )}
             </div>
           ))}
-          {!evaluationReady && speakingSections.length > 0 && (
-            <button onClick={handleSpeakingSubmit} style={{ marginTop: "20px" }}>
-              Submit Speaking
-            </button>
-          )}
-          {evaluationReady && savedResult && (
-            <div style={{ marginTop: "20px" }}>
-              <button
-                onClick={async () => {
-                  try {
-                    if (!savedResult?._id) return alert("No test result to evaluate yet");
-
-                    await axios.post(
-                      `${BASE_URL}/api/tests/request-evaluation`,
-                      { testResultId: savedResult._id },
-                      { withCredentials: true }
-                    );
-
-                    alert("Teacher evaluation requested successfully!");
-                  } catch (err) {
-                    console.error(err);
-                    alert("Failed to request teacher evaluation");
-                  }
-                }}
-              >
-                Request Evaluation
-              </button>
-            </div>
-          )}
 
 
-          {/* Show result if available */}
-          {result?.evaluations && (
-            <div className="speaking-result" style={{ marginTop: "15px" }}>
-              <h3>Speaking Evaluation Result</h3>
 
-              {result.evaluations.map((evalData, idx) => {
-                const fb =
-                  evalData.feedback ||
-                  result.feedback ||
-                  null;
-
-                return (
-                  <div key={idx} style={{ marginBottom: "20px" }}>
-                    {evalData.transcript && (
-                      <details>
-                        <summary>View Transcript</summary>
-                        <p>{evalData.transcript}</p>
-                      </details>
-                    )}
-
-                    <p><b>Band:</b> {evalData.band ?? "N/A"}</p>
-
-                    {fb && (
-                      <ul>
-                        <li>
-                          <b>Fluency & Coherence:</b> {fb.fluency_coherence || "N/A"}
-                        </li>
-                        <li>
-                          <b>Lexical Resource:</b> {fb.lexical_resource || "N/A"}
-                        </li>
-                        <li>
-                          <b>Grammar Range & Accuracy:</b> {fb.grammatical_range_accuracy || "N/A"}
-                        </li>
-                        <li>
-                          <b>Pronunciation:</b> {fb.pronunciation || "N/A"}
-                        </li>
-                        <li>
-                          <b>Summary:</b> {fb.summary || "N/A"}
-                        </li>
-                      </ul>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
 
         </div>
       )}
+      {test.type === "speaking" && !evaluationReady && speakingSections.length > 0 && !result?.isSubmitted && (
+        <button onClick={handleSpeakingSubmit}>Submit Speaking</button>
+      )}
+      {test.type === "speaking" && result && (
+        <div style={{ marginTop: "20px" }}>
+          <h3>Speaking AI Evaluation Result</h3>
+          <p>
+            <b>Band:</b> {result.band || result.evaluations?.[0]?.band || "N/A"}
+          </p>
+          {(result.feedback || (result.evaluations && result.evaluations.length > 0)) && (
+            <ul>
+              <li>
+                <b>Fluency Coherence:</b> {result.feedback?.fluency_coherence ?? result.evaluations?.[0]?.feedback?.fluency_coherence ?? "N/A"}
+              </li>
+              <li>
+                <b>Lexical Resource:</b> {result.feedback?.lexical_resource ?? result.evaluations?.[0]?.feedback?.lexical_resource ?? "N/A"}
+              </li>
+              <li>
+                <b>Grammatical Range Accuracy:</b> {result.feedback?.grammatical_range_accuracy ?? result.evaluations?.[0]?.feedback?.grammatical_range_accuracy ?? "N/A"}
+              </li>
+              <li>
+                <b>Pronunciation:</b> {result.feedback?.pronunciation ?? result.evaluations?.[0]?.feedback?.pronunciation ?? "N/A"}
+              </li>
+            </ul>
+          )}
+        </div>
+      )}
 
+      <div style={{ marginTop: "20px" }}>
+        <button
+          onClick={async () => {
+            try {
+              if (!savedResult?._id) {
+                console.log("[DEBUG] No savedResult yet:", savedResult);
+                return alert("No test result to evaluate yet");
+              }
+
+              await axios.post(
+                `${BASE_URL}/api/tests/request-evaluation`,
+                { testId: savedResult.testId },
+                { withCredentials: true }
+              );
+
+
+              alert("Teacher evaluation requested successfully!");
+            } catch (err) {
+              console.error(err);
+              alert("Failed to request teacher evaluation");
+            }
+          }}
+        >
+          Request Evaluation
+        </button>
+      </div>
 
 
 
@@ -1170,11 +1164,13 @@ const StudentTestView = () => {
       {(readingSections.length > 0 || listeningSections.length > 0) && (
         <>
           {/* Only show Submit button if test not submitted yet */}
-          {!result ? (
+          {!result?.isSubmitted ? (
             <button onClick={handleSubmit}>Submit</button>
           ) : (
-            <p><i>You have already completed this test.</i></p>
+            <p><i>You have already submitted this test.</i></p>
+
           )}
+
 
 
           {/* After submission, show result + toggle button */}

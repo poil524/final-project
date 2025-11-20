@@ -108,18 +108,6 @@ const getAllUsers = asyncHandler(async (req, res) => {
     res.json(users);
 })
 
-/*
-const getCurrentUserProfile = asyncHandler(async (req, res) => {
-    const user = await User.findById(req.user._id).select("-password");
-
-    if (user) {
-        res.json(user);
-    } else {
-        res.status(404);
-        throw new Error("User not found");
-    }
-});
-*/
 const getCurrentUserProfile = asyncHandler(async (req, res) => {
     // Fetch the user without the password
     const user = await User.findById(req.user._id)
@@ -343,7 +331,7 @@ const getStudentEvaluations = asyncHandler(async (req, res) => {
     res.json(evaluations);
 });
 
-/* List evaluations for teacher
+
 const getTeacherAssignments = asyncHandler(async (req, res) => {
     const evaluations = await Evaluation.find({ assignedTeacher: req.user._id, status: "assigned" })
         .populate("student", "username email")
@@ -351,20 +339,6 @@ const getTeacherAssignments = asyncHandler(async (req, res) => {
 
     res.json(evaluations);
 });
-*/
-const getTeacherAssignments = asyncHandler(async (req, res) => {
-    const evaluations = await Evaluation.find({ assignedTeacher: req.user._id, status: "assigned" })
-        .populate("student", "username email")
-        .lean();
-
-    res.json(evaluations);
-});
-
-
-
-
-
-
 
 // Admin: view pending evaluations
 const getPendingEvaluations = asyncHandler(async (req, res) => {

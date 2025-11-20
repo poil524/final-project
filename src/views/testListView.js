@@ -79,8 +79,6 @@ const TestListView = () => {
 
     // Check if the user can add a test
     const canAddTest = currentUser && (currentUser.isAdmin || currentUser.status === "approved");
-    console.log("DEBUG canAddTest:", currentUser, canAddTest);
-
     return (
         <div style={{ padding: "20px" }}>
             <h1>
