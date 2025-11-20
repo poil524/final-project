@@ -448,20 +448,30 @@ const StudentTestView = () => {
 
 
   useEffect(() => {
+    console.log("Fetching test for testId:", testId);
+
     let active = true;
-    const fetchTest = async () => {
+    const shuffle = (arr) => (arr ? [...arr].sort(() => Math.random() - 0.5) : []);
+
+    const fetchAll = async () => {
       try {
-        const res = await axios.get(`${BASE_URL}/api/tests/${testId}`, {
-          withCredentials: true,
-        });
+        // fetch test and existing result in parallel
+        const [testRes, resultRes] = await Promise.allSettled([
+          axios.get(`${BASE_URL}/api/tests/${testId}`, { withCredentials: true }),
+          axios.get(`${BASE_URL}/api/tests/${testId}/get-result`, { withCredentials: true }),
+        ]);
 
         if (!active) return;
-        const fetchedTest = res.data;
-        const shuffle = (arr) => (arr ? [...arr].sort(() => Math.random() - 0.5) : []);
+
+        // --- process test ---
+        if (testRes.status !== "fulfilled") {
+          throw testRes.reason;
+        }
+        const fetchedTest = testRes.value.data;
 
         const updatedSections = fetchedTest.sections.map((section) => ({
           ...section,
-          questions: section.questions.map((q) => {
+          questions: (section.questions || []).map((q) => {
             const newQ = { ...q };
             if (q.type === "matching_headings") {
               newQ.shuffledItems = shuffle((q.questionItems || []).map((it) => ({ ...it, key: it.id })));
@@ -472,49 +482,97 @@ const StudentTestView = () => {
           }),
         }));
 
-        setTest({ ...fetchedTest, sections: updatedSections });
+        let mergedTest = { ...fetchedTest, sections: updatedSections };
 
+        // --- process existing result (if any) ---
+        if (resultRes.status === "fulfilled" && resultRes.value?.data) {
+          const existing = resultRes.value.data;
+
+          // If existing has score/total, set result and show answers where appropriate
+          if (existing.score != null || existing.total != null) {
+            setResult({ score: existing.score, total: existing.total });
+            setShowAnswers(true);
+          }
+
+          // If answers is an array (older format for writing/speaking), convert to keyed object for answers state
+          const newAnswersState = {};
+          if (Array.isArray(existing.answers)) {
+            existing.answers.forEach((secAnswer, sIdx) => {
+              // For writing old format
+              if (typeof secAnswer.content === "string") {
+                newAnswersState[`writing_${sIdx}`] = secAnswer.content;
+              }
+
+              // For speaking / structured answers: merge studentAudioKey into test sections/questions
+              if (secAnswer.questions && Array.isArray(secAnswer.questions)) {
+                // Try to find matching section by title first, else fallback to index
+                const targetSectionIndex = mergedTest.sections.findIndex(
+                  (sec) => sec.sectionTitle === secAnswer.sectionTitle
+                );
+                const secIdxToUse = targetSectionIndex >= 0 ? targetSectionIndex : sIdx;
+
+                if (mergedTest.sections[secIdxToUse]) {
+                  const updatedQuestions = [...(mergedTest.sections[secIdxToUse].questions || [])];
+
+                  secAnswer.questions.forEach((qAns, qIdx) => {
+                    const studentAudioKey = qAns.studentAudioKey || qAns.speakingAudioKey || qAns.audioKey;
+                    if (!studentAudioKey) return;
+
+                    // Match question by requirement/text if possible
+                    let targetQIndex = updatedQuestions.findIndex(
+                      (qq) =>
+                        (qq.requirement && qAns.requirement && qq.requirement === qAns.requirement) ||
+                        (qq.text && qAns.question && qq.text === qAns.question)
+                    );
+
+                    if (targetQIndex === -1) {
+                      // fallback to same index
+                      targetQIndex = qIdx;
+                    }
+                    if (!updatedQuestions[targetQIndex]) return;
+
+                    updatedQuestions[targetQIndex] = {
+                      ...updatedQuestions[targetQIndex],
+                      studentAudioKey,
+                    };
+                  });
+
+                  mergedTest.sections[secIdxToUse] = {
+                    ...mergedTest.sections[secIdxToUse],
+                    questions: updatedQuestions,
+                  };
+                }
+              }
+            });
+          } else if (existing.answers && typeof existing.answers === "object") {
+            // If existing.answers is an object keyed by questionId (newer format),
+            // keep it for view/rendering of non-speaking answers
+            Object.assign(newAnswersState, existing.answers);
+          }
+
+          // apply answers state if we collected any
+          if (Object.keys(newAnswersState).length > 0) {
+            setAnswers((prev) => ({ ...prev, ...newAnswersState }));
+          }
+        } // end if existing result exists
+
+        // finally set test
+        setTest(mergedTest);
       } catch (err) {
-        if (active) setError(err.response?.data?.message || err.message);
-        console.error("Fetch test failed:", err);
-      }
-    };
-    // After setTest(...)
-    const fetchExistingResult = async () => {
-      try {
-        const res2 = await axios.get(`${BASE_URL}/api/tests/${testId}/get-result`, {
-          withCredentials: true
-        });
-
-        const existing = res2.data;
-        if (!existing) return;
-
-        const newAnswers = { ...existing.answers };
-
-        if (Array.isArray(existing.answers)) {
-          // For writing tests, convert array to keyed object
-          existing.answers.forEach((secAnswer, idx) => {
-            newAnswers[`writing_${idx}`] = secAnswer.content;
-          });
+        if (active) {
+          setError(err.response?.data?.message || err.message || "Failed to load test");
         }
-
-        setAnswers(newAnswers);
-        setResult({ score: existing.score, total: existing.total });
-        setShowAnswers(true);
-        console.log("Loaded previous attempt:", existing);
-      } catch (err) {
-        console.log("No previous result or error:", err.response?.data || err.message);
+        console.error(err);
       }
     };
 
-    fetchExistingResult();
+    if (testId) fetchAll();
 
-
-    if (testId) fetchTest();
     return () => {
       active = false;
     };
   }, [testId]);
+
 
   useEffect(() => {
     if (writingRefs.current.length !== (test?.sections?.length || 0)) {
@@ -683,8 +741,6 @@ const StudentTestView = () => {
     }
   };
 
-
-
   const handleSpeakingSubmit = async () => {
     if (!test || !test.sections) return;
 
@@ -734,9 +790,10 @@ const StudentTestView = () => {
           { withCredentials: true }
         );
 
-        // Save backend result with _id
+        // Save the result ID
         setSavedResult(saveRes.data);
-        setEvaluationReady(true); // mark AI evaluation done
+        setEvaluationReady(true);
+
       }
 
       setEvaluationReady(true); // mark AI evaluation done
@@ -756,19 +813,6 @@ const StudentTestView = () => {
   const listeningSections = test.type === "listening" ? test.sections : [];
   const writingSections = test.type === "writing" ? test.sections : [];
   const speakingSections = test.type === "speaking" ? test.sections : [];
-
-  const sanitizeHTML = (html) => {
-    const temp = document.createElement('div');
-    temp.textContent = html;
-    return temp.innerHTML;
-  };
-
-  /* ensure ref array has enough entries
-  if (writingRefs.current.length !== writingSections.length) {
-    writingRefs.current = writingSections.map((_, i) => writingRefs.current[i] || React.createRef());
-  }
-    */
-
 
   return (
     <div className={`test-taking-container ${twoViewMode ? "two-view-layout-active" : ""}`}>
@@ -812,30 +856,6 @@ const StudentTestView = () => {
         <button onClick={handleWritingSubmit}>Submit Writing</button>
       )}
 
-      {evaluationReady && savedResult && (
-        <div style={{ marginTop: "20px" }}>
-          <button
-            onClick={async () => {
-              try {
-                if (!savedResult?._id) return alert("No test result to evaluate yet");
-
-                await axios.post(
-                  `${BASE_URL}/api/tests/request-evaluation`,
-                  { testResultId: savedResult._id },
-                  { withCredentials: true }
-                );
-
-                alert("Teacher evaluation requested successfully!");
-              } catch (err) {
-                console.error(err);
-                alert("Failed to request teacher evaluation");
-              }
-            }}
-          >
-            Request Evaluation
-          </button>
-        </div>
-      )}
 
       {evaluationReady && writingSections.length > 0 && result && (
         <div style={{ marginTop: "20px" }}>
@@ -851,95 +871,6 @@ const StudentTestView = () => {
           ) : null}
         </div>
       )}
-
-      {/*
-  Speaking Sections
-  {speakingSections.length > 0 && (
-    <div>
-      {speakingSections.map((section, secIdx) => (
-        <div key={secIdx} className="speaking-section">
-          <h3>{section.sectionTitle}</h3>
-
-          {section.requirement && (
-            <p><b>Task:</b> {section.requirement}</p>
-          )}
-          {section.questions?.length > 0 && (
-            <div className="speaking-questions">
-              <h4>Questions:</h4>
-              <ul>
-                {section.questions.map((q, qIdx) => (
-                  <li key={q._id || qIdx}>
-                    <strong>Q{qIdx + 1}:</strong> {q.requirement || q.text || "No question text"}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <AudioRecorder
-            testId={testId}
-            sectionIndex={secIdx}
-            onUploadComplete={(key, clearLocalPreview) => {
-              if (clearLocalPreview) clearLocalPreview();
-
-              setTest((prev) => {
-                const updatedSections = [...prev.sections];
-                updatedSections[secIdx] = { ...updatedSections[secIdx], audioKey: key };
-                return { ...prev, sections: updatedSections };
-              });
-
-              const token = localStorage.getItem("token");
-              if (token) {
-                axios.post(
-                  `${BASE_URL}/api/tests/${testId}/save-result`,
-                  { speakingAudioKey: key },
-                  { headers: { Authorization: `Bearer ${token}` } }
-                );
-              }
-            }}
-          />
-
-          {section.audioKey && (
-            <div style={{ marginTop: "10px" }}>
-              <AudioPlayer s3Key={section.audioKey} />
-            </div>
-          )}
-        </div>
-      ))}
-
-      <button onClick={handleSpeakingSubmit} style={{ marginTop: "20px" }}>
-        Submit Speaking
-      </button>
-
-      {result?.evaluations && (
-        <div className="speaking-result" style={{ marginTop: "15px" }}>
-          <h3>Speaking Evaluation Result</h3>
-          {result.evaluations.map((evalData, idx) => (
-            <div key={idx}>
-              {evalData.transcript && (
-                <details>
-                  <summary>View Transcript</summary>
-                  <p>{evalData.transcript}</p>
-                </details>
-              )}
-              <p><b>Band:</b> {evalData.band || "N/A"}</p>
-              {evalData.feedback && (
-                <ul>
-                  <li><b>Fluency & Coherence:</b> {evalData.feedback.fluency_coherence}</li>
-                  <li><b>Lexical Resource:</b> {evalData.feedback.lexical_resource}</li>
-                  <li><b>Grammar Range & Accuracy:</b> {evalData.feedback.grammatical_range_accuracy}</li>
-                  <li><b>Pronunciation:</b> {evalData.feedback.pronunciation}</li>
-                  <li><b>Summary:</b> {evalData.feedback.summary}</li>
-                </ul>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )}
-*/}
-
       {speakingSections.length > 0 && (
         <div>
           {speakingSections.map((section, secIdx) => (
@@ -959,44 +890,48 @@ const StudentTestView = () => {
                         <strong>Q{qIdx + 1}:</strong>{" "}
                         {q.requirement || q.text || "No question text"}
 
-                        {/* 🎧 Question Audio */}
+                        {/* Question Audio */}
                         {q.ttsKey && (
                           <div style={{ marginTop: "8px" }}>
                             <AudioPlayer s3Key={q.ttsKey} autoPlay={false} />
                           </div>
                         )}
-                        {/* 🎙️ Individual Recorder for this Question */}
-                        <AudioRecorder
-                          testId={testId}
-                          sectionIndex={secIdx}
-                          questionIndex={qIdx}
-                          onUploadComplete={(key, clearLocalPreview) => {
-                            if (clearLocalPreview) clearLocalPreview();
 
-                            setTest((prev) => {
-                              const updatedSections = [...prev.sections];
-                              const updatedQuestions = [...updatedSections[secIdx].questions];
-                              updatedQuestions[qIdx] = {
-                                ...updatedQuestions[qIdx],
-                                studentAudioKey: key, // ✅ save under the new field
-                              };
-                              updatedSections[secIdx] = {
-                                ...updatedSections[secIdx],
-                                questions: updatedQuestions,
-                              };
-                              return { ...prev, sections: updatedSections };
-                            });
+                        {/* Hide recorder if audio already exists */}
+                        {!q.studentAudioKey && (
+                          <AudioRecorder
+                            testId={testId}
+                            sectionIndex={secIdx}
+                            questionIndex={qIdx}
+                            onUploadComplete={(key, clearLocalPreview) => {
+                              if (clearLocalPreview) clearLocalPreview();
 
-                            const token = localStorage.getItem("token");
-                            if (token) {
-                              axios.post(
-                                `${BASE_URL}/api/tests/${testId}/save-result`,
-                                { speakingAudioKey: key },
-                                { headers: { Authorization: `Bearer ${token}` } }
-                              );
-                            }
-                          }}
-                        />
+                              setTest((prev) => {
+                                const updatedSections = [...prev.sections];
+                                const updatedQuestions = [...updatedSections[secIdx].questions];
+                                updatedQuestions[qIdx] = {
+                                  ...updatedQuestions[qIdx],
+                                  studentAudioKey: key,
+                                };
+                                updatedSections[secIdx] = {
+                                  ...updatedSections[secIdx],
+                                  questions: updatedQuestions,
+                                };
+                                return { ...prev, sections: updatedSections };
+                              });
+
+                              const token = localStorage.getItem("token");
+                              if (token) {
+                                axios.post(
+                                  `${BASE_URL}/api/tests/${testId}/save-result`,
+                                  { speakingAudioKey: key },
+                                  { headers: { Authorization: `Bearer ${token}` } }
+                                );
+                              }
+                            }}
+                          />
+                        )}
+
 
                         {/* Student's Recorded Answer Playback */}
                         {q.studentAudioKey && (
@@ -1011,26 +946,23 @@ const StudentTestView = () => {
               )}
             </div>
           ))}
-
-          {/* Submit entire speaking test */}
           {!evaluationReady && speakingSections.length > 0 && (
             <button onClick={handleSpeakingSubmit} style={{ marginTop: "20px" }}>
               Submit Speaking
             </button>
           )}
-          {evaluationReady && (
+          {evaluationReady && savedResult && (
             <div style={{ marginTop: "20px" }}>
               <button
                 onClick={async () => {
                   try {
-                    const testResultId = result?._id; // or wherever your saved result ID is
-                    if (!testResultId) return alert("No test result to evaluate yet");
+                    if (!savedResult?._id) return alert("No test result to evaluate yet");
 
-                    await
-                      await axios.post(`${BASE_URL}/api/tests/request-evaluation`, {
-                        testResultId: result._id,
-                      }, { withCredentials: true });
-
+                    await axios.post(
+                      `${BASE_URL}/api/tests/request-evaluation`,
+                      { testResultId: savedResult._id },
+                      { withCredentials: true }
+                    );
 
                     alert("Teacher evaluation requested successfully!");
                   } catch (err) {
@@ -1041,36 +973,57 @@ const StudentTestView = () => {
               >
                 Request Evaluation
               </button>
-
             </div>
           )}
+
 
           {/* Show result if available */}
           {result?.evaluations && (
             <div className="speaking-result" style={{ marginTop: "15px" }}>
               <h3>Speaking Evaluation Result</h3>
-              {result.evaluations.map((evalData, idx) => (
-                <div key={idx}>
-                  {evalData.transcript && (
-                    <details>
-                      <summary>View Transcript</summary>
-                      <p>{evalData.transcript}</p>
-                    </details>
-                  )}
-                  <p><b>Band:</b> {evalData.band || "N/A"}</p>
-                  {evalData.feedback && (
-                    <ul>
-                      <li><b>Fluency & Coherence:</b> {evalData.feedback.fluency_coherence}</li>
-                      <li><b>Lexical Resource:</b> {evalData.feedback.lexical_resource}</li>
-                      <li><b>Grammar Range & Accuracy:</b> {evalData.feedback.grammatical_range_accuracy}</li>
-                      <li><b>Pronunciation:</b> {evalData.feedback.pronunciation}</li>
-                      <li><b>Summary:</b> {evalData.feedback.summary}</li>
-                    </ul>
-                  )}
-                </div>
-              ))}
+
+              {result.evaluations.map((evalData, idx) => {
+                const fb =
+                  evalData.feedback ||
+                  result.feedback ||
+                  null;
+
+                return (
+                  <div key={idx} style={{ marginBottom: "20px" }}>
+                    {evalData.transcript && (
+                      <details>
+                        <summary>View Transcript</summary>
+                        <p>{evalData.transcript}</p>
+                      </details>
+                    )}
+
+                    <p><b>Band:</b> {evalData.band ?? "N/A"}</p>
+
+                    {fb && (
+                      <ul>
+                        <li>
+                          <b>Fluency & Coherence:</b> {fb.fluency_coherence || "N/A"}
+                        </li>
+                        <li>
+                          <b>Lexical Resource:</b> {fb.lexical_resource || "N/A"}
+                        </li>
+                        <li>
+                          <b>Grammar Range & Accuracy:</b> {fb.grammatical_range_accuracy || "N/A"}
+                        </li>
+                        <li>
+                          <b>Pronunciation:</b> {fb.pronunciation || "N/A"}
+                        </li>
+                        <li>
+                          <b>Summary:</b> {fb.summary || "N/A"}
+                        </li>
+                      </ul>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
+
         </div>
       )}
 

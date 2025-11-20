@@ -9,7 +9,10 @@ const Profile = () => {
   const [error, setError] = useState(null);
 
   const navigate = useNavigate();
-  const handleRowClick = (id) => navigate(`/tests/${id}`);
+  const handleRowClick = (id) => {
+  // Force absolute path
+  navigate(`/tests/${id}`, { replace: false });
+};
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -87,9 +90,10 @@ const Profile = () => {
                     return (
                       <tr
                         key={t._id}
-                        onClick={() => handleRowClick(t._id)}
+                        onClick={() => handleRowClick(t.testId)}
                         style={{ borderBottom: "1px solid #ddd", cursor: "pointer" }}
                       >
+                        
                         <td style={{ padding: 8 }}>{t.testName}</td>
                         <td style={{ padding: 8 }}>{t.type}</td>
                         <td style={{ padding: 8 }}>{t.score} / {t.total}</td>

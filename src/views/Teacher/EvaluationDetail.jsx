@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import EssayDisplay from "../EssayDisplay";
+import AudioPlayer from "../../components/AudioPlayer";
 
 axios.defaults.withCredentials = true;
 
@@ -73,7 +74,6 @@ export default function EvaluationDetail() {
             <h1>Evaluate</h1>
             <p><strong>Student:</strong> {request.student?.username || "N/A"}</p>
 
-
             <hr style={{ margin: "20px 0" }} />
 
             {/* Requirement */}
@@ -90,7 +90,7 @@ export default function EvaluationDetail() {
                 Object.keys(answers).map((key) => {
                     const answer = answers[key];
 
-                    // If answer is an object with a content field (essay)
+                    // ===== If essay / writing answer =====
                     if (answer && typeof answer === "object" && answer.content) {
                         return (
                             <div key={key} style={{ marginBottom: "15px" }}>
@@ -100,7 +100,26 @@ export default function EvaluationDetail() {
                         );
                     }
 
-                    // Otherwise render as plain text or JSON
+                    // ===== If speaking answer =====
+                    if (answer && typeof answer === "object" && answer.questions && Array.isArray(answer.questions)) {
+                        return (
+                            <div key={key} style={{ marginBottom: "15px" }}>
+                                <strong>{key}:</strong>
+                                {answer.questions.map((q, idx) => (
+                                    <div key={idx} style={{ marginTop: "10px", paddingLeft: "10px" }}>
+                                        <p><b>Q{idx + 1}:</b> {q.requirement || q.text || "No question text"}</p>
+                                        {q.studentAudioKey ? (
+                                            <AudioPlayer s3Key={q.studentAudioKey} />
+                                        ) : (
+                                            <p><i>No audio submitted.</i></p>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        );
+                    }
+
+                    // ===== Otherwise render as plain text / JSON =====
                     return (
                         <div key={key} style={{ marginBottom: "15px" }}>
                             <strong>{key}:</strong> {typeof answer === "string" ? answer : JSON.stringify(answer)}
@@ -111,9 +130,9 @@ export default function EvaluationDetail() {
                 <p>No answers received.</p>
             )}
 
-
             <hr style={{ margin: "20px 0" }} />
 
+            {/* Feedback input */}
             <h2>Write Feedback</h2>
             <textarea
                 value={feedback}

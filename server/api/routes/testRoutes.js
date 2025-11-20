@@ -134,60 +134,6 @@ router.post("/upload-audio", upload.single("audio"), async (req, res) => {
   }
 });
 
-
-/* Generate TTS audio for speaking test questions
-router.post("/:id/generate-speaking-audio", authenticate, async (req, res) => {
-  try {
-    const test = await Test.findById(req.params.id);
-    if (!test) return res.status(404).json({ error: "Test not found" });
-    if (test.type !== "speaking") {
-      return res.status(400).json({ error: "Only speaking tests need TTS generation" });
-    }
-
-    for (const [secIdx, section] of test.sections.entries()) {
-      for (const [qIdx, q] of section.questions.entries()) {
-        if (!q.requirement?.trim()) continue;
-
-        // === Use Deepgram TTS ===
-        const ttsResponse = await deepgram.speak.request(
-          { text: q.requirement },
-          {
-            model: "aura-asteria-en",
-            encoding: "linear16",
-            container: "wav",
-          }
-        );
-
-        const audioStream = await ttsResponse.getStream();
-        if (!audioStream) throw new Error("Failed to get TTS audio stream from Deepgram");
-
-        // Save to temp .wav file
-        const tmpPath = path.join(tmpdir(), `tts_${Date.now()}.wav`);
-        await streamPipeline(audioStream, fs.createWriteStream(tmpPath));
-
-        // Upload to S3
-        const key = `audio/${test._id}_${secIdx}_${qIdx}_${Date.now()}.wav`;
-        await s3.send(new PutObjectCommand({
-          Bucket: bucketName,
-          Key: key,
-          Body: fs.createReadStream(tmpPath),
-          ContentType: "audio/wav",
-          ACL: "private",
-        }));
-
-        q.ttsKey = key;
-        fs.unlinkSync(tmpPath);
-      }
-    }
-
-    await test.save();
-    res.json({ message: "TTS audio generated successfully for all speaking questions.", test });
-  } catch (err) {
-    console.error("[ERROR] TTS generation failed:", err);
-    res.status(500).json({ error: "Failed to generate TTS audio for speaking test" });
-  }
-});
-*/
 // Generate TTS audio for speaking test questions
 router.post("/:id/generate-speaking-audio", authenticate, async (req, res) => {
   try {
