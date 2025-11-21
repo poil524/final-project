@@ -17,7 +17,8 @@ import {
     completeEvaluation,
     getStudentEvaluations,
     getTeacherAssignments,
-    getPendingEvaluations
+    getPendingEvaluations, 
+    getAssignedEvaluations
 } from "../controllers/userController.js";
 import { authenticate, authorisedAdmin } from "../middlewares/authMiddleware.js";
 
@@ -48,12 +49,14 @@ router.post("/logout", logoutUser);
 router.route('/profile').get(authenticate, getCurrentUserProfile).put(authenticate, updateCurrentProfile)
 
 
-
 // Lists
 router.get("/student", authenticate, getStudentEvaluations);
 router.get("/teacher", authenticate, getTeacherAssignments);
 // Admin: view all pending evaluation requests
 router.get("/admin/requests/evaluations", authenticate, authorisedAdmin, getPendingEvaluations);
+
+// Admin: view assigned evaluation requests
+router.get("/admin/requests/evaluations/assigned", authenticate, authorisedAdmin, getAssignedEvaluations);
 
 
 // Admin teacher list + approval flows

@@ -57,6 +57,9 @@ const testSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     studentsTaken: { type: Number, default: 0 },
+
+    isApproved: { type: Boolean, default: false },
+
 });
 
 const Test = mongoose.model("Test", testSchema);

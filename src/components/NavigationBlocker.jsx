@@ -1,10 +1,7 @@
 import { useEffect } from "react";
-//import { useNavigate } from "react-router-dom";
 
 function useNavigationBlocker(shouldWarn) {
-    //const navigate = useNavigate();
-
-    // Browser refresh / tab close
+    // Warn on browser refresh / tab close
     useEffect(() => {
         const handleBeforeUnload = (e) => {
             if (!shouldWarn) return;
@@ -15,23 +12,29 @@ function useNavigationBlocker(shouldWarn) {
         return () => window.removeEventListener("beforeunload", handleBeforeUnload);
     }, [shouldWarn]);
 
-    // Back/forward buttons
+    // Warn on back/forward buttons
     useEffect(() => {
-        const handlePopState = (e) => {
-            if (!shouldWarn) return;
+        if (!shouldWarn) return;
+
+        window.history.pushState({ blocked: true }, "");
+
+        const handlePopState = () => {
             const confirmLeave = window.confirm(
                 "You have unsaved changes. Are you sure you want to leave this page?"
             );
+
             if (!confirmLeave) {
-                // Stay on the same page by pushing back the current location
-                window.history.pushState(null, document.title, window.location.pathname);
+                // User said NO → restore the fake history entry
+                window.history.pushState({ blocked: true }, "");
+            } else {
+                // User said YES → navigate back automatically
+                window.history.back();
             }
         };
 
-        window.history.pushState(null, document.title, window.location.pathname);
         window.addEventListener("popstate", handlePopState);
-
         return () => window.removeEventListener("popstate", handlePopState);
+
     }, [shouldWarn]);
 }
 

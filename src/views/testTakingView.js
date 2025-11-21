@@ -1,6 +1,10 @@
 import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { useParams } from "react-router-dom";
+
+import { useContext } from "react";
+import { AuthContext } from "../context/authContext.js"; // adjust path
+
 import useNavigationBlocker from "../components/NavigationBlocker.jsx";
 import AudioPlayer from "../components/AudioPlayer";
 import Image from "../components/Image";
@@ -433,6 +437,7 @@ const QuestionBlock = ({
 
 const StudentTestView = () => {
   const { id: testId } = useParams();
+  const { user } = useContext(AuthContext);
   const [test, setTest] = useState(null);
   const [error, setError] = useState(null);
   const [answers, setAnswers] = useState({});
@@ -858,7 +863,7 @@ const StudentTestView = () => {
           </div>
         );
       })}
-      {test.type === "writing" && !evaluationReady && writingSections.length > 0 && !result?.isSubmitted && (
+      {test.type === "writing" && !evaluationReady && writingSections.length > 0 && !result?.isSubmitted && !user?.isAdmin && !user?.isTeacher && (
         <button onClick={handleWritingSubmit}>Submit Writing</button>
       )}
       {test.type === "writing" && result && (
@@ -912,7 +917,7 @@ const StudentTestView = () => {
                         )}
 
                         {/* Hide recorder if audio already exists */}
-                        {!q.studentAudioKey && (
+                        {!q.studentAudioKey && !user?.isAdmin && !user?.isTeacher && (
                           <AudioRecorder
                             testId={testId}
                             sectionIndex={secIdx}
@@ -966,7 +971,7 @@ const StudentTestView = () => {
 
         </div>
       )}
-      {test.type === "speaking" && !evaluationReady && speakingSections.length > 0 && !result?.isSubmitted && (
+      {test.type === "speaking" && !evaluationReady && speakingSections.length > 0 && !result?.isSubmitted && !user?.isAdmin && !user?.isTeacher && (
         <button onClick={handleSpeakingSubmit}>Submit Speaking</button>
       )}
       {test.type === "speaking" && result && (
@@ -1190,7 +1195,7 @@ const StudentTestView = () => {
       )}
 
       {/* === Result Display === */}
-      {(readingSections.length > 0 || listeningSections.length > 0) && (
+      {(readingSections.length > 0 || listeningSections.length > 0) && !user?.isAdmin && !user?.isTeacher && (
         <>
           {/* Only show Submit button if test not submitted yet */}
           {!result?.isSubmitted ? (

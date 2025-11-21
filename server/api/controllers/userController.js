@@ -306,22 +306,17 @@ const assignTeacher = asyncHandler(async (req, res) => {
     res.json(evaluation);
 });
 
-/* Teacher submits feedback
-const completeEvaluation = asyncHandler(async (req, res) => {
-    const evaluation = await Evaluation.findById(req.params.id);
+// Admin get assigned teacher 
+const getAssignedEvaluations = asyncHandler(async (req, res) => {
+    const evaluations = await Evaluation.find({ status: "assigned" })
+        .populate("student", "username email")
+        .populate("assignedTeacher", "username email")
+        .lean();
 
-    if (!evaluation) return res.status(404).json({ error: "Evaluation not found" });
-    if (!evaluation.assignedTeacher.equals(req.user._id))
-        return res.status(403).json({ error: "Not authorized" });
-
-    evaluation.feedback = req.body.feedback;
-    evaluation.status = "completed";
-    evaluation.completedAt = new Date();
-    await evaluation.save();
-
-    res.json(evaluation);
+    res.json(evaluations);
 });
-*/
+
+
 const completeEvaluation = asyncHandler(async (req, res) => {
     const evaluationId = req.params.id;
     const { feedback } = req.body;
@@ -420,6 +415,8 @@ export {
     completeEvaluation,
     getStudentEvaluations,
     getTeacherAssignments,
-    getPendingEvaluations
+    getPendingEvaluations,
+    getAssignedEvaluations
+
 };
 

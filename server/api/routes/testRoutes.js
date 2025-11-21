@@ -50,7 +50,7 @@ router.post("/", authenticate, async (req, res) => {
   }
 });
 
-
+/*
 // GET all tests, optional filter by type
 router.get("/", async (req, res) => {
   try {
@@ -66,6 +66,44 @@ router.get("/", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch tests" });
   }
 });
+*/
+// GET all tests, optional filter by type
+router.get("/", authenticate, async (req, res) => {
+  try {
+    const { type } = req.query;
+    const user = req.user;
+
+    let query = {};
+
+    // Filter by type if provided
+    if (type && ["listening", "reading", "writing", "speaking"].includes(type)) {
+      query.type = type;
+    }
+
+    // Apply approval filter based on role
+    if (!user.isAdmin) {
+      if (user.isTeacher) {
+        // Teachers see approved tests + their own unapproved
+        query.$or = [
+          { isApproved: true },
+          { isApproved: false, createdBy: user._id }
+        ];
+      } else {
+        // Students only see approved tests
+        query.isApproved = true;
+      }
+    }
+    // Admins see everything, no filter needed
+
+    const tests = await Test.find(query).sort({ createdAt: -1 });
+    res.json(tests);
+  } catch (err) {
+    console.error("Error fetching tests:", err);
+    res.status(500).json({ error: "Failed to fetch tests" });
+  }
+});
+
+
 
 // Get test by ID
 router.get("/:id", async (req, res) => {
@@ -265,71 +303,7 @@ router.get("/image-url/:filename", async (req, res) => {
 });
 
 
-// Update test — admins can edit any; teachers only their own
-router.put("/:id", authenticate, async (req, res) => {
-  try {
-    const user = req.user;
-    const test = await Test.findById(req.params.id);
-    if (!test) return res.status(404).json({ error: "Test not found" });
 
-    // Permission check
-    if (!user.isAdmin) {
-      if (!user.isTeacher) {
-        return res.status(403).json({ error: "Only teachers or admins can edit tests." });
-      }
-      if (user.isTeacher && user.status !== "approved") {
-        return res.status(403).json({ error: "Teacher approval pending." });
-      }
-      if (test.createdBy?.toString() !== user._id.toString()) {
-        return res.status(403).json({ error: "Teachers can only edit their own tests." });
-      }
-    }
-
-    const oldSections = test.sections || [];
-    const newSections = req.body.sections || [];
-    const keysToDelete = [];
-
-    oldSections.forEach((old, i) => {
-      const fresh = newSections[i] || {};
-      const oldAudio = old.audioKey?.trim() || "";
-      const newAudio = fresh.audioKey?.trim() || "";
-
-      if (oldAudio && oldAudio !== newAudio) keysToDelete.push(oldAudio);
-
-      // Handle images (arrays)
-      const oldImages = Array.isArray(old.images) ? old.images : (old.images ? [old.images] : []);
-      const newImages = Array.isArray(fresh.images) ? fresh.images : (fresh.images ? [fresh.images] : []);
-
-      // Find deleted images
-      oldImages.forEach(img => {
-        if (!newImages.includes(img)) keysToDelete.push(img);
-      });
-
-
-    });
-
-    // Apply updates
-    test.name = req.body.name;
-    test.type = req.body.type;
-    test.sections = newSections;
-    test.markModified("sections");
-    await test.save();
-
-    // Cleanup S3
-    for (const key of keysToDelete) {
-      try {
-        await s3.send(new DeleteObjectCommand({ Bucket: bucketName, Key: key }));
-      } catch (err) {
-        console.warn(`Failed to delete S3 object: ${key}`, err.message);
-      }
-    }
-
-    res.json(test);
-  } catch (err) {
-    console.error("Updating test failed:", err);
-    res.status(500).json({ error: "Failed to update test" });
-  }
-});
 
 // Delete test — admins can delete any; teachers only their own
 router.delete("/:id", authenticate, async (req, res) => {
@@ -704,7 +678,114 @@ router.post("/request-evaluation", authenticate, async (req, res) => {
   return requestEvaluation(req, res);
 });
 
+// ADMIN TEST APPROVAL ROUTES
 
+// Get pending tests (admin only)
+router.get("/admin/pending", authenticate, async (req, res) => {
+  try {
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ error: "Admins only" });
+    }
+    const tests = await Test.find({ isApproved: false }).sort({ createdAt: -1 });
+    res.json(tests);
+  } catch (err) {
+    console.error("Error fetching pending tests:", err);
+    res.status(500).json({ error: "Failed to fetch pending tests" });
+  }
+});
+
+// Get approved tests (admin only)
+router.get("/admin/approved", authenticate, async (req, res) => {
+  try {
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ error: "Admins only" });
+    }
+    const tests = await Test.find({ isApproved: true }).sort({ createdAt: -1 });
+    res.json(tests);
+  } catch (err) {
+    console.error("Error fetching approved tests:", err);
+    res.status(500).json({ error: "Failed to fetch approved tests" });
+  }
+});
+// Approve
+router.put("/:id/approve", authenticate, async (req, res) => {
+  try {
+    if (!req.user.isAdmin) return res.status(403).json({ error: "Admins only" });
+
+    const test = await Test.findById(req.params.id);
+    if (!test) return res.status(404).json({ error: "Test not found" });
+
+    console.log("[DEBUG] Before approve:", test.toObject());
+
+    // Skip validation
+    test.isApproved = true;
+    await test.save({ validateBeforeSave: false });
+
+    console.log("[DEBUG] After approve:", test.toObject());
+    res.json(test);
+  } catch (err) {
+    console.error("Approve test failed:", err);
+    res.status(500).json({ error: "Failed to approve test" });
+  }
+});
+
+// Update test — admins can edit any
+router.put("/:id", authenticate, async (req, res) => {
+  try {
+    const user = req.user;
+    const test = await Test.findById(req.params.id);
+    if (!test) return res.status(404).json({ error: "Test not found" });
+
+    // Permission check
+    if (!user.isAdmin) {
+      return res.status(403).json({ error: "Only admins can edit tests." });
+    }
+
+    const oldSections = test.sections || [];
+    const newSections = req.body.sections || [];
+    const keysToDelete = [];
+
+    oldSections.forEach((old, i) => {
+      const fresh = newSections[i] || {};
+      const oldAudio = old.audioKey?.trim() || "";
+      const newAudio = fresh.audioKey?.trim() || "";
+
+      if (oldAudio && oldAudio !== newAudio) keysToDelete.push(oldAudio);
+
+      // Handle images (arrays)
+      const oldImages = Array.isArray(old.images) ? old.images : (old.images ? [old.images] : []);
+      const newImages = Array.isArray(fresh.images) ? fresh.images : (fresh.images ? [fresh.images] : []);
+
+      // Find deleted images
+      oldImages.forEach(img => {
+        if (!newImages.includes(img)) keysToDelete.push(img);
+      });
+
+
+    });
+
+    // Apply updates
+    test.name = req.body.name;
+    test.type = req.body.type;
+    test.sections = newSections;
+    test.markModified("sections");
+    await test.save();
+
+    // Cleanup S3
+    for (const key of keysToDelete) {
+      try {
+        await s3.send(new DeleteObjectCommand({ Bucket: bucketName, Key: key }));
+      } catch (err) {
+        console.warn(`Failed to delete S3 object: ${key}`, err.message);
+      }
+    }
+
+    res.json(test);
+  } catch (err) {
+    console.error("Updating test failed:", err);
+    res.status(500).json({ error: "Failed to update test" });
+  }
+});
 
 
 export default router;

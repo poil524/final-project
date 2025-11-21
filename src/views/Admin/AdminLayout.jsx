@@ -32,15 +32,26 @@ export default function AdminLayout() {
           {collapsed ? "T" : "Teachers"}
         </NavLink>
 
+        {/* Test Management */}
         {!collapsed && <p className="admin-nav-group-title">Test Management</p>}
-        <NavLink to="/admin/tests" className="admin-nav-link">
-          {collapsed ? "Ts" : "Test Table"}
+
+        <NavLink to="/admin/tests/pending" className="admin-nav-link">
+          {collapsed ? "PT" : "Pending Tests"}
         </NavLink>
+
+        <NavLink to="/admin/tests/approved" className="admin-nav-link">
+          {collapsed ? "AT" : "Approved Tests"}
+        </NavLink>
+
 
         {!collapsed && <p className="admin-nav-group-title">Request Management</p>}
 
         <NavLink to="/admin/requests/evaluations" className="admin-nav-link">
           {collapsed ? "EV" : "Evaluation Requests"}
+        </NavLink>
+
+        <NavLink to="/admin/requests/assigned" className="admin-nav-link">
+          {collapsed ? "AE" : "Assigned Evaluations"}
         </NavLink>
       </aside>
 

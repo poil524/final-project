@@ -1,0 +1,49 @@
+table {
+    width: 100%;
+    background: #fff;
+    border-collapse: collapse;
+}
+
+table thead tr {
+    background: #e5e7eb;
+}
+
+table th, table td {
+    padding: 8px;
+}
+
+table th {
+    text-align: left;
+}
+
+table td {
+    border-bottom: 1px solid #ddd;
+}
+
+.actions button {
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.actions .approve {
+    background: #16a34a;
+    color: #fff;
+}
+
+.actions .decline {
+    background: #b91c1c;
+    color: #fff;
+    margin-left: 8px;
+}
+
+.actions .delete {
+    background: #b91c1c;
+    color: #fff;
+}
+
+.no-teachers {
+    padding: 12px;
+    text-align: center;
+}
