@@ -542,7 +542,6 @@ const TestCreateEditView = () => {
                                                                     <option value="matching_features">Matching Features</option>
                                                                     <option value="multiple_choice">Multiple Choice</option>
                                                                     <option value="summary_completion">Summary Completion</option>
-                                                                    <option value="sentence_completion">Sentence Completion</option>
                                                                     <option value="table_completion">Table Completion</option>
                                                                     <option value="short_answer">Short Answer</option>
                                                                     <option value="diagram_completion">Diagram Completion</option>

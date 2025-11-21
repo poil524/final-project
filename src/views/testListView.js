@@ -160,12 +160,13 @@ const TestListView = () => {
                         <p>Created: {new Date(test.createdAt).toLocaleString()}</p>
 
                         {/* Card actions */}
-                        {canAddTest && (
+                        {currentUser?.isAdmin && (
                             <div className="card-actions" onClick={e => e.stopPropagation()}>
                                 <button onClick={() => navigate(`/edit/${test._id}`)}>Edit</button>
                                 <button onClick={() => handleDelete(test._id)}>Delete</button>
                             </div>
                         )}
+
                     </div>
                 ))}
             </div>

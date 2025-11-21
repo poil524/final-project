@@ -11,7 +11,9 @@ import Image from "../components/Image";
 import AudioRecorder from "../components/AudioRecorder";
 import './TestTakingView.css';
 import { GoArrowSwitch } from "react-icons/go";
-import EssayDisplay from "./EssayDisplay.jsx";
+import EssayDisplay from "../components/EssayDisplay.jsx";
+import FloatingTimer from "../components/FloatingTimer.jsx";
+
 
 const stripHTML = (str) => str.replace(/<[^>]+>/g, '');
 const QuestionBlock = ({
@@ -608,8 +610,8 @@ const StudentTestView = () => {
     }));
   };
 
-  const handleSubmit = async () => {
-    if (!window.confirm("Are you sure you want to finish this test?")) return;
+  const handleSubmit = async (fromTimer = false) => {
+    if (!fromTimer && !window.confirm("Are you sure you want to finish this test?")) return;
 
     let score = 0;
     let total = 0;
@@ -998,24 +1000,24 @@ const StudentTestView = () => {
           )}
         </div>
       )}
-{/* === Teacher Feedback Display === */}
-{savedResult?.isEvaluated?.resultReceived && savedResult?.teacherFeedback && (
-  <div style={{ marginTop: "25px", padding: "15px", border: "1px solid #ccc", borderRadius: "8px" }}>
-    <h3>Teacher Evaluation Feedback</h3>
+      {/* === Teacher Feedback Display === */}
+      {savedResult?.isEvaluated?.resultReceived && savedResult?.teacherFeedback && (
+        <div style={{ marginTop: "25px", padding: "15px", border: "1px solid #ccc", borderRadius: "8px" }}>
+          <h3>Teacher Evaluation Feedback</h3>
 
-    {typeof savedResult.teacherFeedback === "string" ? (
-      <p style={{ whiteSpace: "pre-wrap" }}>{savedResult.teacherFeedback}</p>
-    ) : (
-      <ul>
-        {Object.entries(savedResult.teacherFeedback).map(([k, v]) => (
-          <li key={k}>
-            <b>{k.replace(/_/g, " ").toUpperCase()}:</b> {v}
-          </li>
-        ))}
-      </ul>
-    )}
-  </div>
-)}
+          {typeof savedResult.teacherFeedback === "string" ? (
+            <p style={{ whiteSpace: "pre-wrap" }}>{savedResult.teacherFeedback}</p>
+          ) : (
+            <ul>
+              {Object.entries(savedResult.teacherFeedback).map(([k, v]) => (
+                <li key={k}>
+                  <b>{k.replace(/_/g, " ").toUpperCase()}:</b> {v}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       <div style={{ marginTop: "20px" }}>
         {savedResult?.feedback && Object.keys(savedResult.feedback).length > 0 && !savedResult?.isEvaluated?.requested && (
@@ -1220,10 +1222,20 @@ const StudentTestView = () => {
           )}
         </>
       )}
+      {/* Timer */}
+      {!user.isAdmin && !user.isTeacher && (
+        <FloatingTimer
+          durationMinutes={0.1}
+          onTimeUp={() => {
+            alert("Time is up! Your test will be submitted automatically.");
+            handleSubmit(true);
+          }}
+        />
+      )}
 
     </div>
   );
-
 };
+
 
 export default StudentTestView;

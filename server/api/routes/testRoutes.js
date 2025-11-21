@@ -50,23 +50,6 @@ router.post("/", authenticate, async (req, res) => {
   }
 });
 
-/*
-// GET all tests, optional filter by type
-router.get("/", async (req, res) => {
-  try {
-    const { type } = req.query;
-    let query = {};
-    if (type && ["listening", "reading", "writing", "speaking"].includes(type)) {
-      query.type = type;
-    }
-    const tests = await Test.find(query).sort({ createdAt: -1 });
-    res.json(tests);
-  } catch (err) {
-    console.error("Error fetching tests:", err);
-    res.status(500).json({ error: "Failed to fetch tests" });
-  }
-});
-*/
 // GET all tests, optional filter by type
 router.get("/", authenticate, async (req, res) => {
   try {
@@ -305,7 +288,7 @@ router.get("/image-url/:filename", async (req, res) => {
 
 
 
-// Delete test — admins can delete any; teachers only their own
+// Delete test — only admin can delete
 router.delete("/:id", authenticate, async (req, res) => {
   try {
     const user = req.user;
@@ -314,15 +297,7 @@ router.delete("/:id", authenticate, async (req, res) => {
 
     // Permission check
     if (!user.isAdmin) {
-      if (!user.isTeacher) {
-        return res.status(403).json({ error: "Only teachers or admins can delete tests." });
-      }
-      if (user.isTeacher && user.status !== "approved") {
-        return res.status(403).json({ error: "Teacher approval pending." });
-      }
-      if (test.createdBy?.toString() !== user._id.toString()) {
-        return res.status(403).json({ error: "Teachers can only delete their own tests." });
-      }
+      return res.status(403).json({ error: "Only admins can delete tests." });
     }
 
     // Collect all S3 keys to remove
@@ -601,7 +576,7 @@ router.post("/:id/save-result", authenticate, async (req, res) => {
       // update existing
       user.testResults[existingIndex] = {
         ...resultEntry,
-        isSubmitted: true  
+        isSubmitted: true
       };
       newResult = user.testResults[existingIndex];
     } else {
@@ -637,7 +612,7 @@ router.get("/:id/get-result", authenticate, async (req, res) => {
     return match;
   });
 
-  
+
   if (!result) {
     return res.json(null);
   }

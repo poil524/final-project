@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import "./Admin.css";
 
 export default function ApprovedTests() {
     const [tests, setTests] = useState([]);
+    const navigate = useNavigate();
 
     const fetchTests = async () => {
         const res = await axios.get("http://localhost:5000/api/tests", { withCredentials: true });
@@ -35,13 +37,21 @@ export default function ApprovedTests() {
 
                 <tbody>
                     {tests.map(t => (
-                        <tr key={t._id}>
+                        <tr key={t._id}
+                            onClick={() => navigate(`/tests/${t._id}`)}
+                            className="clickable-row">
                             <td>{t.name}</td>
                             <td>{t.type}</td>
                             <td>{t.createdBy?.username || "Unknown"}</td>
                             <td>{t.studentsTaken}</td>
-                            <td className="actions">
-                                <button onClick={() => deleteTest(t._id)}>Delete</button>
+                            <td
+                                className="actions"
+                                onClick={(e) => {
+                                    e.stopPropagation();   // prevent navigation when clicking delete
+                                    deleteTest(t._id);
+                                }}
+                            >
+                                <button>Delete</button>
                             </td>
                         </tr>
                     ))}
