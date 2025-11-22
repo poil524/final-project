@@ -110,8 +110,9 @@ const LoginForm = () => {
                 </a>
 
                 <div className="signup-text">
-                    Don't have an account? <a href="/register">Sign up</a>
+                    Don't have an account? <a href="/register/choose">Sign up</a>
                 </div>
+
             </div>
         </div>
     );

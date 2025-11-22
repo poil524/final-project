@@ -1,5 +1,5 @@
 .test-container {
-  max-width: 900px;
+  max-width: 1300px;
   margin: 30px auto;
   padding: 20px;
   background: transparent;
@@ -12,10 +12,46 @@
   margin-bottom: 20px;
 }
 
+.two-col {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.reading-passages {
+    flex: 1;
+}
+
+.questions {
+    flex: 1;
+}
+
+.editable {
+  color: #2a9d8f;        /* different color from normal headings */
+  cursor: text;          /* shows text cursor on hover */
+  transition: background 0.2s;
+  padding: 2px 4px;      /* subtle padding so text feels editable */
+  border-radius: 3px;
+}
+
+.editable:hover {
+  background-color: rgba(42, 157, 143, 0.1); /* subtle hover effect */
+}
+
+.editable-icon {
+  opacity: 0.6;
+  cursor: text;
+  font-size: 0.8em;
+  transition: opacity 0.2s;
+}
+
+.editable:hover .editable-icon {
+  opacity: 1;             /* makes pencil more visible on hover */
+}
 .section-card {
   background: var(--color-bg-section-card);
   border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
   margin-bottom: 20px;
   padding: 20px;
 }
@@ -65,12 +101,28 @@ textarea {
   box-sizing: border-box;
 }
 
-.passage-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 6px;
+.passage-wrapper {
+    position: relative;
+    width: 100%;
 }
+
+.passage-floating-header {
+    position: absolute;
+    top: 8px;
+    left: 12px;
+    right: 12px;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    pointer-events: auto;
+}
+
+.passage-wrapper textarea {
+    width: 100%;
+    padding-top: 40px; /* room for the floating header */
+    box-sizing: border-box;
+}
+
 
 .question-card {
   background: var(--color-bg-question-card);
@@ -203,26 +255,67 @@ hr {
   margin-bottom: 2px; 
 }
 
-.question-items-container {
-  border: 2px dashed #888; /* dashed border all sides */
-  border-radius: 8px;       /* rounded corners */
-  padding: 15px;            /* inner spacing */
-  margin: 15px 0;           /* spacing from other elements */
-  
-  display: flex;
-  flex-direction: column;
-  gap: 10px;                /* spacing between items */
 
-  /* Responsive width */
-  width: 100%;
-  max-width: 800px;         /* container won’t be too wide on large screens */
-  box-sizing: border-box;
-}
 
 .question-item {
   padding: 10px;
   background-color: red; /* subtle background for items */
   border-radius: 4px;
+}
+.tfng-card {
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
+    background-color: #f9f9f9;
+}
+
+.tfng-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.tfng-handle {
+    cursor: grab;
+    padding: 4px 8px;
+    background: #eee;
+    border-radius: 4px;
+}
+
+.tfng-statement {
+    flex: 2;
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.tfng-select {
+    flex: 1;
+    padding: 6px 8px;
+    border-radius: 4px;
+}
+
+.tfng-source {
+    flex: 1;
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.tfng-row-right {
+    display: flex;          /* make it a flex container */
+    justify-content: flex-end; /* push children to the right */
+}
+
+
+/* Remove bullets and padding/margin from Reorder.Group */
+.reorder-group,
+.reorder-group li {
+    list-style: none;
+    margin: 0;
+    padding: 0;
 }
 
 

@@ -9,39 +9,32 @@ const Navigation = () => {
   const { user, setUser } = useContext(AuthContext);
   const [isExamDropdown, setIsExamDropdown] = useState(false);
   const [isUserDropdown, setIsUserDropdown] = useState(false);
-console.log("[NAV] user =", user);
+  console.log("[NAV] user =", user);
 
-const handleLogout = async () => {
-  try {
-    console.log("[LOGOUT] Sending request to backend...");
-    await axiosClient.post("/api/users/logout"); // <-- Removes httpOnly cookie
-  } catch (err) {
-    console.log("[LOGOUT] Server logout failed:", err?.response?.data);
-  }
+  const handleLogout = async () => {
+    try {
+      console.log("[LOGOUT] Sending request to backend...");
+      await axiosClient.post("/api/users/logout"); // <-- Removes httpOnly cookie
+    } catch (err) {
+      console.log("[LOGOUT] Server logout failed:", err?.response?.data);
+    }
 
-  // Clear local storage
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
+    // Clear local storage
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
 
-  // Clear context
-  setUser(null);
+    // Clear context
+    setUser(null);
 
-  // Redirect
-  window.location.href = "/";
-};
+    // Redirect
+    window.location.href = "/";
+  };
 
 
   // Determine dashboard link
   let dashboardLink = "/profile";
   let dashboardLabel = "My Profile";
 
-  if (user?.isTeacher && user.status === "approved") {
-    dashboardLink = "/teacher-dashboard";
-    dashboardLabel = "Teacher Dashboard";
-  } else if (user?.isAdmin) {
-    dashboardLink = "/admin-dashboard";
-    dashboardLabel = "Admin Dashboard";
-  }
 
   return (
     <header className="header">
@@ -51,6 +44,14 @@ const handleLogout = async () => {
 
       <nav className="header_nav" aria-label="Primary">
         <ul className="site-nav_list">
+          {(user?.isAdmin || user?.isTeacher) && (
+            <li className="site-nav_item">
+              <Link className="site-nav_link" to={user.isAdmin ? "/admin" : "/teacher"}>
+                <span className="site-nav_label">Dashboard</span>
+              </Link>
+            </li>
+          )}
+
           <li
             className="site-nav_item dropdown"
             onMouseEnter={() => setIsExamDropdown(true)}

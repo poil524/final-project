@@ -7,8 +7,6 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
 
     useEffect(() => {
-        console.log("[Auth] Attempt restore login");
-
         axiosClient.get("/api/users/profile")
             .then(res => {
                 console.log("[Auth] Login restored:", res.data);

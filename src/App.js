@@ -11,6 +11,7 @@ import TeacherTestCreateView from "./views/testCreateEditView";
 import TestListView from "./views/testListView";
 import EditTestView from "./views/testCreateEditView";
 import Login from "./views/Auth/login";
+import SignUpTeacherOrStudent from "./views/Auth/SignUpTeacherOrStudent.jsx";
 import RegisterStudent from "./views/Auth/registerStudent";
 import RegisterTeacher from "./views/Auth/registerTeacher";
 
@@ -49,6 +50,7 @@ const App = () => {
       <Routes>
         {/* Auth pages */}
         <Route path="/login" element={<Login />} />
+        <Route path="/register/choose" element={<SignUpTeacherOrStudent />} />
         <Route path="/register/student" element={<RegisterStudent />} />
         <Route path="/register/teacher" element={<RegisterTeacher />} />
 
