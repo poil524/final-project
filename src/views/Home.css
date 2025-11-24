@@ -3,120 +3,146 @@
     display: flex;
     flex-direction: column;
     gap: 50px;
+    background-color: var(--color-bg);
 }
 
 /* Carousel */
 .carousel-container img {
-    height: 350px;
+    height: 600px;
     object-fit: cover;
     width: 100%;
 }
+
 .link-card {
-  text-decoration: none;
-  color: inherit;
+    text-decoration: none;
+    color: inherit;
 }
 
 /* Signup cards */
-.signup-options {
-  display: flex;
-  justify-content: center;
-  gap: 25px;
-  padding: 30px 0;
-}
-
+/* Signup cards */
 .signup-card {
-  width: 230px;
-  border: 2px solid var(--color-border);
-  padding: 24px 18px;
-  background: #fff;
-  border-radius: 12px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  transition: 0.2s;
-  cursor: pointer;
+    width: 380px; /* increased card width */
+    padding: 28px 20px; /* more padding for bigger card */
+    background: var(--color-bg-section-card);
+    border: 2px solid var(--color-border);
+    border-radius: 12px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px; /* reduce gap between elements slightly */
+    transition: 0.2s;
+    cursor: pointer;
+    color: var(--color-secondary-text);
+    font-size: 15px; /* increased base font size */
 }
 
-.signup-card:hover {
-  border-color: var(--color-border-hover);
-  transform: translateY(-2px);
+/* Signup cards container */
+.signup-options {
+    display: flex;
+    justify-content: center; /* center cards horizontally */
+    flex-direction: row; /* make cards horizontal */
+    gap: 30px; /* spacing between cards */
+    padding: 30px 0;
+    flex-wrap: wrap; /* wrap to next line on small screens */
 }
 
-.signup-card::before {
-  content: "";
-  width: 55px;
-  height: 55px;
-  border: 2px solid #000;
-  border-radius: 50%;
+/* Icon spacing */
+.signup-icon {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 6px; 
+}
+
+/* Headings and paragraph spacing */
+.signup-card h2 {
+    margin: 0;
+    font-size: 24px; /* slightly larger heading */
+    font-weight: 700;
+}
+
+.signup-card p {
+    margin: 4px 0 0 0; /* reduce gap between h2 and paragraph */
+    font-size: 16px;
+}
+
+/* Button adjustments */
+.btn-signup {
+    padding: 12px 20px; /* increase button size */
+    font-size: 16px; /* increase font size for emphasis */
+    border-radius: 8px;
+    margin-top: 30px;
 }
 
 .btn-primary {
-  padding: 8px 14px;
-  border-radius: 6px;
-  border: none;
-  background: #000;
-  color: #fff;
-  cursor: pointer;
-  font-size: 14px;
-  transition: 0.15s;
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: none;
+    background: var(--color-primary);
+    color: var(--color-primary-text);
+    cursor: pointer;
+    font-size: 14px;
+    transition: 0.15s;
 }
 
 .btn-primary:hover {
-  background: #333;
+    background: var(--color-primary-hover);
 }
-
-
 
 /* Skills grid */
 .skills-section {
-  text-align: center;
-  margin-top: 30px;
+    text-align: center;
+    margin-top: 30px;
 }
 
 .skills-grid {
-  display: flex;
-  justify-content: center;
-  gap: 35px;
-  flex-wrap: wrap;
-  margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    gap: 35px;
+    flex-wrap: wrap;
+    margin-top: 20px;
 }
 
 .skill-box {
-  width: 200px;
-  height: 160px;
-  border: 2px solid var(--color-border);       /* light red outline */
-  background: #fafafa;             
-  border-radius: 14px;
-  text-decoration: none;
-  color: #000;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  transition: 0.2s;
+    width: 200px;
+    height: 160px;
+    border: 2px solid var(--color-border);
+    background: var(--color-bg-section-card);
+    border-radius: 14px;
+    text-decoration: none;
+    color: var(--color-secondary-text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: 0.2s, font-size 0.2s, font-weight 0.2s;
+    font-size: 18px; /* slightly bigger text */
+    font-weight: 500; /* default weight */
 }
 
 .skill-box:hover {
-  border-color: var(--color-border-hover);           /* stronger red hover */
-  transform: translateY(-3px);
+    border-color: var(--color-border-hover);
+    transform: translateY(-3px);
+    font-weight: 800; /* make text bold on hover */
 }
 
-/* round red icon placeholder */
-.skill-box::before {
-  content: "";
-  width: 48px;
-  height: 48px;
-  border: 3px solid ;       /* red circle */
-  border-radius: 15%;
+.skill-box-icon {
+    margin-bottom: 6px; /* closer to text */
+    color: var(--color-primary);
+    height: 35px;
+    width: 35px;
 }
+
+
 
 
 /* Footer */
 .footer {
     text-align: center;
     padding: 20px;
-    border-top: 1px solid #ddd;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-secondary-text);
 }
+

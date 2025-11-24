@@ -3,7 +3,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: rgba(69, 69, 69, 0.4);
+  background-color: var(--color-primary);
   padding: 0 24px;
   position: relative;
   z-index: 2;
@@ -11,44 +11,18 @@
 }
 
 .header:hover {
-  background-color: #ffffff;
+  background-color: var(--color-primary-hover);
 }
 
 .header:hover .site-nav_link,
 .header:hover .user-name {
-  color: rgb(4, 112, 185);
-}
-
-/* === Brand === */
-.header_brand {
-  display: flex;
-  align-items: center;
-  height: 72px;
-}
-
-.brand_link {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 72px;
-  padding: 8px 0 16px;
-  color: rgb(4, 112, 185);
-  text-decoration: none;
-}
-
-.brand_logo {
-  max-height: 80px;
-  max-width: 160px;
-  vertical-align: middle;
-}
-
-.brand_logo--hidden {
-  display: none;
+  color: var(--color-primary-text);
 }
 
 /* === Navigation === */
 .header_nav {
   display: flex;
+  justify-content: space-between;
   align-items: center;
   height: 72px;
 }
@@ -73,7 +47,7 @@
 
 /* === Nav Links === */
 .site-nav_link {
-  color: #ffffff;
+  color: var(--color-primary-text);
   text-decoration: none;
   font: 700 14px/72px Poppins, sans-serif;
   display: flex;
@@ -84,7 +58,7 @@
 }
 
 .site-nav_link:hover {
-  color: rgb(4, 112, 185);
+  color: var(--color-accent);
 }
 
 .site-nav_link::after {
@@ -95,7 +69,7 @@
   transform: translateX(-50%);
   width: 0;
   height: 2px;
-  background-color: rgb(175, 40, 44);
+  background-color: var(--color-accent);
   transition: width 0.3s ease;
 }
 
@@ -103,12 +77,22 @@
   width: 100%;
 }
 
+.site-nav_left,
+.site-nav_right {
+  display: flex;
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 16px;
+}
+
 /* === CTA Button === */
 .btn-login {
-  background-color: rgb(175, 40, 44);
-  border: 1px solid rgb(175, 40, 44);
+  background-color: var(--color-accent);
+  border: 1px solid var(--color-accent);
   border-radius: 80px;
-  color: #fff;
+  color: var(--color-accent-text);
   cursor: pointer;
   text-align: center;
   text-decoration: none;
@@ -122,7 +106,7 @@
 }
 
 .btn-login:hover {
-  background-color: rgb(200, 60, 60);
+  background-color: var(--color-primary);
 }
 
 /* === Dropdown Menus (Unified) === */
@@ -130,15 +114,15 @@
 .user-dropdown {
   position: relative;
   cursor: pointer;
-  padding-right: 16px; /* move dropdown slightly to the right */
+  padding-right: 16px;
 }
 
 .dropdown_menu,
 .user-dropdown_menu {
   position: absolute;
-  right: 0; /* align to right edge */
+  right: 0;
   top: 72px;
-  background-color: #ffffff;
+  background-color: var(--color-bg-section-card);
   border-radius: 6px;
   list-style: none;
   padding: 8px 0;
@@ -148,63 +132,60 @@
   z-index: 100;
   animation: fadeIn 0.2s ease-in-out;
 }
-/* Unified dropdown items */
+
 .dropdown_menu li,
 .user-dropdown_menu li {
   list-style: none;
   padding: 10px 16px;
   font: 500 14px Poppins, sans-serif;
-  color: rgb(4, 112, 185);
+  color: var(--color-primary);
   cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-.user-dropdown_menu li:hover {
-  background-color: rgba(4, 112, 185, 0.1);
-  color: rgb(175, 40, 44);
-}
-
-.user-dropdown_menu hr {
-  border: none;
-  border-top: 1px solid #e2e8f0;
-  margin: 4px 0;
-}
-
+/* Dropdown list items hover */
 .dropdown_menu li:hover,
 .user-dropdown_menu li:hover {
-  background-color: rgba(4, 112, 185, 0.1);
-  color: rgb(175, 40, 44);
+  background-color: rgba(59, 130, 246, 0.1); /* subtle hover background */
+  color: var(--color-primary-hover);
+  font-weight: 700; /* make the text bold on hover */
 }
+
+/* Keep signout button behavior */
+.user-dropdown_menu li .signout-btn:hover {
+  background-color: transparent !important; /* prevent li hover from coloring */
+  font-weight: 700; /* bold on hover */
+  color: var(--color-primary-hover);
+}
+
+.user-dropdown_menu li:hover .signout-btn {
+  background-color: transparent;
+}
+
 
 /* Links inside dropdowns */
-.dropdown_menu li a {
-  color: rgb(4, 112, 185);
+.dropdown_menu li a,
+.user-dropdown_menu a {
+  color: var(--color-primary);
   text-decoration: none;
-  font: 500 14px Poppins, sans-serif;
   display: block;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* === User Info Section === */
-.user-dropdown_menu a {
-  display: block;
-  font: 500 14px Poppins, sans-serif;
-  color: rgb(4, 112, 185);
-  text-decoration: none;
-  transition: background-color 0.2s ease, color 0.2s ease;
-}
+/* User Name */
 .user-name {
   font: 700 14px/72px Poppins, sans-serif;
-  color: #ffffff;
+  color: var(--color-primary-text);
   display: flex;
   align-items: center;
   gap: 8px;
   transition: color 0.3s ease;
 }
 
+/* User Info Section */
 .user-dropdown_menu hr {
   border: none;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid #CBD6E3; /* softer gray border */
   margin: 4px 0;
 }
 
@@ -215,20 +196,26 @@
 
 .user-info p {
   margin: 2px 0;
-  color: #64748b;
+  color: #64748b; /* muted gray text */
 }
 
-/* === Sign Out Button === */
+/* Sign Out Button */
 .signout-btn {
   background: none;
   border: none;
-  color: #dc2626;
+  color: var(--color-primary);
   font: 500 14px Poppins, sans-serif;
   cursor: pointer;
   width: 100%;
   text-align: left;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: font-weight 0.2s ease, color 0.2s ease;
 }
+
+.signout-btn:hover {
+  font-weight: 700; /* makes the text bold on hover */
+  color: var(--color-primary-hover); /* optional: keep hover color */
+}
+
 
 /* === Animation === */
 @keyframes fadeIn {

@@ -9,44 +9,44 @@ const Navigation = () => {
   const { user, setUser } = useContext(AuthContext);
   const [isExamDropdown, setIsExamDropdown] = useState(false);
   const [isUserDropdown, setIsUserDropdown] = useState(false);
-  console.log("[NAV] user =", user);
 
   const handleLogout = async () => {
     try {
-      console.log("[LOGOUT] Sending request to backend...");
-      await axiosClient.post("/api/users/logout"); // <-- Removes httpOnly cookie
+      await axiosClient.post("/api/users/logout");
     } catch (err) {
-      console.log("[LOGOUT] Server logout failed:", err?.response?.data);
+      console.log("Logout failed:", err?.response?.data);
     }
-
-    // Clear local storage
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-
-    // Clear context
     setUser(null);
-
-    // Redirect
     window.location.href = "/";
   };
 
-
-  // Determine dashboard link
   let dashboardLink = "/profile";
   let dashboardLabel = "My Profile";
 
-
   return (
     <header className="header">
-      <div className="header_brand">
-        <a className="brand_link" href="/" aria-label="Home"></a>
-      </div>
+      <ul className="site-nav_left">
+        <li className="site-nav_item">
+          <Link className="site-nav_link" to="/">
+            <span className="site-nav_label">Home</span>
+          </Link>
+        </li>
+      </ul>
 
       <nav className="header_nav" aria-label="Primary">
-        <ul className="site-nav_list">
+        {/* Left Side */}
+
+
+        {/* Right Side */}
+        <ul className="site-nav_right">
           {(user?.isAdmin || user?.isTeacher) && (
             <li className="site-nav_item">
-              <Link className="site-nav_link" to={user.isAdmin ? "/admin" : "/teacher"}>
+              <Link
+                className="site-nav_link"
+                to={user.isAdmin ? "/admin" : "/teacher"}
+              >
                 <span className="site-nav_label">Dashboard</span>
               </Link>
             </li>
@@ -65,10 +65,18 @@ const Navigation = () => {
 
             {isExamDropdown && (
               <ul className="dropdown_menu">
-                <li><Link to="/tests/listening">Listening Exam</Link></li>
-                <li><Link to="/tests/reading">Reading Exam</Link></li>
-                <li><Link to="/tests/writing">Writing Exam</Link></li>
-                <li><Link to="/tests/speaking">Speaking Exam</Link></li>
+                <li>
+                  <Link to="/tests/listening">Listening Exam</Link>
+                </li>
+                <li>
+                  <Link to="/tests/reading">Reading Exam</Link>
+                </li>
+                <li>
+                  <Link to="/tests/writing">Writing Exam</Link>
+                </li>
+                <li>
+                  <Link to="/tests/speaking">Speaking Exam</Link>
+                </li>
               </ul>
             )}
           </li>
@@ -86,7 +94,9 @@ const Navigation = () => {
                   <li className="user-info">
                     <strong>{user.username}</strong>
                     <p>{user.email}</p>
-                    <small>Joined: {new Date(user.createdAt).toLocaleDateString()}</small>
+                    <small>
+                      Joined: {new Date(user.createdAt).toLocaleDateString()}
+                    </small>
                   </li>
                   <hr />
                   <li>

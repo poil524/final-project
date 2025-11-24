@@ -215,3 +215,13 @@
     background-color: white;
     padding: 5px;
 }
+
+.speaking-running-track {
+    margin-top: 20px;
+}
+
+.speaking-track-item {
+    padding: 20px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+}

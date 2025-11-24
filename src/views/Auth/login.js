@@ -105,12 +105,8 @@ const LoginForm = () => {
                     </button>
                 </form>
 
-                <a href="/forgot-password" className="forgot-password">
-                    Forgot password?
-                </a>
-
                 <div className="signup-text">
-                    Don't have an account? <a href="/register/choose">Sign up</a>
+                    Don't have an account? <a href="/register/sign-up-select">Sign up</a>
                 </div>
 
             </div>

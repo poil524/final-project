@@ -368,9 +368,14 @@ const TestCreateEditView = () => {
                                 <span className="editable-icon">✎</span>
                             </div>
                             {/* Remove Section */}
-                            <button className="remove-button" onClick={() => removeSection(secIdx)}>
+                            <button
+                                type="button"
+                                className="remove-button"
+                                onClick={() => removeSection(secIdx)}
+                            >
                                 <BiTrash size={20} /> Remove Section
                             </button>
+
                         </div>
 
                         <div className="section-title-row">

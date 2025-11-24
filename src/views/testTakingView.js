@@ -451,13 +451,21 @@ const StudentTestView = () => {
   const [savedResult, setSavedResult] = useState(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
+  // Speaking "running track" progression
+  const [speakingStep, setSpeakingStep] = useState(0);
+
+
   // If not submitted, warn user on return
   useNavigationBlocker(!result?.isSubmitted);
 
   const writingRefs = useRef([]);
   const BASE_URL = "http://localhost:5000";
 
-
+  // Gate Navigation Only When Answer Uploaded
+  const canMoveToNext = (sectionIdx, questionIdx) => {
+    const q = test.sections[sectionIdx].questions[questionIdx];
+    return Boolean(q.studentAudioKey);
+  };
 
 
   useEffect(() => {
@@ -894,79 +902,68 @@ const StudentTestView = () => {
       )}
       {speakingSections.length > 0 && (
         <div>
-          {speakingSections.map((section, secIdx) => (
-            <div key={secIdx} className="speaking-section">
-              <h3>{section.sectionTitle}</h3>
 
-              {section.requirement && (
-                <p><b>Task:</b> {section.requirement}</p>
-              )}
+          {speakingSections.length > 0 && (
+            <div className="speaking-running-track">
+              {(() => {
+                const section = speakingSections[0];
+                const q = section.questions[speakingStep];
 
-              {section.questions?.length > 0 && (
-                <div className="speaking-questions">
-                  <h4>Questions:</h4>
-                  <ul>
-                    {section.questions.map((q, qIdx) => (
-                      <li key={q._id || qIdx} style={{ marginBottom: "25px" }}>
-                        <strong>Q{qIdx + 1}:</strong>{" "}
-                        {q.requirement || q.text || "No question text"}
+                if (!q) return <p>All questions completed.</p>;
 
-                        {/* Question Audio */}
-                        {q.ttsKey && (
-                          <div style={{ marginTop: "8px" }}>
-                            <AudioPlayer s3Key={q.ttsKey} autoPlay={false} />
-                          </div>
-                        )}
+                return (
+                  <div className="speaking-track-item">
+                    <h2>Speaking Question {speakingStep + 1}</h2>
+                    {/* 
+                    <p><b>{q.requirement || q.text}</b></p>
+*/}
+                    {/* Question audio */}
+                    {q.ttsKey && (
+                      <AudioPlayer s3Key={q.ttsKey} autoPlay={false} />
+                    )}
 
-                        {/* Hide recorder if audio already exists */}
-                        {!q.studentAudioKey && !user?.isAdmin && !user?.isTeacher && (
-                          <AudioRecorder
-                            testId={testId}
-                            sectionIndex={secIdx}
-                            questionIndex={qIdx}
-                            onUploadComplete={(key, clearLocalPreview) => {
-                              if (clearLocalPreview) clearLocalPreview();
+                    {/* Recorder (hide if student already recorded) */}
+                    {!q.studentAudioKey && !user?.isAdmin && !user?.isTeacher && (
+                      <AudioRecorder
+                        testId={testId}
+                        sectionIndex={0}
+                        questionIndex={speakingStep}
+                        onUploadComplete={(key, clearPreview) => {
+                          if (clearPreview) clearPreview();
 
-                              setTest((prev) => {
-                                const updatedSections = [...prev.sections];
-                                const updatedQuestions = [...updatedSections[secIdx].questions];
-                                updatedQuestions[qIdx] = {
-                                  ...updatedQuestions[qIdx],
-                                  studentAudioKey: key,
-                                };
-                                updatedSections[secIdx] = {
-                                  ...updatedSections[secIdx],
-                                  questions: updatedQuestions,
-                                };
-                                return { ...prev, sections: updatedSections };
-                              });
+                          setTest(prev => {
+                            const updated = { ...prev };
+                            updated.sections[0].questions[speakingStep].studentAudioKey = key;
+                            return updated;
+                          });
+                        }}
+                      />
+                    )}
 
-                              const token = localStorage.getItem("token");
-                              if (token) {
-                                axios.post(
-                                  `${BASE_URL}/api/tests/${testId}/save-result`,
-                                  { speakingAudioKey: key },
-                                  { headers: { Authorization: `Bearer ${token}` } }
-                                );
-                              }
-                            }}
-                          />
-                        )}
+                    {/* Playback after recording */}
+                    {q.studentAudioKey && (
+                      <AudioPlayer s3Key={q.studentAudioKey} />
+                    )}
 
+                    {/* NEXT BUTTON (only when recording done) */}
+                    {q.studentAudioKey && speakingStep < section.questions.length - 1 && (
+                      <button onClick={() => setSpeakingStep(speakingStep + 1)}>
+                        Next Question
+                      </button>
+                    )}
 
-                        {/* Student's Recorded Answer Playback */}
-                        {q.studentAudioKey && (
-                          <div style={{ marginTop: "8px" }}>
-                            <AudioPlayer s3Key={q.studentAudioKey} />
-                          </div>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                    {/* FINAL SUBMIT BUTTON */}
+                    {q.studentAudioKey && speakingStep === section.questions.length - 1 && (
+                      <button onClick={handleSpeakingSubmit}>
+                        Submit Speaking
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
-          ))}
+          )}
+
 
 
 
