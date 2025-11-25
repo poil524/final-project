@@ -144,23 +144,13 @@
 }
 
 /* Dropdown list items hover */
-.dropdown_menu li:hover,
-.user-dropdown_menu li:hover {
+.dropdown_menu li:not(.user-info):hover,
+.user-dropdown_menu li:not(.user-info):hover {
   background-color: rgba(59, 130, 246, 0.1); /* subtle hover background */
   color: var(--color-primary-hover);
-  font-weight: 700; /* make the text bold on hover */
+  font-weight: 700;
 }
 
-/* Keep signout button behavior */
-.user-dropdown_menu li .signout-btn:hover {
-  background-color: transparent !important; /* prevent li hover from coloring */
-  font-weight: 700; /* bold on hover */
-  color: var(--color-primary-hover);
-}
-
-.user-dropdown_menu li:hover .signout-btn {
-  background-color: transparent;
-}
 
 
 /* Links inside dropdowns */
@@ -209,13 +199,24 @@
   width: 100%;
   text-align: left;
   transition: font-weight 0.2s ease, color 0.2s ease;
+  margin: 0px 0px 0px 0px !important
 }
 
 .signout-btn:hover {
   font-weight: 700; /* makes the text bold on hover */
   color: var(--color-primary-hover); /* optional: keep hover color */
+  margin: 5px 5px 5px 5px !important
+}
+/* Keep signout button behavior */
+.user-dropdown_menu li .signout-btn:hover {
+  background-color: transparent !important; /* prevent li hover from coloring */
+  font-weight: 700; /* bold on hover */
+  color: var(--color-primary-hover);
 }
 
+.user-dropdown_menu li:hover .signout-btn {
+  background-color: transparent;
+}
 
 /* === Animation === */
 @keyframes fadeIn {

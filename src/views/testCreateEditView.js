@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import "./TestCreateEditView.css";
 import { Reorder, motion } from "framer-motion";
 import { BiTrash } from "react-icons/bi";
-
+import { IoIosRemoveCircleOutline } from "react-icons/io";
 
 
 axios.defaults.withCredentials = true;
@@ -404,6 +404,7 @@ const TestCreateEditView = () => {
                                                     </div>
 
                                                     <textarea
+                                                        className="passage-textarea"
                                                         value={p.text}
                                                         onChange={(e) => {
                                                             const updatedPassages = [...section.passages];
@@ -413,6 +414,7 @@ const TestCreateEditView = () => {
                                                             updateSection(secIdx, updatedSection);
                                                         }}
                                                     />
+
                                                 </div>
                                             </div>
                                         ))}
@@ -595,15 +597,6 @@ const TestCreateEditView = () => {
                                                 </div>
                                                 <br />
 
-                                                {testData.type !== "speaking" &&
-                                                    testData.type !== "writing" &&
-                                                    q.type !== "summary_completion" &&
-                                                    q.type !== "table_completion" &&
-                                                    q.type !== "diagram_completion" && (
-                                                        <button type="button" onClick={() => addQuestionItem(secIdx, qIdx)}>
-                                                            Add Question Item
-                                                        </button>
-                                                    )}
 
 
 
@@ -762,214 +755,7 @@ const TestCreateEditView = () => {
                                                                     </select>
                                                                 </div>
                                                             )}
-                                                            {/* 
-                                                    {q.type === "multiple_choice" && (
-                                                        <div>
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Question Text"
-                                                                value={item.text}
-                                                                onChange={(e) => {
-                                                                    const updatedItems = [...q.questionItems];
-                                                                    updatedItems[itemIdx] = {
-                                                                        ...item,
-                                                                        text: e.target.value,
-                                                                    };
-                                                                    const updatedQ = { ...q, questionItems: updatedItems };
-                                                                    const updatedQuestions = [...section.questions];
-                                                                    updatedQuestions[qIdx] = updatedQ;
-                                                                    updateSection(secIdx, {
-                                                                        ...section,
-                                                                        questions: updatedQuestions,
-                                                                    });
-                                                                }}
-                                                            />
-                                                            {item.options.map((opt, optIdx) => (
-                                                                <div key={optIdx}>
-                                                                    <input
-                                                                        type="text"
-                                                                        placeholder={`Option ${optIdx + 1}`}
-                                                                        value={opt}
-                                                                        onChange={(e) => {
-                                                                            const updatedOptions = [...item.options];
-                                                                            updatedOptions[optIdx] = e.target.value;
-                                                                            const updatedItems = [...q.questionItems];
-                                                                            updatedItems[itemIdx] = { ...item, options: updatedOptions };
-                                                                            const updatedQ = { ...q, questionItems: updatedItems };
-                                                                            const updatedQuestions = [...section.questions];
-                                                                            updatedQuestions[qIdx] = updatedQ;
-                                                                            updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                                        }}
-                                                                    />
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => {
-                                                                            const updatedOptions = item.options.filter((_, i) => i !== optIdx);
-                                                                            const updatedItems = [...q.questionItems];
-                                                                            updatedItems[itemIdx] = { ...item, options: updatedOptions };
-                                                                            const updatedQ = { ...q, questionItems: updatedItems };
-                                                                            const updatedQuestions = [...section.questions];
-                                                                            updatedQuestions[qIdx] = updatedQ;
-                                                                            updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                                        }}
-                                                                    >
-                                                                        Remove
-                                                                    </button>
-                                                                </div>
-                                                            ))}
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    const updatedItems = [...q.questionItems];
-                                                                    updatedItems[itemIdx] = {
-                                                                        ...item,
-                                                                        options: [...item.options, ""],
-                                                                    };
-                                                                    const updatedQ = { ...q, questionItems: updatedItems };
-                                                                    const updatedQuestions = [...section.questions];
-                                                                    updatedQuestions[qIdx] = updatedQ;
-                                                                    updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                                }}
-                                                            >
-                                                                Add Option
-                                                            </button>
-                                                            <label> Select Correct Answer: </label>
-                                                            {item.options.map((opt, idx) => (
-                                                                <label key={idx} style={{ display: "block" }}>
-                                                                    <input
-                                                                        type="radio"
-                                                                        name={`mc_correct_${q.id}_${item.id}`}
-                                                                        value={opt}
-                                                                        checked={q.answers?.find(a => a.id === item.id)?.value === opt}
-                                                                        onChange={(e) => {
-                                                                            const updatedAnswers = [
-                                                                                ...(q.answers || []).filter(a => a.id !== item.id),
-                                                                                { id: item.id, value: e.target.value, sourceText: "" }
-                                                                            ];
-                                                                            const updatedQ = { ...q, answers: updatedAnswers };
-                                                                            const updatedQuestions = [...section.questions];
-                                                                            updatedQuestions[qIdx] = updatedQ;
-                                                                            updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                                        }}
-                                                                    />
-                                                                    {opt}
-                                                                </label>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                        */}
-                                                            {/* 
-                                                    {q.type === "true_false_not_given" && (
-                                                        <div>
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Statement"
-                                                                value={item.text || ""}
-                                                                onChange={(e) => {
-                                                                    const updatedItems = [...q.questionItems];
-                                                                    updatedItems[itemIdx] = { ...item, text: e.target.value };
-                                                                    const updatedQ = { ...q, questionItems: updatedItems };
-                                                                    const updatedQuestions = [...section.questions];
-                                                                    updatedQuestions[qIdx] = updatedQ;
-                                                                    updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                                }}
-                                                            />
-                                                            <select
-                                                                value={q.answers?.find(a => a.id === item.id)?.value || ""}
-                                                                onChange={(e) => {
-                                                                    const updatedAnswers = [
-                                                                        ...(q.answers || []).filter(a => a.id !== item.id),
-                                                                        { id: item.id, value: e.target.value, sourceText: "" }
-                                                                    ];
-                                                                    const updatedQ = { ...q, answers: updatedAnswers };
-                                                                    const updatedQuestions = [...section.questions];
-                                                                    updatedQuestions[qIdx] = updatedQ;
-                                                                    updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                                }}
-                                                            >
-                                                                <option value="">-- Select Answer --</option>
-                                                                <option value="True">True</option>
-                                                                <option value="False">False</option>
-                                                                <option value="Not Given">Not Given</option>
-                                                            </select>
-                                                        </div>
-                                                    )}
-                                                        */}
-                                                            {/*
-                                                    {q.type === "yes_no_not_given" && (
-                                                        <div>
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Statement"
-                                                                value={item.text || ""}
-                                                                onChange={(e) => {
-                                                                    const updatedItems = [...q.questionItems];
-                                                                    updatedItems[itemIdx] = { ...item, text: e.target.value };
-                                                                    const updatedQ = { ...q, questionItems: updatedItems };
-                                                                    const updatedQuestions = [...section.questions];
-                                                                    updatedQuestions[qIdx] = updatedQ;
-                                                                    updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                                }}
-                                                            />
-                                                            <select
-                                                                value={q.answers?.find(a => a.index === item.index)?.value || ""}
-                                                                onChange={(e) => {
-                                                                    const updatedAnswers = [
-                                                                        ...(q.answers || []).filter(a => a.index !== item.index),
-                                                                        { id: uuidv4(), index: item.index, value: e.target.value }
-                                                                    ];
-                                                                    const updatedQ = { ...q, answers: updatedAnswers };
-                                                                    const updatedQuestions = [...section.questions];
-                                                                    updatedQuestions[qIdx] = updatedQ;
-                                                                    updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                                }}
-                                                            >
-                                                                <option value="">-- Correct Answer --</option>
-                                                                <option value="Yes">Yes</option>
-                                                                <option value="No">No</option>
-                                                                <option value="Not Given">Not Given</option>
-                                                            </select>
 
-                                                        </div>
-                                                    )}
-                                                        */}
-                                                            {/* 
-                                                    {q.type === "short_answer" && (
-                                                        <div>
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Question Text"
-                                                                value={item.text || ""}
-                                                                onChange={(e) => {
-                                                                    const updatedItems = [...q.questionItems];
-                                                                    updatedItems[itemIdx] = { ...item, text: e.target.value };
-                                                                    const updatedQ = { ...q, questionItems: updatedItems };
-                                                                    const updatedQuestions = [...section.questions];
-                                                                    updatedQuestions[qIdx] = updatedQ;
-                                                                    updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                                }}
-                                                            />
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Correct Answer"
-                                                                value={q.answers?.find(a => a.id === item.id)?.value || ""}
-                                                                onChange={(e) => {
-                                                                    const updatedAnswers = q.answers ? [...q.answers] : [];
-                                                                    const existing = updatedAnswers.find(a => a.id === item.id);
-                                                                    if (existing) {
-                                                                        existing.value = e.target.value;
-                                                                    } else {
-                                                                        updatedAnswers.push({ id: item.id, value: e.target.value, sourceText: "" });
-                                                                    }
-                                                                    const updatedQ = { ...q, answers: updatedAnswers };
-                                                                    const updatedQuestions = [...section.questions];
-                                                                    updatedQuestions[qIdx] = updatedQ;
-                                                                    updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                                }}
-                                                            />
-                                                        </div>
-                                                    )}
-                                                        */}
                                                             {/* Globally Component */}
                                                             {/* sourceText input */}
                                                             {q.type !== "summary_completion" && q.type !== "diagram_completion" && q.type !== "true_false_not_given" && q.type !== "yes_no_not_given" && q.type !== "multiple_choice" && q.type !== "short_answer" && (
@@ -1005,6 +791,7 @@ const TestCreateEditView = () => {
                                                             {q.type !== "summary_completion" && q.type !== "diagram_completion" && q.type !== "true_false_not_given" && q.type !== "yes_no_not_given" && q.type !== "multiple_choice" && q.type !== "short_answer" && (
                                                                 <button
                                                                     type="button"
+                                                                    title="Remove this item"
                                                                     onClick={() => {
                                                                         const updatedItems = q.questionItems.filter((_, i) => i !== itemIdx);
                                                                         const updatedQ = { ...q, questionItems: updatedItems };
@@ -1028,12 +815,11 @@ const TestCreateEditView = () => {
                                                         </div>
                                                     ))}
                                                 </div>
+
                                                 {/* Outside loop */}
 
                                                 {q.type === "short_answer" && (
                                                     <div style={{ marginTop: "10px" }}>
-                                                        <h4>Short Answer Questions (drag to reorder)</h4>
-
                                                         <Reorder.Group
                                                             axis="y"
                                                             values={q.questionItems || []}
@@ -1048,9 +834,25 @@ const TestCreateEditView = () => {
                                                             {(q.questionItems || []).map((item, itemIdx) => (
                                                                 <Reorder.Item key={item.id} value={item}>
                                                                     <div className="tfng-card">
-                                                                        {/* Row 1: Drag handle + Question text */}
+                                                                        <div className="tfng-row-right">
+                                                                            <button
+                                                                                type="button"
+                                                                                className="option-remove-button"
+                                                                                title="Remove this question"
+                                                                                onClick={() => {
+                                                                                    const updatedItems = q.questionItems.filter((_, i) => i !== itemIdx);
+                                                                                    const updatedAnswers = (q.answers || []).filter(a => a.id !== item.id);
+                                                                                    const updatedQ = { ...q, questionItems: updatedItems, answers: updatedAnswers };
+                                                                                    const updatedQuestions = [...section.questions];
+                                                                                    updatedQuestions[qIdx] = updatedQ;
+                                                                                    updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                                                }}
+                                                                            >
+                                                                                <BiTrash size={18} />
+                                                                            </button>
+                                                                        </div>
+                                                                        {/* Question text */}
                                                                         <div className="tfng-row">
-                                                                            <span className="tfng-handle">☰</span>
                                                                             <input
                                                                                 type="text"
                                                                                 placeholder="Question Text"
@@ -1113,23 +915,8 @@ const TestCreateEditView = () => {
                                                                             />
                                                                         </div>
 
-                                                                        {/* Row 4: Remove item */}
-                                                                        <div className="tfng-row tfng-row-right">
-                                                                            <button
-                                                                                type="button"
-                                                                                className="remove-button"
-                                                                                onClick={() => {
-                                                                                    const updatedItems = q.questionItems.filter((_, i) => i !== itemIdx);
-                                                                                    const updatedAnswers = (q.answers || []).filter(a => a.id !== item.id);
-                                                                                    const updatedQ = { ...q, questionItems: updatedItems, answers: updatedAnswers };
-                                                                                    const updatedQuestions = [...section.questions];
-                                                                                    updatedQuestions[qIdx] = updatedQ;
-                                                                                    updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                                                }}
-                                                                            >
-                                                                                <BiTrash size={20} />
-                                                                            </button>
-                                                                        </div>
+
+
                                                                     </div>
                                                                 </Reorder.Item>
                                                             ))}
@@ -1137,7 +924,7 @@ const TestCreateEditView = () => {
                                                     </div>
                                                 )}
                                                 {q.type === "multiple_choice" && (
-                                                    <div style={{ marginTop: "10px" }}>
+                                                    <div>
                                                         <Reorder.Group
                                                             axis="y"
                                                             values={q.questionItems || []}
@@ -1152,7 +939,25 @@ const TestCreateEditView = () => {
                                                             {(q.questionItems || []).map((item, itemIdx) => (
                                                                 <Reorder.Item key={item.id} value={item}>
                                                                     <div className="tfng-card">
-                                                                        {/* Row 1: Drag handle + question text */}
+                                                                        {/* Remove item */}
+                                                                        <div className="tfng-row-right">
+                                                                            <button
+                                                                                type="button"
+                                                                                className="option-remove-button"
+                                                                                title="Delete this question"
+                                                                                onClick={() => {
+                                                                                    const updatedItems = q.questionItems.filter((_, i) => i !== itemIdx);
+                                                                                    const updatedAnswers = (q.answers || []).filter(a => a.id !== item.id);
+                                                                                    const updatedQ = { ...q, questionItems: updatedItems, answers: updatedAnswers };
+                                                                                    const updatedQuestions = [...section.questions];
+                                                                                    updatedQuestions[qIdx] = updatedQ;
+                                                                                    updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                                                }}
+                                                                            >
+                                                                                <BiTrash size={18} />
+                                                                            </button>
+                                                                        </div>
+                                                                        {/* Question text */}
                                                                         <div className="tfng-row">
                                                                             <input
                                                                                 type="text"
@@ -1170,43 +975,65 @@ const TestCreateEditView = () => {
                                                                             />
                                                                         </div>
 
-                                                                        {/* Row 2: Options */}
-                                                                        {(item.options || []).map((opt, optIdx) => (
-                                                                            <div className="tfng-row" key={optIdx}>
-                                                                                <input
-                                                                                    type="text"
-                                                                                    placeholder={`Option ${optIdx + 1}`}
-                                                                                    value={opt}
-                                                                                    onChange={(e) => {
-                                                                                        const updatedOptions = [...item.options];
-                                                                                        updatedOptions[optIdx] = e.target.value;
-                                                                                        const updatedItems = [...q.questionItems];
-                                                                                        updatedItems[itemIdx] = { ...item, options: updatedOptions };
-                                                                                        const updatedQ = { ...q, questionItems: updatedItems };
-                                                                                        const updatedQuestions = [...section.questions];
-                                                                                        updatedQuestions[qIdx] = updatedQ;
-                                                                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                                                    }}
-                                                                                    className="tfng-statement"
-                                                                                />
-                                                                                <button
-                                                                                    type="button"
-                                                                                    className="remove-button"
-                                                                                    onClick={() => {
-                                                                                        const updatedOptions = item.options.filter((_, i) => i !== optIdx);
-                                                                                        const updatedItems = [...q.questionItems];
-                                                                                        updatedItems[itemIdx] = { ...item, options: updatedOptions };
-                                                                                        const updatedQ = { ...q, questionItems: updatedItems };
-                                                                                        const updatedQuestions = [...section.questions];
-                                                                                        updatedQuestions[qIdx] = updatedQ;
-                                                                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                                                    }}
-                                                                                >
-                                                                                    <BiTrash size={16} />
-                                                                                </button>
-                                                                            </div>
-                                                                        ))}
+                                                                        {/* Options with radio buttons */}
+                                                                        {(item.options || []).map((opt, optIdx) => {
+                                                                            const selectedAnswer = q.answers?.find(a => a.id === item.id)?.value;
+                                                                            return (
+                                                                                <div className="tfng-row" key={optIdx}>
+                                                                                    <input
+                                                                                        type="radio"
 
+                                                                                        name={`mc_correct_${q.id}_${item.id}`}
+                                                                                        checked={selectedAnswer === opt}
+                                                                                        onChange={() => {
+                                                                                            const updatedAnswers = [
+                                                                                                ...(q.answers || []).filter(a => a.id !== item.id),
+                                                                                                { id: item.id, value: opt, sourceText: selectedAnswer?.sourceText || "" }
+                                                                                            ];
+                                                                                            const updatedQ = { ...q, answers: updatedAnswers };
+                                                                                            const updatedQuestions = [...section.questions];
+                                                                                            updatedQuestions[qIdx] = updatedQ;
+                                                                                            updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                                                        }}
+                                                                                    />
+
+                                                                                    <input
+                                                                                        type="text"
+                                                                                        placeholder={`Option ${optIdx + 1}`}
+                                                                                        value={opt}
+                                                                                        onChange={(e) => {
+                                                                                            const updatedOptions = [...item.options];
+                                                                                            updatedOptions[optIdx] = e.target.value;
+                                                                                            const updatedItems = [...q.questionItems];
+                                                                                            updatedItems[itemIdx] = { ...item, options: updatedOptions };
+                                                                                            const updatedQ = { ...q, questionItems: updatedItems };
+                                                                                            const updatedQuestions = [...section.questions];
+                                                                                            updatedQuestions[qIdx] = updatedQ;
+                                                                                            updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                                                        }}
+                                                                                        className="tfng-option"
+                                                                                    />
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        className="option-remove-button"
+                                                                                        title="Delete this option"
+                                                                                        onClick={() => {
+                                                                                            const updatedOptions = item.options.filter((_, i) => i !== optIdx);
+                                                                                            const updatedItems = [...q.questionItems];
+                                                                                            updatedItems[itemIdx] = { ...item, options: updatedOptions };
+                                                                                            const updatedQ = { ...q, questionItems: updatedItems };
+                                                                                            const updatedQuestions = [...section.questions];
+                                                                                            updatedQuestions[qIdx] = updatedQ;
+                                                                                            updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                                                        }}
+                                                                                    >
+                                                                                        <IoIosRemoveCircleOutline size={18} />
+                                                                                    </button>
+                                                                                </div>
+                                                                            );
+                                                                        })}
+
+                                                                        {/* Add option button */}
                                                                         <button
                                                                             type="button"
                                                                             onClick={() => {
@@ -1222,33 +1049,7 @@ const TestCreateEditView = () => {
                                                                             + Add Option
                                                                         </button>
 
-                                                                        {/* Row 3: Correct answer */}
-                                                                        <div className="tfng-row">
-                                                                            <label>Select Correct Answer:</label>
-                                                                            {item.options.map((opt, idx) => (
-                                                                                <label key={idx} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                                                                                    <input
-                                                                                        type="radio"
-                                                                                        name={`mc_correct_${q.id}_${item.id}`}
-                                                                                        value={opt}
-                                                                                        checked={q.answers?.find(a => a.id === item.id)?.value === opt}
-                                                                                        onChange={(e) => {
-                                                                                            const updatedAnswers = [
-                                                                                                ...(q.answers || []).filter(a => a.id !== item.id),
-                                                                                                { id: item.id, value: e.target.value, sourceText: "" }
-                                                                                            ];
-                                                                                            const updatedQ = { ...q, answers: updatedAnswers };
-                                                                                            const updatedQuestions = [...section.questions];
-                                                                                            updatedQuestions[qIdx] = updatedQ;
-                                                                                            updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                                                        }}
-                                                                                    />
-                                                                                    {opt}
-                                                                                </label>
-                                                                            ))}
-                                                                        </div>
-
-                                                                        {/* Row 4: Answer comes from */}
+                                                                        {/* Answer source */}
                                                                         <div className="tfng-row">
                                                                             <input
                                                                                 type="text"
@@ -1271,23 +1072,6 @@ const TestCreateEditView = () => {
                                                                             />
                                                                         </div>
 
-                                                                        {/* Row 5: Remove item */}
-                                                                        <div className="tfng-row tfng-row-right">
-                                                                            <button
-                                                                                type="button"
-                                                                                className="remove-button"
-                                                                                onClick={() => {
-                                                                                    const updatedItems = q.questionItems.filter((_, i) => i !== itemIdx);
-                                                                                    const updatedAnswers = (q.answers || []).filter(a => a.id !== item.id);
-                                                                                    const updatedQ = { ...q, questionItems: updatedItems, answers: updatedAnswers };
-                                                                                    const updatedQuestions = [...section.questions];
-                                                                                    updatedQuestions[qIdx] = updatedQ;
-                                                                                    updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                                                }}
-                                                                            >
-                                                                                <BiTrash size={20} />
-                                                                            </button>
-                                                                        </div>
                                                                     </div>
                                                                 </Reorder.Item>
                                                             ))}
@@ -1295,9 +1079,9 @@ const TestCreateEditView = () => {
                                                     </div>
                                                 )}
 
+
                                                 {q.type === "true_false_not_given" && (
                                                     <div style={{ marginTop: "10px" }}>
-                                                        <h4>Statements (drag to reorder)</h4>
 
                                                         <Reorder.Group
                                                             axis="y"
@@ -1313,6 +1097,23 @@ const TestCreateEditView = () => {
                                                             {(q.questionItems || []).map((item, itemIdx) => (
                                                                 <Reorder.Item key={item.id} value={item}>
                                                                     <div className="tfng-card">
+                                                                        <div className="tfng-row-right">
+                                                                            <button
+                                                                                type="button"
+                                                                                className="option-remove-button"
+                                                                                title="Remove this question"
+                                                                                onClick={() => {
+                                                                                    const updatedItems = q.questionItems.filter((_, i) => i !== itemIdx);
+                                                                                    const updatedAnswers = (q.answers || []).filter(a => a.id !== item.id);
+                                                                                    const updatedQ = { ...q, questionItems: updatedItems, answers: updatedAnswers };
+                                                                                    const updatedQuestions = [...section.questions];
+                                                                                    updatedQuestions[qIdx] = updatedQ;
+                                                                                    updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                                                }}
+                                                                            >
+                                                                                <BiTrash size={18} />
+                                                                            </button>
+                                                                        </div>
                                                                         <div className="tfng-row">
                                                                             <input
                                                                                 type="text"
@@ -1374,22 +1175,7 @@ const TestCreateEditView = () => {
                                                                             />
                                                                         </div>
 
-                                                                        <div className="tfng-row tfng-row-right">
-                                                                            <button
-                                                                                type="button"
-                                                                                className="remove-button"
-                                                                                onClick={() => {
-                                                                                    const updatedItems = q.questionItems.filter((_, i) => i !== itemIdx);
-                                                                                    const updatedAnswers = (q.answers || []).filter(a => a.id !== item.id);
-                                                                                    const updatedQ = { ...q, questionItems: updatedItems, answers: updatedAnswers };
-                                                                                    const updatedQuestions = [...section.questions];
-                                                                                    updatedQuestions[qIdx] = updatedQ;
-                                                                                    updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                                                }}
-                                                                            >
-                                                                                <BiTrash size={20} />
-                                                                            </button>
-                                                                        </div>
+
                                                                     </div>
                                                                 </Reorder.Item>
                                                             ))}
@@ -1399,7 +1185,6 @@ const TestCreateEditView = () => {
 
                                                 {q.type === "yes_no_not_given" && (
                                                     <div style={{ marginTop: "10px" }}>
-                                                        <h4>Statements (drag to reorder)</h4>
 
                                                         <Reorder.Group
                                                             axis="y"
@@ -1415,6 +1200,23 @@ const TestCreateEditView = () => {
                                                             {(q.questionItems || []).map((item, itemIdx) => (
                                                                 <Reorder.Item key={item.id} value={item}>
                                                                     <div className="tfng-card">
+                                                                        <div className="tfng-row-right">
+                                                                            <button
+                                                                                type="button"
+                                                                                className="option-remove-button"
+                                                                                title="Remove this question item"
+                                                                                onClick={() => {
+                                                                                    const updatedItems = q.questionItems.filter((_, i) => i !== itemIdx);
+                                                                                    const updatedAnswers = (q.answers || []).filter(a => a.id !== item.id);
+                                                                                    const updatedQ = { ...q, questionItems: updatedItems, answers: updatedAnswers };
+                                                                                    const updatedQuestions = [...section.questions];
+                                                                                    updatedQuestions[qIdx] = updatedQ;
+                                                                                    updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                                                }}
+                                                                            >
+                                                                                <BiTrash size={15} />
+                                                                            </button>
+                                                                        </div>
                                                                         <div className="tfng-row">
                                                                             <input
                                                                                 type="text"
@@ -1476,22 +1278,7 @@ const TestCreateEditView = () => {
                                                                             />
                                                                         </div>
 
-                                                                        <div className="tfng-row tfng-row-right">
-                                                                            <button
-                                                                                type="button"
-                                                                                className="remove-button"
-                                                                                onClick={() => {
-                                                                                    const updatedItems = q.questionItems.filter((_, i) => i !== itemIdx);
-                                                                                    const updatedAnswers = (q.answers || []).filter(a => a.id !== item.id);
-                                                                                    const updatedQ = { ...q, questionItems: updatedItems, answers: updatedAnswers };
-                                                                                    const updatedQuestions = [...section.questions];
-                                                                                    updatedQuestions[qIdx] = updatedQ;
-                                                                                    updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                                                }}
-                                                                            >
-                                                                                <BiTrash size={20} />
-                                                                            </button>
-                                                                        </div>
+
                                                                     </div>
                                                                 </Reorder.Item>
                                                             ))}
@@ -1591,7 +1378,7 @@ const TestCreateEditView = () => {
                                                 )}
                                                 {q.type === "summary_completion" && (
                                                     <div style={{ marginTop: "10px" }}>
-                                                        <h4>Summary Text</h4>
+                                                        <h5>Summary Text</h5>
                                                         <textarea
                                                             ref={summaryRef}
                                                             rows={4}
@@ -1620,6 +1407,7 @@ const TestCreateEditView = () => {
 
                                                         <button
                                                             type="button"
+                                                            
                                                             onClick={() => {
                                                                 if (!summaryRef.current) return;
 
@@ -1648,10 +1436,9 @@ const TestCreateEditView = () => {
                                                         >
                                                             Add Blank
                                                         </button>
-
-                                                        <h4>Answers (drag to reorder)</h4>
                                                         <Reorder.Group
                                                             axis="y"
+                                                            className="reorder-group"
                                                             values={q.answers || []}
                                                             onReorder={(newOrder) => {
                                                                 const updatedQ = { ...q, answers: newOrder };
@@ -1672,74 +1459,76 @@ const TestCreateEditView = () => {
                                                             }}
                                                         >
                                                             {(q.answers || []).map((answer, idx) => (
-                                                                <Reorder.Item
-                                                                    key={answer.id}
-                                                                    value={answer}
+                                                                <Reorder.Item key={answer.id} value={answer} className="reorder-item">
+                                                                    <div className="tfng-card">
 
-                                                                >
-                                                                    <motion.div
-                                                                        layout
-                                                                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                                                                        <motion.div
+                                                                            layout
+                                                                            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                                                                        />
+                                                                        <div className="tfng-row-right">
+                                                                            <button
+                                                                                type="button"
+                                                                                className="remove-button"
+                                                                                title="Remove this question item"
+                                                                                onClick={() => {
+                                                                                    let blankIndex = 0;
+                                                                                    const updatedText = (q.summary || "").replace(/\[BLANK\]/g, () => {
+                                                                                        blankIndex++;
+                                                                                        return blankIndex === idx + 1 ? "" : "[BLANK]";
+                                                                                    });
 
-                                                                    ></motion.div>
-                                                                    <input
-                                                                        type="text"
-                                                                        placeholder={`Answer for blank #${idx + 1}`}
-                                                                        value={answer.value}
-                                                                        onChange={(e) => {
-                                                                            const updatedAnswers = q.answers.map(a =>
-                                                                                a.id === answer.id ? { ...a, value: e.target.value } : a
-                                                                            );
-                                                                            const updatedQ = { ...q, answers: updatedAnswers };
-                                                                            const updatedQuestions = [...section.questions];
-                                                                            updatedQuestions[qIdx] = updatedQ;
-                                                                            updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                                        }}
-                                                                        style={{ flex: 1 }}
-                                                                    />
-                                                                    <input
-                                                                        type="text"
-                                                                        placeholder="Answer comes from..."
-                                                                        value={answer.sourceText}
-                                                                        onChange={(e) => {
-                                                                            const updatedAnswers = q.answers.map(a =>
-                                                                                a.id === answer.id ? { ...a, sourceText: e.target.value } : a
-                                                                            );
-                                                                            const updatedQ = { ...q, answers: updatedAnswers };
-                                                                            const updatedQuestions = [...section.questions];
-                                                                            updatedQuestions[qIdx] = updatedQ;
-                                                                            updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                                        }}
-                                                                        style={{ flex: 1, marginRight: "5px" }}
-                                                                    />
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => {
-                                                                            // Remove blank from summary
-                                                                            let blankIndex = 0;
-                                                                            const updatedText = (q.summary || "").replace(/\[BLANK\]/g, () => {
-                                                                                blankIndex++;
-                                                                                return blankIndex === idx + 1 ? "" : "[BLANK]";
-                                                                            });
+                                                                                    const updatedAnswers = q.answers.filter(a => a.id !== answer.id);
 
-                                                                            // Remove the answer
-                                                                            const updatedAnswers = q.answers.filter(a => a.id !== answer.id);
+                                                                                    const updatedQ = { ...q, summary: updatedText, answers: updatedAnswers };
+                                                                                    const updatedQuestions = [...section.questions];
+                                                                                    updatedQuestions[qIdx] = updatedQ;
+                                                                                    updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                                                }}
+                                                                            >
+                                                                                <BiTrash size={15} />
+                                                                            </button>
+                                                                        </div>
+                                                                        <input
+                                                                            type="text"
+                                                                            placeholder={`Answer for blank #${idx + 1}`}
+                                                                            value={answer.value}
+                                                                            onChange={(e) => {
+                                                                                const updatedAnswers = q.answers.map(a =>
+                                                                                    a.id === answer.id ? { ...a, value: e.target.value } : a
+                                                                                );
+                                                                                const updatedQ = { ...q, answers: updatedAnswers };
+                                                                                const updatedQuestions = [...section.questions];
+                                                                                updatedQuestions[qIdx] = updatedQ;
+                                                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                                            }}
 
-                                                                            const updatedQ = { ...q, summary: updatedText, answers: updatedAnswers };
-                                                                            const updatedQuestions = [...section.questions];
-                                                                            updatedQuestions[qIdx] = updatedQ;
-                                                                            updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                                        }}
-                                                                        style={{ marginLeft: "5px" }}
-                                                                    >
-                                                                        Remove Item
-                                                                    </button>
-                                                                    <span style={{ cursor: "grab", padding: "4px 8px" }}>☰</span>
+                                                                        />
+
+                                                                        <input
+                                                                            type="text"
+                                                                            placeholder="Answer comes from..."
+                                                                            value={answer.sourceText}
+                                                                            onChange={(e) => {
+                                                                                const updatedAnswers = q.answers.map(a =>
+                                                                                    a.id === answer.id ? { ...a, sourceText: e.target.value } : a
+                                                                                );
+                                                                                const updatedQ = { ...q, answers: updatedAnswers };
+                                                                                const updatedQuestions = [...section.questions];
+                                                                                updatedQuestions[qIdx] = updatedQ;
+                                                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                                            }}
+
+                                                                        />
+
+
+                                                                    </div>
                                                                 </Reorder.Item>
                                                             ))}
                                                         </Reorder.Group>
 
-                                                        <h4>Preview</h4>
+
+                                                        <h5>Preview</h5>
                                                         <div
                                                             style={{
                                                                 border: "1px solid #ccc",
@@ -1760,16 +1549,16 @@ const TestCreateEditView = () => {
                                                 )}
 
                                                 {q.type === "table_completion" && (() => {
-                                                    const { row, col } = selectedCell;
+                                                    //const { row, col } = selectedCell;
 
                                                     return (
                                                         <div style={{ marginTop: "10px" }}>
-                                                            <h4>Table Completion</h4>
-
                                                             {/* --- Toolbar --- */}
-                                                            <div style={{ marginBottom: "10px" }}>
+                                                            <div className="table-toolbar">
                                                                 <button
                                                                     type="button"
+                                                                    className="toolbar-btn"
+                                                                    title="Insert new row after the last row "
                                                                     onClick={() => {
                                                                         const updatedTable = [...(q.tableData || [])];
                                                                         const cols = updatedTable[0]?.length || 1;
@@ -1785,6 +1574,8 @@ const TestCreateEditView = () => {
 
                                                                 <button
                                                                     type="button"
+                                                                    className="toolbar-btn"
+                                                                    title="Insert new column after the last column"
                                                                     onClick={() => {
                                                                         const updatedTable = (q.tableData || []).map((row) => [...row, ""]);
                                                                         const updatedQ = { ...q, tableData: updatedTable };
@@ -1799,6 +1590,8 @@ const TestCreateEditView = () => {
 
                                                                 <button
                                                                     type="button"
+                                                                    className="toolbar-btn remove-btn"
+                                                                    title="Remove the last row"
                                                                     onClick={() => {
                                                                         const updatedTable = [...(q.tableData || [])];
                                                                         updatedTable.pop(); // remove last row
@@ -1814,6 +1607,8 @@ const TestCreateEditView = () => {
 
                                                                 <button
                                                                     type="button"
+                                                                    className="toolbar-btn remove-btn"
+                                                                    title="Remove the last column"
                                                                     onClick={() => {
                                                                         const updatedTable = (q.tableData || []).map((row) => row.slice(0, -1)); // remove last col
                                                                         const updatedQ = { ...q, tableData: updatedTable };
@@ -1826,37 +1621,7 @@ const TestCreateEditView = () => {
                                                                     − Remove Column
                                                                 </button>
 
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        const { row, col } = selectedCell;
-                                                                        const updatedTable = [...(q.tableData || [])];
-                                                                        updatedTable[row][col] = (updatedTable[row][col] || "") + " [BLANK]";
 
-                                                                        // Count blanks
-                                                                        const flat = updatedTable.flat();
-                                                                        const blankCount = flat.join(" ").match(/\[BLANK\]/g)?.length || 0;
-
-                                                                        // Sync `answers` length
-                                                                        let answers = q.answers ? [...q.answers] : [];
-                                                                        if (blankCount > answers.length) {
-                                                                            for (let i = answers.length; i < blankCount; i++) {
-                                                                                answers.push({ id: uuidv4(), value: "", sourceText: "" });
-                                                                            }
-                                                                        } else if (blankCount < answers.length) {
-                                                                            answers = answers.slice(0, blankCount);
-                                                                        }
-
-                                                                        const updatedQ = { ...q, tableData: updatedTable, answers };
-
-                                                                        const updatedQuestions = [...section.questions];
-                                                                        updatedQuestions[qIdx] = updatedQ;
-                                                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                                    }}
-                                                                    style={{ marginLeft: "8px", backgroundColor: "#eee" }}
-                                                                >
-                                                                    Add Blank
-                                                                </button>
 
                                                             </div>
 
@@ -1896,13 +1661,45 @@ const TestCreateEditView = () => {
                                                                     ))}
                                                                 </tbody>
                                                             </table>
+                                                            <button
+                                                                type="button"
+
+                                                                onClick={() => {
+                                                                    const { row, col } = selectedCell;
+                                                                    const updatedTable = [...(q.tableData || [])];
+                                                                    updatedTable[row][col] = (updatedTable[row][col] || "") + " [BLANK]";
+
+                                                                    // Count blanks
+                                                                    const flat = updatedTable.flat();
+                                                                    const blankCount = flat.join(" ").match(/\[BLANK\]/g)?.length || 0;
+
+                                                                    // Sync `answers` length
+                                                                    let answers = q.answers ? [...q.answers] : [];
+                                                                    if (blankCount > answers.length) {
+                                                                        for (let i = answers.length; i < blankCount; i++) {
+                                                                            answers.push({ id: uuidv4(), value: "", sourceText: "" });
+                                                                        }
+                                                                    } else if (blankCount < answers.length) {
+                                                                        answers = answers.slice(0, blankCount);
+                                                                    }
+
+                                                                    const updatedQ = { ...q, tableData: updatedTable, answers };
+
+                                                                    const updatedQuestions = [...section.questions];
+                                                                    updatedQuestions[qIdx] = updatedQ;
+                                                                    updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                                }}
+
+                                                            >
+                                                                Add Blank
+                                                            </button>
                                                             {/* Answer Inputs */}
                                                             <div style={{ marginTop: "15px" }}>
-                                                                <h4>Answers (drag to reorder)</h4>
 
                                                                 <Reorder.Group
                                                                     axis="y"
                                                                     values={q.answers || []}
+                                                                    className="reorder-group"
                                                                     onReorder={(newOrder) => {
                                                                         // Keep answers in new order
                                                                         const updatedAnswers = newOrder;
@@ -1916,51 +1713,53 @@ const TestCreateEditView = () => {
                                                                 >
                                                                     {(q.answers || []).map((ans, idx) => (
                                                                         <Reorder.Item key={ans.id} value={ans}>
-                                                                            <div
-                                                                                style={{
-                                                                                    display: "flex",
-                                                                                    gap: "10px",
-                                                                                    marginBottom: "6px",
-                                                                                    alignItems: "center"
-                                                                                }}
-                                                                            >
-                                                                                <label style={{ width: "40px" }}>{idx + 1}.</label>
-
-                                                                                {/* Correct answer */}
-                                                                                <input
-                                                                                    type="text"
-                                                                                    placeholder="Correct answer"
-                                                                                    value={ans.value}
-                                                                                    onChange={(e) => {
-                                                                                        const updatedAnswers = q.answers.map(a =>
-                                                                                            a.id === ans.id ? { ...a, value: e.target.value } : a
-                                                                                        );
-                                                                                        const updatedQ = { ...q, answers: updatedAnswers };
-                                                                                        const updatedQuestions = [...section.questions];
-                                                                                        updatedQuestions[qIdx] = updatedQ;
-                                                                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                                            <div className="tfng-card">
+                                                                                <div
+                                                                                    style={{
+                                                                                        display: "flex",
+                                                                                        gap: "10px",
+                                                                                        marginBottom: "6px",
+                                                                                        alignItems: "center"
                                                                                     }}
-                                                                                    style={{ flex: 1 }}
-                                                                                />
+                                                                                >
+                                                                                    <label>{idx + 1}.</label>
 
-                                                                                {/* Source text */}
-                                                                                <input
-                                                                                    type="text"
-                                                                                    placeholder="Answer comes from..."
-                                                                                    value={ans.sourceText}
-                                                                                    onChange={(e) => {
-                                                                                        const updatedAnswers = q.answers.map(a =>
-                                                                                            a.id === ans.id ? { ...a, sourceText: e.target.value } : a
-                                                                                        );
-                                                                                        const updatedQ = { ...q, answers: updatedAnswers };
-                                                                                        const updatedQuestions = [...section.questions];
-                                                                                        updatedQuestions[qIdx] = updatedQ;
-                                                                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                                                    }}
-                                                                                    style={{ flex: 1 }}
-                                                                                />
+                                                                                    {/* Correct answer */}
+                                                                                    <input
+                                                                                        type="text"
+                                                                                        placeholder="Correct answer"
+                                                                                        value={ans.value}
+                                                                                        onChange={(e) => {
+                                                                                            const updatedAnswers = q.answers.map(a =>
+                                                                                                a.id === ans.id ? { ...a, value: e.target.value } : a
+                                                                                            );
+                                                                                            const updatedQ = { ...q, answers: updatedAnswers };
+                                                                                            const updatedQuestions = [...section.questions];
+                                                                                            updatedQuestions[qIdx] = updatedQ;
+                                                                                            updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                                                        }}
+                                                                                        style={{ flex: 1 }}
+                                                                                    />
 
-                                                                                <span style={{ cursor: "grab", padding: "4px 8px" }}>☰</span>
+                                                                                    {/* Source text */}
+                                                                                    <input
+                                                                                        type="text"
+                                                                                        placeholder="Answer comes from..."
+                                                                                        value={ans.sourceText}
+                                                                                        onChange={(e) => {
+                                                                                            const updatedAnswers = q.answers.map(a =>
+                                                                                                a.id === ans.id ? { ...a, sourceText: e.target.value } : a
+                                                                                            );
+                                                                                            const updatedQ = { ...q, answers: updatedAnswers };
+                                                                                            const updatedQuestions = [...section.questions];
+                                                                                            updatedQuestions[qIdx] = updatedQ;
+                                                                                            updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                                                        }}
+                                                                                        style={{ flex: 1 }}
+                                                                                    />
+
+
+                                                                                </div>
                                                                             </div>
                                                                         </Reorder.Item>
                                                                     ))}
@@ -1993,118 +1792,127 @@ const TestCreateEditView = () => {
                                                     );
                                                 })()}
                                                 {q.type === "diagram_completion" && (
-                                                    <div style={{ marginTop: "10px" }}>
-                                                        <h4>Diagram Completion Setup</h4>
+                                                    <div>
 
                                                         {/* Image Upload */}
-                                                        <h3>Image</h3>
-                                                        <input
-                                                            type="file"
-                                                            accept="image/*"
-                                                            onChange={async (e) => {
-                                                                const file = e.target.files[0];
-                                                                if (!file) return;
 
-                                                                const formData = new FormData();
-                                                                formData.append("image", file);
-                                                                formData.append("testId", testData._id);
+                                                        <div className="tfng-section-settings">
 
-                                                                try {
-                                                                    const res = await axios.post(
-                                                                        "http://localhost:5000/api/tests/upload-image",
-                                                                        formData,
-                                                                        { headers: { "Content-Type": "multipart/form-data" } }
-                                                                    );
+                                                            {/* Image Upload */}
+                                                            <div>
+                                                                <label>Upload Image:</label>
+                                                                <input
+                                                                    type="file"
+                                                                    accept="image/*"
+                                                                    onChange={async (e) => {
+                                                                        const file = e.target.files[0];
+                                                                        if (!file) return;
 
-                                                                    // Extract key from backend response
-                                                                    const key = res.data.key;
+                                                                        const formData = new FormData();
+                                                                        formData.append("image", file);
+                                                                        formData.append("testId", testData._id);
 
-                                                                    // Append it to section.images
-                                                                    const updatedSection = {
-                                                                        ...section,
-                                                                        images: [...(section.images || []), key],
-                                                                    };
+                                                                        try {
+                                                                            const res = await axios.post(
+                                                                                "http://localhost:5000/api/tests/upload-image",
+                                                                                formData,
+                                                                                { headers: { "Content-Type": "multipart/form-data" } }
+                                                                            );
 
-                                                                    updateSection(secIdx, updatedSection);
+                                                                            const key = res.data.key;
 
-                                                                    // Save to DB
-                                                                    await axios.put(`${BASE_URL}/api/tests/${testData._id}`, {
-                                                                        ...testData,
-                                                                        sections: testData.sections.map((s, i) =>
-                                                                            i === secIdx ? updatedSection : s
-                                                                        ),
-                                                                    });
-                                                                } catch (err) {
-                                                                    console.error("Image upload failed:", err);
-                                                                }
-                                                            }}
-                                                        />
+                                                                            const updatedSection = {
+                                                                                ...section,
+                                                                                images: [...(section.images || []), key],
+                                                                            };
 
-                                                        {(section.images || []).length > 0 && (
-                                                            <div style={{ marginTop: "10px" }}>
-                                                                <h4>Uploaded Images:</h4>
-                                                                <ul>
-                                                                    {section.images.map((imgKey, imgIdx) => (
-                                                                        <li key={imgIdx}>
-                                                                            {imgKey}
-                                                                            <button
-                                                                                type="button"
-                                                                                style={{ marginLeft: "10px" }}
-                                                                                onClick={() => {
-                                                                                    const updatedSection = {
-                                                                                        ...section,
-                                                                                        images: section.images.filter((_, i) => i !== imgIdx),
-                                                                                    };
-                                                                                    updateSection(secIdx, updatedSection);
-                                                                                }}
-                                                                            >
-                                                                                Remove
-                                                                            </button>
-                                                                        </li>
-                                                                    ))}
-                                                                </ul>
+                                                                            updateSection(secIdx, updatedSection);
+
+                                                                            // Save to DB
+                                                                            await axios.put(`${BASE_URL}/api/tests/${testData._id}`, {
+                                                                                ...testData,
+                                                                                sections: testData.sections.map((s, i) =>
+                                                                                    i === secIdx ? updatedSection : s
+                                                                                ),
+                                                                            });
+                                                                        } catch (err) {
+                                                                            console.error("Image upload failed:", err);
+                                                                        }
+                                                                    }}
+                                                                    className="tfng-file-input"
+                                                                />
+
+                                                                {(section.images || []).length > 0 && (
+                                                                    <div className="tfng-uploaded-images">
+                                                                        <h4>Uploaded Images:</h4>
+                                                                        <ul>
+                                                                            {section.images.map((imgKey, imgIdx) => (
+                                                                                <li key={imgIdx} className="tfng-image-item">
+                                                                                    <span className="tfng-image-name">{imgKey}</span>
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        className="remove-button"
+                                                                                        title="Remove this image"
+                                                                                        onClick={() => {
+                                                                                            const updatedSection = {
+                                                                                                ...section,
+                                                                                                images: section.images.filter((_, i) => i !== imgIdx),
+                                                                                            };
+                                                                                            updateSection(secIdx, updatedSection);
+                                                                                        }}
+                                                                                    >
+                                                                                        <BiTrash size={15}></BiTrash>
+                                                                                    </button>
+                                                                                </li>
+                                                                            ))}
+                                                                        </ul>
+                                                                    </div>
+                                                                )}
                                                             </div>
-                                                        )}
 
+                                                            {/* Number of Blanks */}
+                                                            <div className="tfng-blanks-section">
+                                                                <label className="tfng-label" htmlFor={`numBlanks_${q.id}`}>Number of blanks:</label>
+                                                                <input
+                                                                    id={`numBlanks_${q.id}`}
+                                                                    type="number"
+                                                                    min="0"
+                                                                    value={q.questionItems?.length || 0}
+                                                                    onChange={(e) => {
+                                                                        const count = parseInt(e.target.value) || 0;
 
+                                                                        let items = q.questionItems ? [...q.questionItems] : [];
+                                                                        let answers = q.answers ? [...q.answers] : [];
 
-                                                        {/* Number of Blanks */}
+                                                                        if (count > items.length) {
+                                                                            for (let i = items.length; i < count; i++) {
+                                                                                const newId = uuidv4();
+                                                                                items.push({ id: newId, text: "" });
+                                                                                answers.push({ id: newId, value: "", sourceText: "" });
+                                                                            }
+                                                                        } else {
+                                                                            items = items.slice(0, count);
+                                                                            answers = answers.slice(0, count);
+                                                                        }
 
-                                                        <input
-                                                            type="number"
-                                                            min="0"
-                                                            value={q.questionItems?.length || 0}
-                                                            onChange={(e) => {
-                                                                const count = parseInt(e.target.value) || 0;
+                                                                        const updatedQ = { ...q, questionItems: items, answers };
+                                                                        const updatedQuestions = [...section.questions];
+                                                                        updatedQuestions[qIdx] = updatedQ;
+                                                                        updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                                    }}
+                                                                    className="tfng-number-input"
+                                                                />
+                                                            </div>
 
-                                                                let items = q.questionItems ? [...q.questionItems] : [];
-                                                                let answers = q.answers ? [...q.answers] : [];
+                                                        </div>
 
-                                                                if (count > items.length) {
-                                                                    for (let i = items.length; i < count; i++) {
-                                                                        const newId = uuidv4();
-                                                                        items.push({ id: newId, text: "" });
-                                                                        answers.push({ id: newId, value: "", sourceText: "" });
-                                                                    }
-                                                                } else {
-                                                                    items = items.slice(0, count);
-                                                                    answers = answers.slice(0, count);
-                                                                }
-
-                                                                const updatedQ = { ...q, questionItems: items, answers };
-                                                                const updatedQuestions = [...section.questions];
-                                                                updatedQuestions[qIdx] = updatedQ;
-                                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                            }}
-                                                            style={{ width: "60px", marginLeft: "8px" }}
-                                                        />
 
                                                         {/* Editable blanks + correct answers */}
-                                                        <h5 style={{ marginTop: "15px" }}>Blanks / Answers (drag to reorder)</h5>
 
                                                         <Reorder.Group
                                                             axis="y"
                                                             values={q.answers || []}
+                                                            className="reorder-group"
                                                             onReorder={(newOrder) => {
                                                                 // Reorder answers array
                                                                 const updatedAnswers = newOrder;
@@ -2113,9 +1921,7 @@ const TestCreateEditView = () => {
                                                                 const updatedItems = updatedAnswers.map(a =>
                                                                     q.questionItems.find(i => i.id === a.id)
                                                                 );
-
                                                                 const updatedQ = { ...q, answers: updatedAnswers, questionItems: updatedItems };
-
                                                                 const updatedQuestions = [...section.questions];
                                                                 updatedQuestions[qIdx] = updatedQ;
                                                                 updateSection(secIdx, { ...section, questions: updatedQuestions });
@@ -2123,66 +1929,68 @@ const TestCreateEditView = () => {
                                                         >
                                                             {(q.answers || []).map((ans, idx) => (
                                                                 <Reorder.Item key={ans.id} value={ans}>
-                                                                    <div
-                                                                        style={{
-                                                                            display: "flex",
-                                                                            gap: "8px",
-                                                                            marginBottom: "8px",
-                                                                            alignItems: "center",
-                                                                        }}
-                                                                    >
-                                                                        <span style={{ width: "24px", fontWeight: "bold" }}>
-                                                                            {idx + 1}.
-                                                                        </span>
-
-                                                                        {/* Correct answer */}
-                                                                        <input
-                                                                            type="text"
-                                                                            placeholder="Correct Answer"
-                                                                            value={ans.value}
-                                                                            onChange={(e) => {
-                                                                                const updatedAnswers = q.answers.map((a) =>
-                                                                                    a.id === ans.id ? { ...a, value: e.target.value } : a
-                                                                                );
-
-                                                                                const updatedQ = { ...q, answers: updatedAnswers };
-
-                                                                                const updatedQuestions = [...section.questions];
-                                                                                updatedQuestions[qIdx] = updatedQ;
-                                                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                                    <div className="tfng-card">
+                                                                        <div
+                                                                            style={{
+                                                                                display: "flex",
+                                                                                gap: "8px",
+                                                                                marginBottom: "8px",
+                                                                                alignItems: "center",
                                                                             }}
-                                                                            style={{ flex: 1 }}
-                                                                        />
-
-                                                                        {/* Source text */}
-                                                                        <input
-                                                                            type="text"
-                                                                            placeholder="Answer comes from..."
-                                                                            value={ans.sourceText}
-                                                                            onChange={(e) => {
-                                                                                const updatedAnswers = q.answers.map((a) =>
-                                                                                    a.id === ans.id ? { ...a, sourceText: e.target.value } : a
-                                                                                );
-
-                                                                                const updatedQ = { ...q, answers: updatedAnswers };
-
-                                                                                const updatedQuestions = [...section.questions];
-                                                                                updatedQuestions[qIdx] = updatedQ;
-                                                                                updateSection(secIdx, { ...section, questions: updatedQuestions });
-                                                                            }}
-                                                                            style={{ flex: 1 }}
-                                                                        />
-
-                                                                        <span style={{ cursor: "grab", padding: "4px 8px" }}>☰</span>
+                                                                        >
+                                                                            <span style={{ width: "24px", fontWeight: "bold" }}>
+                                                                                {idx + 1}.
+                                                                            </span>
+                                                                            {/* Correct answer */}
+                                                                            <input
+                                                                                type="text"
+                                                                                placeholder="Correct Answer"
+                                                                                value={ans.value}
+                                                                                onChange={(e) => {
+                                                                                    const updatedAnswers = q.answers.map((a) =>
+                                                                                        a.id === ans.id ? { ...a, value: e.target.value } : a
+                                                                                    );
+                                                                                    const updatedQ = { ...q, answers: updatedAnswers };
+                                                                                    const updatedQuestions = [...section.questions];
+                                                                                    updatedQuestions[qIdx] = updatedQ;
+                                                                                    updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                                                }}
+                                                                                style={{ flex: 1 }}
+                                                                            />
+                                                                            {/* Source text */}
+                                                                            <input
+                                                                                type="text"
+                                                                                placeholder="Answer comes from..."
+                                                                                value={ans.sourceText}
+                                                                                onChange={(e) => {
+                                                                                    const updatedAnswers = q.answers.map((a) =>
+                                                                                        a.id === ans.id ? { ...a, sourceText: e.target.value } : a
+                                                                                    );
+                                                                                    const updatedQ = { ...q, answers: updatedAnswers };
+                                                                                    const updatedQuestions = [...section.questions];
+                                                                                    updatedQuestions[qIdx] = updatedQ;
+                                                                                    updateSection(secIdx, { ...section, questions: updatedQuestions });
+                                                                                }}
+                                                                                style={{ flex: 1 }}
+                                                                            />
+                                                                        </div>
                                                                     </div>
                                                                 </Reorder.Item>
                                                             ))}
                                                         </Reorder.Group>
-
                                                     </div>
+
                                                 )}
 
-
+                                                {testData.type !== "speaking" &&
+                                                    testData.type !== "writing" &&
+                                                    q.type !== "summary_completion" &&
+                                                    q.type !== "table_completion" &&
+                                                    q.type !== "diagram_completion" && (
+                                                        <button type="button" onClick={() => addQuestionItem(secIdx, qIdx)}>
+                                                            Add Question Item
+                                                        </button>
+                                                    )}
 
                                             </div>
 
