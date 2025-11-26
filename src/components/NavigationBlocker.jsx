@@ -1,41 +1,34 @@
 import { useEffect } from "react";
 
-function useNavigationBlocker(shouldWarn) {
-    // Warn on browser refresh / tab close
-    useEffect(() => {
-        const handleBeforeUnload = (e) => {
-            if (!shouldWarn) return;
-            e.preventDefault();
-            e.returnValue = "";
-        };
-        window.addEventListener("beforeunload", handleBeforeUnload);
-        return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-    }, [shouldWarn]);
+function useNavigationBlocker() {
+  // Block refresh / tab close
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = ""; // Required for Chrome
+    };
 
-    // Warn on back/forward buttons
-    useEffect(() => {
-        if (!shouldWarn) return;
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
 
-        window.history.pushState({ blocked: true }, "");
+  // Block back/forward navigation
+  useEffect(() => {
+    // Push one fake state on mount
+    window.history.pushState(null, "");
 
-        const handlePopState = () => {
-            const confirmLeave = window.confirm(
-                "You have unsaved changes. Are you sure you want to leave this page?"
-            );
+    const handlePopState = () => {
+      const confirmLeave = window.confirm("Are you sure you want to leave this page?");
+      if (!confirmLeave) {
+        // Restore current page without adding extra entries
+        window.history.pushState(null, "");
+      }
+      // If confirmed, the browser will navigate naturally
+    };
 
-            if (!confirmLeave) {
-                // User said NO → restore the fake history entry
-                window.history.pushState({ blocked: true }, "");
-            } else {
-                // User said YES → navigate back automatically
-                window.history.back();
-            }
-        };
-
-        window.addEventListener("popstate", handlePopState);
-        return () => window.removeEventListener("popstate", handlePopState);
-
-    }, [shouldWarn]);
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 }
 
 export default useNavigationBlocker;
