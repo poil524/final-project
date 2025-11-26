@@ -25,19 +25,21 @@ export default function Students() {
             <table>
                 <thead>
                     <tr>
-                        <th>Username</th>
-                        <th>Email</th>
-                        <th>Actions</th>
+                        <th className="name-col">Username</th>
+                        <th className="mail-col">Email</th>
+                        <th className="empty-col"></th>
+                        <th className="actions">Action</th>
                     </tr>
                 </thead>
 
                 <tbody>
                     {students.map(s => (
                         <tr key={s._id}>
-                            <td>{s.username}</td>
-                            <td>{s.email}</td>
+                            <td className="name-col">{s.username}</td>
+                            <td className="mail-col">{s.email}</td>
+                            <td className="empty-col"></td>
                             <td className="actions">
-                                <button onClick={() => handleDelete(s._id)}>Delete</button>
+                                <button className="delete" onClick={() => handleDelete(s._id)}>Delete</button>
                             </td>
                         </tr>
                     ))}

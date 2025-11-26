@@ -1,6 +1,7 @@
 import React, { useState, useContext } from "react";
 import { Link } from "react-router-dom";
 import { BiHome, BiLogIn } from "react-icons/bi";
+import { IoLibraryOutline } from "react-icons/io5";
 import { AuthContext } from "../../context/authContext.js";
 import "./Navigation.css";
 import axiosClient from "../../axiosClient.js";
@@ -30,7 +31,7 @@ const Navigation = () => {
       <ul className="site-nav_left">
         <li className="site-nav_item">
           <Link className="site-nav_link" to="/">
-            <span className="site-nav_label">Home</span>
+            <span className="site-nav_label"><BiHome size={15}></BiHome>Home</span>
           </Link>
         </li>
       </ul>
@@ -45,7 +46,7 @@ const Navigation = () => {
             <li className="site-nav_item">
               <Link
                 className="site-nav_link"
-                to={user.isAdmin ? "/admin" : "/teacher"}
+                to={user.isAdmin ? "/admin/tests/pending" : "/teacher"}
               >
                 <span className="site-nav_label">Dashboard</span>
               </Link>
@@ -59,7 +60,7 @@ const Navigation = () => {
           >
             <Link className="site-nav_link" to="/tests">
               <span className="site-nav_label">
-                <BiHome /> Exam Library
+                <IoLibraryOutline size={15}/>Exam Library
               </span>
             </Link>
 
@@ -114,7 +115,7 @@ const Navigation = () => {
           ) : (
             <li className="site-nav_cta">
               <Link className="btn-login" to="/login">
-                <BiLogIn /> Log In
+                <BiLogIn size={15} /> Log In
               </Link>
             </li>
           )}

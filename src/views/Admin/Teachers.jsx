@@ -35,17 +35,19 @@ export default function TeacherTable() {
             <table>
                 <thead>
                     <tr>
-                        <th>Username</th>
-                        <th>Email</th>
-                        <th>Action</th>
+                        <th className="name-col">Username</th>
+                        <th className="mail-col">Email</th>
+                        <th className="empty-col"></th>
+                        <th className="actions">Action</th>
                     </tr>
                 </thead>
 
                 <tbody>
                     {teachers.map(t => (
                         <tr key={t._id}>
-                            <td>{t.username}</td>
-                            <td>{t.email}</td>
+                            <td className="name-col">{t.username}</td>
+                            <td className="mail-col">{t.email}</td>
+                            <td className="empty-col"></td>
                             <td className="actions">
                                 {t.status === "pending" && (
                                     <>

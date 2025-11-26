@@ -50,7 +50,7 @@ const App = () => {
       <Routes>
         {/* Auth pages */}
         <Route path="/login" element={<Login />} />
-        <Route path="/register/choose" element={<SignUpTeacherOrStudent />} />
+        <Route path="/register/sign-up-select" element={<SignUpTeacherOrStudent />} />
         <Route path="/register/student" element={<RegisterStudent />} />
         <Route path="/register/teacher" element={<RegisterTeacher />} />
 

@@ -3,18 +3,13 @@ html, body {
   padding: 0;
 }
 
-.App-header {
-  min-height: auto;
-  padding: 0;
-  margin: 0;
-}
 
 .site-content {
   padding: 0;
 }
 
 .site-content {
-  padding: 20px;
+  padding: 0px;
 }
 
 .home-title {

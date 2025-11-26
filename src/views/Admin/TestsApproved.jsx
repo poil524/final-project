@@ -27,11 +27,11 @@ export default function ApprovedTests() {
             <table>
                 <thead>
                     <tr>
-                        <th>Name</th>
-                        <th>Type</th>
-                        <th>Created By</th>
+                        <th className="name-col">Name</th>
+                        <th className="type-col">Type</th>
+                        <th className="createdBy-col">Created By</th>
                         <th>Students Taken</th>
-                        <th>Actions</th>
+                        <th className="actions">Actions</th>
                     </tr>
                 </thead>
 
@@ -40,9 +40,9 @@ export default function ApprovedTests() {
                         <tr key={t._id}
                             onClick={() => navigate(`/tests/${t._id}`)}
                             className="clickable-row">
-                            <td>{t.name}</td>
-                            <td>{t.type}</td>
-                            <td>{t.createdBy?.username || "Unknown"}</td>
+                            <td className="name-col">{t.name}</td>
+                            <td className="type-col">{t.type}</td>
+                            <td className="createdBy-col">{t.createdBy?.username || "Unknown"}</td>
                             <td>{t.studentsTaken}</td>
                             <td
                                 className="actions"
@@ -51,7 +51,9 @@ export default function ApprovedTests() {
                                     deleteTest(t._id);
                                 }}
                             >
-                                <button>Delete</button>
+                                <button className="delete">
+                                    Delete
+                                </button>
                             </td>
                         </tr>
                     ))}

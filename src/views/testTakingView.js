@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { useParams } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 import { useContext } from "react";
 import { AuthContext } from "../context/authContext.js"; // adjust path
@@ -83,10 +84,6 @@ const QuestionBlock = ({
       </span>
     );
   };
-
-
-
-
   const itemCount = generatedItems.length;
   const start = questionCounter.current + 1; // first index of this question group
   const end = start + itemCount - 1;        // last index in this question group
@@ -187,9 +184,14 @@ const QuestionBlock = ({
     );
   };
 
+
+
   return (
     <div className="question-block">
+
       <h4>{requirementText}</h4>
+
+
       {renderSummaryText()}
       {renderTableCompletion()}
       {generatedItems.map((item) => {
@@ -359,6 +361,22 @@ const QuestionBlock = ({
                 </select>
               </div>
             );
+          case "short_question":
+            return (
+              <div key={item.id} style={{ marginBottom: 8 }}>
+                <label>
+                  {questionCounter.current}. {item.text}
+                </label>
+                <input
+                  type="text"
+                  value={answers[q._id]?.[item.id] || ""}
+                  placeholder="Enter your answer"
+                  onChange={(e) =>
+                    handleAnswerChange(q._id, item.id, e.target.value)
+                  }
+                />
+              </div>
+            );
 
           case "diagram_completion":
             return (
@@ -375,7 +393,7 @@ const QuestionBlock = ({
               </div>
             );
 
-          case "short_answer":
+
           case "summary_completion":
             return (
               <div
@@ -447,26 +465,42 @@ const StudentTestView = () => {
   const [showAnswers, setShowAnswers] = useState(false);
   const [highlightText, setHighlightText] = useState(null);
   const [twoViewMode, setTwoViewMode] = useState(false);
-  const [evaluationReady, setEvaluationReady] = useState(false); // Teacher Evaluation is ready after user submit to AI Evaluation. TODO: Change variable name
+  const [evaluationReady, setEvaluationReady] = useState(false);
   const [savedResult, setSavedResult] = useState(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  const location = useLocation();
+  const passedViewOnly = location.state?.viewOnly || false;
+
+  const isTeacherOrAdmin = user?.isTeacher || user?.isAdmin;
+
+  // Final enforced mode:
+  const viewOnly = isTeacherOrAdmin ? true : passedViewOnly;
+
 
   // Speaking "running track" progression
   const [speakingStep, setSpeakingStep] = useState(0);
 
 
   // If not submitted, warn user on return
-  useNavigationBlocker(!result?.isSubmitted);
+  useNavigationBlocker(!viewOnly && !result?.isSubmitted);
 
   const writingRefs = useRef([]);
   const BASE_URL = "http://localhost:5000";
+  const highlightTranscript = (transcript, highlight) => {
+  const plain = transcript.replace(/\s+/g, " ").trim();
+  const h = highlight.replace(/\s+/g, " ").trim();
 
-  // Gate Navigation Only When Answer Uploaded
-  const canMoveToNext = (sectionIdx, questionIdx) => {
-    const q = test.sections[sectionIdx].questions[questionIdx];
-    return Boolean(q.studentAudioKey);
-  };
+  const parts = plain.split(new RegExp(`(${h})`, "gi"));
 
+  return parts.map((part, i) =>
+    part.toLowerCase() === h.toLowerCase() ? (
+      <span key={i} className="highlight-active">{part}</span>
+    ) : (
+      part
+    )
+  );
+};
 
   useEffect(() => {
 
@@ -848,7 +882,10 @@ const StudentTestView = () => {
           return (
             <div key={secIdx}>
               <h2>{section.sectionTitle}</h2>
-              <p><b>Requirement:</b> {section.requirement}</p>
+              <div className="requirement-card">
+                <p><b>Requirement:</b> {section.requirement}</p>
+              </div>
+
               <EssayDisplay content={prevContent} />
             </div>
           );
@@ -858,7 +895,10 @@ const StudentTestView = () => {
         return (
           <div key={secIdx}>
             <h2>{section.sectionTitle}</h2>
-            <p><b>Requirement:</b> {section.requirement}</p>
+            <div className="requirement-card">
+              <p><b>Requirement:</b> {section.requirement}</p>
+            </div>
+
             <div
               ref={writingRefs.current[secIdx]}
               className="writing-box"
@@ -873,12 +913,12 @@ const StudentTestView = () => {
           </div>
         );
       })}
-      {test.type === "writing" && !evaluationReady && writingSections.length > 0 && !result?.isSubmitted && !user?.isAdmin && !user?.isTeacher && (
+      {!viewOnly && test.type === "writing" && !evaluationReady && writingSections.length > 0 && !result?.isSubmitted && (
         <button onClick={handleWritingSubmit}>Submit Writing</button>
       )}
       {test.type === "writing" && result && (
         <div style={{ marginTop: "20px" }}>
-          <h3>Writing AI Evaluation Result</h3>
+          <h3>Result (Evaluate by AI)</h3>
           <p>
             <b>Band:</b> {result.band || result.evaluations?.[0]?.band || "N/A"}
           </p>
@@ -913,17 +953,15 @@ const StudentTestView = () => {
 
                 return (
                   <div className="speaking-track-item">
-                    <h2>Speaking Question {speakingStep + 1}</h2>
-                    {/* 
-                    <p><b>{q.requirement || q.text}</b></p>
-*/}
+                    <h2>Question {speakingStep + 1}</h2>
+
                     {/* Question audio */}
                     {q.ttsKey && (
                       <AudioPlayer s3Key={q.ttsKey} autoPlay={false} />
                     )}
 
                     {/* Recorder (hide if student already recorded) */}
-                    {!q.studentAudioKey && !user?.isAdmin && !user?.isTeacher && (
+                    {!q.studentAudioKey && !viewOnly && (
                       <AudioRecorder
                         testId={testId}
                         sectionIndex={0}
@@ -939,21 +977,24 @@ const StudentTestView = () => {
                         }}
                       />
                     )}
-
                     {/* Playback after recording */}
                     {q.studentAudioKey && (
                       <AudioPlayer s3Key={q.studentAudioKey} />
                     )}
-
-                    {/* NEXT BUTTON (only when recording done) */}
-                    {q.studentAudioKey && speakingStep < section.questions.length - 1 && (
+                    {/* Previous BUTTON (only when user has authorize to view) */}
+                    {viewOnly && speakingStep > 0 && (
+                      <button onClick={() => setSpeakingStep(speakingStep - 1)}>
+                        Previous Question
+                      </button>
+                    )}
+                    {/* NEXT BUTTON (only when recording done or user has authorize to view) */}
+                    {(viewOnly || q.studentAudioKey) && speakingStep < section.questions.length - 1 && (
                       <button onClick={() => setSpeakingStep(speakingStep + 1)}>
                         Next Question
                       </button>
                     )}
-
                     {/* FINAL SUBMIT BUTTON */}
-                    {q.studentAudioKey && speakingStep === section.questions.length - 1 && (
+                    {!viewOnly && q.studentAudioKey && speakingStep === section.questions.length - 1 && (
                       <button onClick={handleSpeakingSubmit}>
                         Submit Speaking
                       </button>
@@ -963,19 +1004,14 @@ const StudentTestView = () => {
               })()}
             </div>
           )}
-
-
-
-
-
         </div>
       )}
-      {test.type === "speaking" && !evaluationReady && speakingSections.length > 0 && !result?.isSubmitted && !user?.isAdmin && !user?.isTeacher && (
+      {!viewOnly && test.type === "speaking" && !evaluationReady && speakingSections.length > 0 && !result?.isSubmitted && (
         <button onClick={handleSpeakingSubmit}>Submit Speaking</button>
       )}
       {test.type === "speaking" && result && (
         <div style={{ marginTop: "20px" }}>
-          <h3>Speaking AI Evaluation Result</h3>
+          <h3>Result (Evaluate by AI)</h3>
           <p>
             <b>Band:</b> {result.band || result.evaluations?.[0]?.band || "N/A"}
           </p>
@@ -999,8 +1035,8 @@ const StudentTestView = () => {
       )}
       {/* === Teacher Feedback Display === */}
       {savedResult?.isEvaluated?.resultReceived && savedResult?.teacherFeedback && (
-        <div style={{ marginTop: "25px", padding: "15px", border: "1px solid #ccc", borderRadius: "8px" }}>
-          <h3>Teacher Evaluation Feedback</h3>
+        <div>
+          <h3>Teacher Feedback</h3>
 
           {typeof savedResult.teacherFeedback === "string" ? (
             <p style={{ whiteSpace: "pre-wrap" }}>{savedResult.teacherFeedback}</p>
@@ -1058,8 +1094,8 @@ const StudentTestView = () => {
 
 
 
-      {/* === Toggle Button for Reading/Listening View Mode === */}
-      {(readingSections.length > 0 || listeningSections.length > 0) && (
+      {/*Toggle Button for Reading Mode */}
+      {(readingSections.length > 0) && (
         <div className="toggle-button">
           <button
             onClick={() => setTwoViewMode(!twoViewMode)}
@@ -1140,6 +1176,16 @@ const StudentTestView = () => {
                   <h3>{section.sectionTitle}</h3>
 
                   {type === "listening" && section.audioKey && <AudioPlayer s3Key={section.audioKey} />}
+                  {showAnswers && section.transcript && (
+                    <div className="transcript-container">
+                      <h4>Transcript</h4>
+                      <p>
+                        {highlightText
+                          ? highlightTranscript(section.transcript, highlightText)
+                          : section.transcript}
+                      </p>
+                    </div>
+                  )}
 
                   {section.passages?.map((passage, idx) => (
                     <div key={idx}>
@@ -1194,25 +1240,19 @@ const StudentTestView = () => {
       )}
 
       {/* === Result Display === */}
-      {(readingSections.length > 0 || listeningSections.length > 0) && !user?.isAdmin && !user?.isTeacher && (
+      {(readingSections.length > 0 || listeningSections.length > 0) && (
         <>
           {/* Only show Submit button if test not submitted yet */}
-          {!result?.isSubmitted ? (
+          {!viewOnly && !result?.isSubmitted && (
             <button onClick={handleSubmit}>Submit</button>
-          ) : (
-            <p><i>You have already submitted this test.</i></p>
-
           )}
-
-
-
           {/* After submission, show result + toggle button */}
           {result && (
             <div>
               <h3>
                 Result: {result.score} / {result.total}
               </h3>
-              <button onClick={() => setShowAnswers(!showAnswers)}>
+              <button type="button" className="hide-answer-button" onClick={() => setShowAnswers(!showAnswers)}>
                 {showAnswers ? "Hide Answers" : "View Answers"}
               </button>
             </div>
@@ -1220,15 +1260,18 @@ const StudentTestView = () => {
         </>
       )}
       {/* Timer */}
-      {!user.isAdmin && !user.isTeacher && (
+
+      {!viewOnly && !isSubmitted && (
         <FloatingTimer
-          durationMinutes={0.1}
+          durationMinutes={60}
           onTimeUp={() => {
             alert("Time is up! Your test will be submitted automatically.");
             handleSubmit(true);
           }}
         />
       )}
+
+
 
     </div>
   );

@@ -125,19 +125,17 @@
     padding: 6px 12px !important;
     font-size: 14px !important;
     cursor: pointer !important;
-    background: #fff !important;
-    /* or transparent if you want */
-    border: 1px solid #ccc !important;
-    /* optional */
-    color: #000 !important;
+    background: transparent !important;
+    border: none !important;
+    color: var(--color-primary) !important;
     /* make icon visible */
     display: inline-flex;
     align-items: center;
     justify-content: center;
 }
-
-
-
+.toggle-button button:hover {
+    background-color: var(--color-primary-hover) !important;
+}
 .two-view-layout {
     display: flex;
     margin-top: 10px;
@@ -208,11 +206,10 @@
 
 .image-wrapper {
     flex: 0 0 auto;
-    max-width: 300px;
-    border: 1px solid #ccc;
+    max-width: 600px;
+    border: none;
     border-radius: 4px;
     overflow: hidden;
-    background-color: white;
     padding: 5px;
 }
 
@@ -222,6 +219,37 @@
 
 .speaking-track-item {
     padding: 20px;
-    border: 2px solid #ddd;
-    border-radius: 8px;
+    border: none;
+}
+
+.requirement-card {
+    padding: 16px;
+    background: var(--color-secondary);
+    border: 1px solid #e2e2e2;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.essay-display {
+font-family: 'Times New Roman', Times, serif !important;
+  font-size: 16px;
+  line-height: 1.7;
+  color: black;
+  padding: 20px;
+  border-radius: 12px;
+
+  /* Improve readability */
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.hide-answer-button {
+    width: 150px;
+    color: var(--color-primary);
+    background-color: transparent;
+    border: 2px solid var(--color-primary);
+}
+.hide-answer-button:hover {
+    background-color: var(--color-primary-hover);
+    font-weight: bold;
 }

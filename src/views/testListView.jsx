@@ -12,7 +12,10 @@ const TestListView = () => {
     const [error, setError] = useState(null);
     const [modalOpen, setModalOpen] = useState(false);
     const [sortOption, setSortOption] = useState("newest");
-    const [currentUser, setCurrentUser] = useState(null); // <-- new
+    const [currentUser, setCurrentUser] = useState(null);
+    const [startModalOpen, setStartModalOpen] = useState(false);
+    const [selectedTestId, setSelectedTestId] = useState(null);
+
 
     const BASE_URL = "http://localhost:5000";
     const navigate = useNavigate();
@@ -80,7 +83,14 @@ const TestListView = () => {
     // Check if the user can add a test
     const canAddTest = currentUser && (currentUser.isAdmin || currentUser.status === "approved");
     return (
-        <div style={{ padding: "20px" }}>
+        <div
+            style={{
+                paddingTop: "40px",
+                paddingRight: "200px",
+                paddingBottom: "40px",
+                paddingLeft: "200px"
+            }}
+        >
             <h1>
                 {filterType
                     ? `${filterType.charAt(0).toUpperCase() + filterType.slice(1)} Tests`
@@ -105,10 +115,10 @@ const TestListView = () => {
                 </select>
 
                 <select value={sortOption} onChange={(e) => setSortOption(e.target.value)}>
-                    <option value="newest">Date: Newest → Oldest</option>
-                    <option value="oldest">Date: Oldest → Newest</option>
-                    <option value="alpha-asc">Alphabetical: A → Z</option>
-                    <option value="alpha-desc">Alphabetical: Z → A</option>
+                    <option value="newest">Date: Newest to Oldest</option>
+                    <option value="oldest">Date: Oldest to Newest</option>
+                    <option value="alpha-asc">Alphabetical: A - Z</option>
+                    <option value="alpha-desc">Alphabetical: Z - A</option>
                 </select>
             </div>
 
@@ -140,10 +150,36 @@ const TestListView = () => {
                                 </div>
                             ))}
                         </div>
-                        <button className="close-button" onClick={() => setModalOpen(false)}>Close</button>
+                        <button className="delete-button" onClick={() => setModalOpen(false)}>Close</button>
                     </div>
                 </div>
             )}
+            {startModalOpen && (
+                <div className="modal-backdrop" onClick={() => setStartModalOpen(false)}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        <h2>Start this test?</h2>
+                        <p>Once you begin, you’ll need to complete it.</p>
+
+                        <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
+                            <button className="start-button"
+                                onClick={() => {
+                                    navigate(`/tests/${selectedTestId}`);
+                                }}
+                            >
+                                Start
+                            </button>
+
+                            <button 
+                                className="delete-button"
+                                onClick={() => setStartModalOpen(false)}
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
 
             {error && <div style={{ color: "red" }}>Error: {error}</div>}
             {!tests.length && !error && <div>No tests found.</div>}
@@ -153,7 +189,15 @@ const TestListView = () => {
                     <div
                         key={test._id}
                         className="test-card"
-                        onClick={() => navigate(`/tests/${test._id}`)}
+                        onClick={() => {
+                            if (!currentUser?.isAdmin && !currentUser?.isTeacher) {
+                                setSelectedTestId(test._id);
+                                setStartModalOpen(true);
+                            } else {
+                                navigate(`/tests/${test._id}`);
+                            }
+                        }}
+
                     >
                         <h3 className="test-name">{test.name}</h3>
                         <p>Type: {test.type.charAt(0).toUpperCase() + test.type.slice(1)}</p>
@@ -163,7 +207,8 @@ const TestListView = () => {
                         {currentUser?.isAdmin && (
                             <div className="card-actions" onClick={e => e.stopPropagation()}>
                                 <button onClick={() => navigate(`/edit/${test._id}`)}>Edit</button>
-                                <button onClick={() => handleDelete(test._id)}>Delete</button>
+                                <button className="delete-button" onClick={() => handleDelete(test._id)}>Delete</button>
+
                             </div>
                         )}
 

@@ -1,164 +1,234 @@
-/* Container padding and spacing */
+
 .container {
-    padding: 120px 80px; /* more padding on both sides */
-    display: flex;
-    flex-direction: column;
-    gap: 30px; /* spacing between components */
+padding: 80px 100px;
+display: flex;
+flex-direction: column;
+gap: 40px; 
+max-width: 1200px;
+margin: 0 auto; 
+color: #333;
+background: #f9f9f9;
 }
 
-/* Filters styling */
 .filters {
-    display: flex;
-    gap: 20px;
-    margin-bottom: 20px;
+display: flex;
+margin-bottom: 30px;
+
 }
 
 .filters select {
-    padding: 8px 12px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    font-size: 14px;
-    cursor: pointer;
-    transition: 0.2s;
+padding: 10px 14px;
+border-radius: 8px;
+border: 1px solid #ccc;
+font-size: 15px;
+cursor: pointer;
+transition: 0.2s;
+min-width: 180px;
 }
 
 .filters select:hover {
-    border-color: #007bff;
+border-color: var(--color-secondary-hover);
+box-shadow: 0 0 6px rgba(0,123,255,0.3);
 }
 
 /* Add New Exam Button */
 .add-button {
-    padding: 10px 10px;
-    background: #007bff;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: 0.2s;
-    align-self: flex-start;
-    margin-bottom: 30px; /* increased spacing between button and test cards */
+padding: 12px 18px;
+background: var(--color-primary);
+color: white;
+border: none;
+border-radius: 8px;
+cursor: pointer;
+transition: 0.2s;
+align-self: flex-start;
+font-size: 16px;
+font-weight: 600;
+margin-bottom: 40px;
 }
 
 .add-button:hover {
-    background: #0056b3;
+background: var(--color-primary);
+box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 /* Tests grid */
 .tests-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 20px; /* distance between cards */
-    margin-top: 20px; /* optional: extra spacing from button */
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+gap: 25px; /* space between cards */
+margin-top: 20px;
 }
-
 
 /* Modal */
 .modal-backdrop {
-    position: fixed;
-    top:0; left:0; right:0; bottom:0;
-    background: rgba(0,0,0,0.5);
-    display: flex; justify-content: center; align-items: center;
-    z-index: 1000;
+position: fixed;
+top: 0; left: 0; right: 0; bottom: 0;
+background: rgba(0,0,0,0.5);
+display: flex; justify-content: center; align-items: center;
+z-index: 1000;
+padding: 20px;
 }
 
 .modal-content {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    min-width: 300px;
+background: #fff;
+padding: 30px;
+border-radius: 12px;
+min-width: 320px;
+max-width: 600px;
+box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+display: flex;
+flex-direction: column;
+gap: 20px;
 }
 
 .modal-content button.close-button {
-    padding: 6px 12px;
-    background: #dc3545; /* red color */
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: background 0.2s;
-    align-self: flex-end; /* move to the right inside modal */
+padding: 8px 16px;
+background: #dc3545;
+color: white;
+border: none;
+border-radius: 8px;
+cursor: pointer;
+font-weight: bold;
+transition: 0.2s;
+align-self: flex-end;
 }
 
 .modal-content button.close-button:hover {
-    background: #c82333;
+background: #c82333;
 }
 
 .card-grid {
-    display: flex;
-    gap: 5px;
-    margin: 20px 0;
+display: flex;
+gap: 15px;
+flex-wrap: wrap;
 }
 
 .exam-card {
-    padding: 20px;
-    background: #f0f0f0;
-    border-radius: 8px;
-    cursor: pointer;
-    flex: 1;
-    text-align: center;
-    transition: 0.2s;
+padding: 25px 15px;
+background: #f0f0f0;
+border-radius: 12px;
+cursor: pointer;
+flex: 1;
+text-align: center;
+transition: 0.3s;
+font-weight: 600;
 }
 
 .exam-card:hover {
-    background: #007bff;
-    color: white;
+background: var(--color-primary-hover);
+color: white;
+transform: translateY(-4px);
 }
 
-/* Test cards stacked vertically */
-.tests-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
+/* Test cards styling */
 .test-card {
-    background: #ffffff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 20px 30px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    transition: transform 0.2s, box-shadow 0.2s;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.test-card h3, .test-card p {
-    margin: 5px; 
+background: #ffffff;
+border: 1px solid #ddd;
+border-radius: 12px;
+padding: 25px 30px;
+box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+transition: transform 0.2s, box-shadow 0.2s;
+cursor: pointer;
+display: flex;
+flex-direction: column;
+gap: 5px;
 }
 
 .test-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+transform: translateY(-4px);
+box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+}
+
+.test-card h3, .test-card p {
+margin: 6px 0;
 }
 
 /* Test name styling */
 .test-name {
-    font-weight: bold;
-    font-size: 18px;
-    color: #333;
+font-weight: 700;
+font-size: 18px;
+color: #222;
 }
 
 /* Card actions */
 .card-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 10px;
+display: flex;
+justify-content: flex-end;
+gap: 12px;
+margin-top: 12px;
 }
 
 .card-actions button {
-    padding: 6px 12px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: 0.2s;
-    background: #007bff;
-    color: white;
+    width: 80px;
+padding: 8px 16px;
+border: none;
+border-radius: 8px;
+cursor: pointer;
+transition: 0.2s;
+background: var(--color-primary);
+color: white;
+font-size: 14px;
+font-weight: 600;
 }
 
 .card-actions button:hover {
-    background: #0056b3;
+background: var(--color-primary);
+box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+}
+
+
+/* Secondary outline button for delete */
+.card-actions .delete-button {
+width: 80px;
+padding: 8px 16px;
+border: 2px solid var(--color-primary);
+background: transparent;
+color: var(--color-primary);
+border-radius: 8px;
+cursor: pointer;
+font-size: 14px;
+font-weight: 600;
+transition: 0.2s;
+}
+
+.card-actions .delete-button:hover {
+background: var(--color-primary-hover);
+color: white;
+box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+}
+.delete-button {
+width: 80px;
+padding: 8px 16px;
+border: 2px solid var(--color-primary);
+background: transparent;
+color: var(--color-primary);
+border-radius: 8px;
+cursor: pointer;
+font-size: 14px;
+font-weight: 600;
+transition: 0.2s;
+}
+
+.delete-button:hover {
+background: var(--color-primary-hover);
+color: white;
+box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+}
+
+.start-button {
+width: 80px;
+padding: 8px 16px;
+background: var(--color-primary);
+color: white;
+border-radius: 8px;
+cursor: pointer;
+font-size: 14px;
+font-weight: 600;
+transition: 0.2s;
+}
+
+.start-button:hover {
+background: var(--color-primary-hover);
+color: white;
+box-shadow: 0 3px 10px rgba(0,0,0,0.15);
 }

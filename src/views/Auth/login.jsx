@@ -2,6 +2,7 @@ import React, { useState, useContext } from "react";
 import axios from "axios";
 import { AuthContext } from "../../context/authContext.js";
 import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import "./Login.css";
 
 const LoginForm = () => {
@@ -14,27 +15,6 @@ const LoginForm = () => {
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
-    /*
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError("");
-        setLoading(true);
-
-        try {
-            const res = await axios.post(
-                "http://localhost:5000/api/users/login",
-                { email, password },
-                { withCredentials: true }
-            );
-            setUser(res.data.user);
-            navigate("/"); // redirect to main page
-        } catch (err) {
-            setError(err.response?.data?.message || "Login failed. Check credentials.");
-        } finally {
-            setLoading(false);
-        }
-    };
-    */
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
@@ -106,7 +86,7 @@ const LoginForm = () => {
                 </form>
 
                 <div className="signup-text">
-                    Don't have an account? <a href="/register/sign-up-select">Sign up</a>
+                    Don't have an account? <Link to="/register/sign-up-select">Sign up</Link>
                 </div>
 
             </div>

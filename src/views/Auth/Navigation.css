@@ -8,10 +8,8 @@
   position: relative;
   z-index: 2;
   transition: background-color 0.3s ease;
-}
-
-.header:hover {
-  background-color: var(--color-primary-hover);
+  height: 60px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .header:hover .site-nav_link,
@@ -38,6 +36,11 @@
 .site-nav_item {
   padding: 0 16px;
 }
+.site-nav_label svg {
+  margin-right: 6px; /* Adjust distance as needed */
+  vertical-align: middle; /* Keeps icon aligned with text */
+}
+
 
 @media (max-width: 991px) {
   .site-nav_item {
@@ -45,7 +48,7 @@
   }
 }
 
-/* === Nav Links === */
+/*  Nav Links  */
 .site-nav_link {
   color: var(--color-primary-text);
   text-decoration: none;
@@ -87,7 +90,7 @@
   gap: 16px;
 }
 
-/* === CTA Button === */
+/* CTA Button  */
 .btn-login {
   background-color: var(--color-accent);
   border: 1px solid var(--color-accent);
@@ -103,13 +106,14 @@
   padding: 12px 24px;
   font: 700 12.8px/17px Poppins, sans-serif;
   transition: background-color 0.2s ease;
+  height: 15px;
 }
 
 .btn-login:hover {
   background-color: var(--color-primary);
 }
 
-/* === Dropdown Menus (Unified) === */
+/* Dropdown Menus (Unified) */
 .dropdown,
 .user-dropdown {
   position: relative;
@@ -146,7 +150,7 @@
 /* Dropdown list items hover */
 .dropdown_menu li:not(.user-info):hover,
 .user-dropdown_menu li:not(.user-info):hover {
-  background-color: rgba(59, 130, 246, 0.1); /* subtle hover background */
+  background-color: rgba(59, 130, 246, 0.1); 
   color: var(--color-primary-hover);
   font-weight: 700;
 }
@@ -175,7 +179,7 @@
 /* User Info Section */
 .user-dropdown_menu hr {
   border: none;
-  border-top: 1px solid #CBD6E3; /* softer gray border */
+  border-top: 1px solid #CBD6E3; 
   margin: 4px 0;
 }
 
@@ -186,7 +190,7 @@
 
 .user-info p {
   margin: 2px 0;
-  color: #64748b; /* muted gray text */
+  color: #64748b; 
 }
 
 /* Sign Out Button */
@@ -203,13 +207,13 @@
 }
 
 .signout-btn:hover {
-  font-weight: 700; /* makes the text bold on hover */
-  color: var(--color-primary-hover); /* optional: keep hover color */
+  font-weight: 700; 
+  color: var(--color-primary-hover); 
   margin: 5px 5px 5px 5px !important
 }
 /* Keep signout button behavior */
 .user-dropdown_menu li .signout-btn:hover {
-  background-color: transparent !important; /* prevent li hover from coloring */
+  background-color: transparent !important;
   font-weight: 700; /* bold on hover */
   color: var(--color-primary-hover);
 }
@@ -218,7 +222,7 @@
   background-color: transparent;
 }
 
-/* === Animation === */
+/*  Animation  */
 @keyframes fadeIn {
   from {
     opacity: 0;

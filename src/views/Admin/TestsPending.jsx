@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom"; 
+import { useNavigate } from "react-router-dom";
 import "./Admin.css";
 
 export default function PendingTests() {
     const [tests, setTests] = useState([]);
-const navigate = useNavigate();   
+    const navigate = useNavigate();
 
     const fetchTests = async () => {
         const res = await axios.get("http://localhost:5000/api/tests", { withCredentials: true });
@@ -13,14 +13,14 @@ const navigate = useNavigate();
         setTests(pending);
     };
 
-const approveTest = async (id) => {
-    await axios.put(
-        `http://localhost:5000/api/tests/${id}/approve`,
-        {},
-        { withCredentials: true }
-    );
-    fetchTests();
-};
+    const approveTest = async (id) => {
+        await axios.put(
+            `http://localhost:5000/api/tests/${id}/approve`,
+            {},
+            { withCredentials: true }
+        );
+        fetchTests();
+    };
 
 
     const deleteTest = async (id) => {
@@ -37,28 +37,45 @@ const approveTest = async (id) => {
             <table>
                 <thead>
                     <tr>
-                        <th>Name</th>
+                        <th className="name-col">Name</th>
                         <th>Type</th>
                         <th>Created By</th>
-                        <th>Actions</th>
+                        <th className="empty-col"></th>
+                        <th className="actions">Actions</th>
                     </tr>
                 </thead>
 
                 <tbody>
                     {tests.map(t => (
                         <tr key={t._id}
-                        onClick={() => navigate(`/tests/${t._id}`)}   // ← navigate to test
+                            onClick={() => navigate(`/tests/${t._id}`)}   // ← navigate to test
                             className="clickable-row"
-                            >
-                            <td>{t.name}</td>
+                        >
+                            <td className="name-col">{t.name}</td>
                             <td>{t.type}</td>
                             <td>{t.createdBy?.username || "Unknown"}</td>
+                            <td className="empty-col"></td>
                             <td
                                 className="actions"
                                 onClick={(e) => e.stopPropagation()}  // ← prevent row navigation
                             >
-                                <button onClick={() => approveTest(t._id)}>Approve</button>
-                                <button onClick={() => deleteTest(t._id)}>Delete</button>
+                                <div className="actions">
+                                    <button
+                                        className="approve"
+                                        onClick={() => approveTest(t._id)}
+                                    >
+                                        Approve
+                                    </button>
+
+                                    <button
+                                        className="delete"
+                                        onClick={() => deleteTest(t._id)}
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
+
+
                             </td>
                         </tr>
                     ))}

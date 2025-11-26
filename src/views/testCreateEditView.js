@@ -355,25 +355,6 @@ const TestCreateEditView = () => {
                 if (!section.questions || section.questions.length === 0) {
                     return `Section ${s + 1} must contain at least one question.`;
                 }
-
-                for (let q = 0; q < section.questions.length; q++) {
-                    const question = section.questions[q];
-
-                    if (!question.requirement || !question.requirement.trim()) {
-                        return `Requirement missing in Section ${s + 1}, Question ${q + 1}.`;
-                    }
-
-                    if (!question.questionItems || question.questionItems.length === 0) {
-                        return `Section ${s + 1}, Question ${q + 1} must contain at least one item.`;
-                    }
-
-                    for (let i = 0; i < question.questionItems.length; i++) {
-                        const item = question.questionItems[i];
-                        if (!item.text || !item.text.trim()) {
-                            return `Empty question text at Section ${s + 1}, Question ${q + 1}, Item ${i + 1}.`;
-                        }
-                    }
-                }
             }
         }
 
@@ -581,9 +562,9 @@ const TestCreateEditView = () => {
                                                         </div>
                                                     ))}
                                                     <div style={{ display: "flex", justifyContent: "center", margin: "20px 0" }}>
-                                                    <button type="button" className="secondary-button-small" onClick={() => addPassage(secIdx)}>
-                                                        + Add Passage
-                                                    </button>
+                                                        <button type="button" className="secondary-button-small" onClick={() => addPassage(secIdx)}>
+                                                            + Add Passage
+                                                        </button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -693,26 +674,32 @@ const TestCreateEditView = () => {
                                                                                             const newType = e.target.value;
                                                                                             let updatedQ = { ...q, type: newType };
 
-                                                                                            // Auto-set requirement only if requirement is currently empty
-                                                                                            if (!updatedQ.requirement && defaultRequirements[newType]) {
+                                                                                            // Always reset question items when type changes
+                                                                                            updatedQ.questionItems = [];
+
+                                                                                            // Always update requirement based on the new type
+                                                                                            if (defaultRequirements[newType]) {
                                                                                                 updatedQ.requirement = defaultRequirements[newType];
                                                                                             }
+
+                                                                                            // Special sync for matching_headings
                                                                                             if (newType === "matching_headings" && testData.type === "reading") {
                                                                                                 const updatedSection = syncMatchingHeadingsItems({
                                                                                                     ...section,
-                                                                                                    questions: section.questions?.map((qq, idx) =>
-                                                                                                        idx === qIdx ? { ...qq, type: newType } : qq
+                                                                                                    questions: section.questions.map((qq, idx) =>
+                                                                                                        idx === qIdx ? { ...updatedQ } : qq
                                                                                                     ),
                                                                                                 });
                                                                                                 updateSection(secIdx, updatedSection);
                                                                                                 return;
-                                                                                            } else {
-                                                                                                updatedQ.questionItems = [];
                                                                                             }
+
                                                                                             const updatedQuestions = [...section.questions];
                                                                                             updatedQuestions[qIdx] = updatedQ;
                                                                                             updateSection(secIdx, { ...section, questions: updatedQuestions });
                                                                                         }}
+
+
                                                                                     >
                                                                                         {testData.type === "reading" ? (
                                                                                             <>
@@ -1932,7 +1919,7 @@ const TestCreateEditView = () => {
                                                                                         </table>
                                                                                         <button
                                                                                             type="button"
-className="tertiary-button"
+                                                                                            className="tertiary-button"
                                                                                             onClick={() => {
                                                                                                 const { row, col } = selectedCell;
                                                                                                 const updatedTable = [...(q.tableData || [])];

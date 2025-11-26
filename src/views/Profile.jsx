@@ -1,16 +1,16 @@
-import React, { useEffect, useState, useContext } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { AuthContext } from "../context/authContext.js";
+//import { AuthContext } from "../context/authContext.js";
+import "./Profile.css";
 
 const Profile = () => {
-  const { user } = useContext(AuthContext);
+  //const { user } = useContext(AuthContext);
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState(null);
 
   const navigate = useNavigate();
   const handleRowClick = (id) => {
-    // Force absolute path
     navigate(`/tests/${id}`, { replace: false });
   };
 
@@ -20,9 +20,7 @@ const Profile = () => {
         const res = await axios.get("http://localhost:5000/api/users/profile", {
           withCredentials: true,
         });
-        console.log("[DEBUG] Profile fetched from server:", res.data);
 
-        // Create a map of evaluations by testResultId
         const evaluationsByTest = {};
         if (res.data.evaluations) {
           res.data.evaluations.forEach((ev) => {
@@ -37,7 +35,6 @@ const Profile = () => {
         };
         setProfile(data);
       } catch (err) {
-        console.error("[DEBUG] Error fetching profile:", err);
         setError(err.response?.data?.error || "Failed to fetch profile");
       }
     };
@@ -45,116 +42,113 @@ const Profile = () => {
     fetchProfile();
   }, []);
 
-  if (error) return <div style={{ color: "red" }}>{error}</div>;
+  if (error) return <div className="error">{error}</div>;
   if (!profile) return <div>Loading...</div>;
 
   const { testResults, evaluationsByTest } = profile;
 
   return (
-    <div style={{ padding: "20px" }}>
+    <div className="profile-container">
       <h2>My Profile</h2>
-      <div style={{ marginBottom: 20 }}>
+
+      <div className="profile-info">
         <p><strong>Username:</strong> {profile.username}</p>
         <p><strong>Email:</strong> {profile.email}</p>
         <p>
           <strong>Joined:</strong>{" "}
           {profile.createdAt ? new Date(profile.createdAt).toLocaleDateString() : "N/A"}
         </p>
-
         {profile.isTeacher && <p><strong>Status:</strong> {profile.status}</p>}
       </div>
 
       {!profile.isTeacher && (
         <div>
           <h3>Past Test Attempts</h3>
+
           {testResults.length === 0 ? (
             <p>No tests attempted yet.</p>
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table className="results-table">
               <thead>
-                <tr style={{ background: "#e5e7eb" }}>
-                  <th style={{ padding: 8 }}>Test Name</th>
-                  <th style={{ padding: 8 }}>Type</th>
-                  <th style={{ padding: 8 }}>Score</th>
-                  <th style={{ padding: 8 }}>Band</th>
-                  <th style={{ padding: 8 }}>Taken At</th>
-                  <th style={{ padding: 8 }}>Evaluation</th>
+                <tr>
+                  <th>Test Name</th>
+                  <th>Type</th>
+                  <th>Band</th>
+                  <th>Taken At</th>
+                  <th>Evaluation</th>
                 </tr>
               </thead>
+
               <tbody>
                 {testResults
-                  .sort((a, b) => new Date(b.takenAt || b.createdAt) - new Date(a.takenAt || a.createdAt))
+                  .sort(
+                    (a, b) =>
+                      new Date(b.takenAt || b.createdAt) -
+                      new Date(a.takenAt || a.createdAt)
+                  )
                   .map((t) => {
-                    const teacherFeedback = evaluationsByTest[t._id];
+                    //const teacherFeedback = evaluationsByTest[t._id];
+                    const evalStatus =
+                      t.isEvaluated || { requested: false, resultReceived: false };
 
                     return (
                       <tr
                         key={t._id}
+                        className="result-row"
                         onClick={() => handleRowClick(t.testId)}
-                        style={{ borderBottom: "1px solid #ddd", cursor: "pointer" }}
                       >
-
-                        <td style={{ padding: 8 }}>{t.testName}</td>
-                        <td style={{ padding: 8 }}>{t.type}</td>
-                        <td style={{ padding: 8 }}>{t.score} / {t.total}</td>
-                        <td style={{ padding: 8 }}>{t.band ?? "-"}</td>
-                        <td style={{ padding: 8 }}>
+                        <td>{t.testName}</td>
+                        <td>{t.type}</td>
+                        <td>{t.band ?? "-"}</td>
+                        <td>
                           {new Date(t.takenAt || t.createdAt).toLocaleString()}
                         </td>
-                        <td style={{ padding: 8 }} onClick={(e) => e.stopPropagation()}>
-                          {t.type === "writing" || t.type === "speaking" ? (
-                            (() => {
-                              const evalStatus = t.isEvaluated || { requested: false, resultReceived: false };
 
-                              if (!evalStatus.requested && !evalStatus.resultReceived) {
-                                // Request Evaluation
-                                return (
-                                  <button
-                                    onClick={async () => {
-                                      try {
-                                        await axios.post(
-                                          "http://localhost:5000/api/evaluations/request",
-                                          { testResultId: t._id },
-                                          { withCredentials: true }
-                                        );
-                                        alert("Teacher evaluation requested successfully!");
-                                      } catch (err) {
-                                        console.error("[DEBUG] Failed to request evaluation:", err);
-                                        alert("Failed to request teacher evaluation");
-                                      }
-                                    }}
-                                    style={{ padding: "6px 12px", borderRadius: "6px" }}
-                                  >
-                                    Request Evaluation
-                                  </button>
-                                );
-                              } else if (evalStatus.requested && !evalStatus.resultReceived) {
-                                // Pending (disabled)
-                                return (
-                                  <button
-                                    disabled
-                                    style={{ padding: "6px 12px", borderRadius: "6px", background: "#facc15", cursor: "not-allowed" }}
-                                  >
-                                    Pending
-                                  </button>
-                                );
-                              } else if (evalStatus.requested && evalStatus.resultReceived) {
-                                // See Result
-                                return (
-                                  <button
-                                    onClick={() => navigate(`/tests/${t.testId}`)}
-                                    style={{ padding: "6px 12px", borderRadius: "6px", background: "#4ade80" }}
-                                  >
-                                    See Result
-                                  </button>
-                                );
-                              }
-                            })()
+                        <td
+                          className="evaluation-cell"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {t.type === "writing" || t.type === "speaking" ? (
+                            <>
+                              {!evalStatus.requested && !evalStatus.resultReceived && (
+                                <button
+                                  className="btn request-btn"
+                                  onClick={async () => {
+                                    try {
+                                      await axios.post(
+                                        "http://localhost:5000/api/evaluations/request",
+                                        { testResultId: t._id },
+                                        { withCredentials: true }
+                                      );
+                                      alert("Teacher evaluation requested successfully!");
+                                    } catch (err) {
+                                      alert("Failed to request teacher evaluation");
+                                    }
+                                  }}
+                                >
+                                  Request Evaluation
+                                </button>
+                              )}
+
+                              {evalStatus.requested && !evalStatus.resultReceived && (
+                                <button className="btn pending-btn" disabled>
+                                  Pending
+                                </button>
+                              )}
+
+                              {evalStatus.requested && evalStatus.resultReceived && (
+                                <button
+                                  className="btn result-btn"
+                                  onClick={() => navigate(`/tests/${t.testId}`)}
+                                >
+                                  See Result
+                                </button>
+                              )}
+                            </>
                           ) : (
                             "-"
                           )}
                         </td>
-
                       </tr>
                     );
                   })}

@@ -42,7 +42,9 @@ export default function AdminLayout() {
         <NavLink to="/admin/tests/approved" className="admin-nav-link">
           {collapsed ? "AT" : "Approved Tests"}
         </NavLink>
-
+        <NavLink to="/tests" className="admin-nav-link">
+          {collapsed ? "CT" : "Create New Test"}
+        </NavLink>
 
         {!collapsed && <p className="admin-nav-group-title">Request Management</p>}
 

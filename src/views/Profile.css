@@ -1,0 +1,68 @@
+.profile-container {
+padding: 20px;
+}
+
+.profile-info {
+margin-bottom: 20px;
+}
+
+.error {
+color: red;
+}
+
+.results-table {
+width: 100%;
+border-collapse: collapse;
+}
+
+.results-table thead tr {
+background: #e5e7eb;
+}
+
+.results-table th,
+.results-table td {
+padding: 8px;
+border-bottom: 1px solid #ddd;
+text-align: center;       /* horizontally center */
+vertical-align: middle;   /* vertically center */
+}
+
+.result-row {
+cursor: pointer;
+}
+
+.result-row:hover {
+background: #f9fafb;
+}
+
+.evaluation-cell {
+position: relative;
+}
+
+.results-table td.evaluation-cell {
+display: flex;
+justify-content: center; /* horizontal center */
+align-items: center;     /* vertical center */
+height: 60px;            /* optional: ensures some row height */
+padding: 8px;
+}
+
+
+.btn {
+padding: 6px 12px;
+border-radius: 6px;
+border: none;
+}
+
+.request-btn {
+background: #d1d5db;
+}
+
+.pending-btn {
+background: #facc15;
+cursor: not-allowed;
+}
+
+.result-btn {
+background: #4ade80;
+}

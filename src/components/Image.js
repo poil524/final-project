@@ -29,7 +29,7 @@ const Image = ({ img }) => {
         if (img?.url) fetchImageUrl();
     }, [img?.url]);
 
-    if (!imageUrl) return <p>Loading image...</p>;
+    if (!imageUrl) return;
 
     return (
         <img
