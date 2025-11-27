@@ -59,10 +59,26 @@ const QuestionBlock = ({
   };
 
   const renderAnswer = (itemId) => {
-    const studentAnswer = answers[q._id]?.[itemId] || "";
-    const correctAnswer = getCorrectAnswer(itemId);
-    const sourceText = getSourceText(itemId);
-    const isCorrect = studentAnswer === correctAnswer;
+    let studentAnswer = answers[q._id]?.[itemId] || "";
+    let correctAnswer;
+    let sourceText = "";
+
+    const type = (q.type || "").trim().toLowerCase();
+
+    if (type === "matching_headings") {
+      // Find the index of this item in questionItems
+      const idx = q.questionItems.findIndex((it) => it.id === itemId);
+      correctAnswer = q.answers?.[idx]?.value || "";
+      sourceText = q.questionItems[idx]?.text || "";
+    } else {
+      correctAnswer = getCorrectAnswer(itemId);
+      sourceText = getSourceText(itemId);
+    }
+
+    // Normalize both for comparison
+    const isCorrect =
+      (studentAnswer || "").trim().toLowerCase() ===
+      (correctAnswer || "").trim().toLowerCase();
 
     return (
       <span
@@ -84,6 +100,8 @@ const QuestionBlock = ({
       </span>
     );
   };
+
+
   const itemCount = generatedItems.length;
   const start = questionCounter.current + 1; // first index of this question group
   const end = start + itemCount - 1;        // last index in this question group
@@ -207,8 +225,6 @@ const QuestionBlock = ({
             </div>
           );
         }
-
-
         // === Normal input mode ===
         switch (q.type) {
           case "matching_paragraph_information":
@@ -233,27 +249,27 @@ const QuestionBlock = ({
               </div>
             );
 
-          case "matching_headings":
-            const original = (q.questionItems || []).find((it) => it.id === item.id) || {};
-            const studentAnswer = answers[q._id]?.[original.id] || "";
+          case "matching_headings": {
             return (
               <div key={item.id} style={{ marginBottom: 8 }}>
                 <label>
                   {questionCounter.current}. {item.text}
                 </label>
                 <select
-                  value={studentAnswer}
-                  onChange={(e) => handleAnswerChange(q._id, original.id, e.target.value)}
+                  value={answers[q._id]?.[item.id] || ""}
+                  onChange={(e) => handleAnswerChange(q._id, item.id, e.target.value)}
                 >
-                  <option value="">-- Select Paragraph --</option>
-                  {section.passages?.map((p) => (
-                    <option key={p.header} value={p.header}>
-                      {p.header}
+                  <option value="">-- Select Heading --</option>
+                  {q.answers.map((ans, idx) => (
+                    <option key={idx} value={ans.value}>
+                      {ans.value}. {q.questionItems[idx]?.text || ""}
                     </option>
                   ))}
                 </select>
               </div>
             );
+          }
+
 
           case "matching_sentence_endings":
             const studentAns = answers[q._id]?.[item.id] || "";
@@ -488,19 +504,19 @@ const StudentTestView = () => {
   const writingRefs = useRef([]);
   const BASE_URL = "http://localhost:5000";
   const highlightTranscript = (transcript, highlight) => {
-  const plain = transcript.replace(/\s+/g, " ").trim();
-  const h = highlight.replace(/\s+/g, " ").trim();
+    const plain = transcript.replace(/\s+/g, " ").trim();
+    const h = highlight.replace(/\s+/g, " ").trim();
 
-  const parts = plain.split(new RegExp(`(${h})`, "gi"));
+    const parts = plain.split(new RegExp(`(${h})`, "gi"));
 
-  return parts.map((part, i) =>
-    part.toLowerCase() === h.toLowerCase() ? (
-      <span key={i} className="highlight-active">{part}</span>
-    ) : (
-      part
-    )
-  );
-};
+    return parts.map((part, i) =>
+      part.toLowerCase() === h.toLowerCase() ? (
+        <span key={i} className="highlight-active">{part}</span>
+      ) : (
+        part
+      )
+    );
+  };
 
   useEffect(() => {
 
@@ -625,11 +641,6 @@ const StudentTestView = () => {
     };
   }, [testId]);
 
-
-
-
-
-
   useEffect(() => {
     if (writingRefs.current.length !== (test?.sections?.length || 0)) {
       writingRefs.current = (test?.sections || []).map(
@@ -658,6 +669,25 @@ const StudentTestView = () => {
     let score = 0;
     let total = 0;
     if (!test) return;
+    const EXACT_MATCH_TYPES = new Set([
+      "matching_paragraph_information",
+      "matching_sentence_endings",
+      "matching_features",
+      "multiple_choice",
+      "true_false_not_given",
+      "yes_no_not_given",
+    ]);
+
+    const TEXT_MATCH_TYPES = new Set([
+      "short_question",
+      "diagram_completion",
+      "summary_completion",
+      "table_completion",
+    ]);
+
+    // Normalize helper
+    const norm = (v) =>
+      (v || "").toString().trim().toLowerCase();
 
     // ===== Calculate score =====
     if (["reading", "listening"].includes(test.type)) {
@@ -665,57 +695,61 @@ const StudentTestView = () => {
         section.questions.forEach((q) => {
           if (!q) return;
 
-          if (q.type === "matching_headings") {
-            (q.questionItems || []).forEach((item, idx) => {
-              total++;
-              const studentAnswer = answers[q._id]?.[item.id];
-              if (!studentAnswer) return;
-              const correctValue = q.answers?.[idx]?.value || "";
-              if (studentAnswer === correctValue) score++;
-            });
-            return;
-          }
+          const items =
+            q.questionItems?.length
+              ? q.questionItems
+              : q.answers?.map((a) => ({ id: a.id })) || [];
 
-          if (q.type === "summary_completion") {
-            (q.answers || []).forEach((correct) => {
-              total++;
-              const studentAnswer = answers[q._id]?.[correct.id];
-              if (!studentAnswer) return;
-              if (
-                studentAnswer.trim().toLowerCase() ===
-                (correct.value || "").trim().toLowerCase()
-              )
-                score++;
-            });
-            return;
-          }
-
-          (q.questionItems && q.questionItems.length > 0
-            ? q.questionItems
-            : (q.answers || []).map((ans, idx) => ({
-              id: ans.id,
-              text: `[${idx + 1}]`,
-            }))
-          ).forEach((item) => {
-
+          items.forEach((item, idx) => {
             total++;
-            const correctObj = (q.answers || []).find((a) => a.id === item.id);
-            const correctValue = correctObj?.value ?? "";
+
             const studentAnswer = answers[q._id]?.[item.id];
             if (!studentAnswer) return;
-            if (q.type === "short_answer") {
-              if (
-                studentAnswer.trim().toLowerCase() ===
-                (correctValue || "").trim().toLowerCase()
-              )
-                score++;
-            } else {
+
+            const studentNorm = norm(studentAnswer);
+
+            // -----------------------------------
+            // SPECIAL CASE: matching_headings
+            // index-based, ignore case
+            // -----------------------------------
+            const type = (q.type || "").trim().toLowerCase();
+
+            if (type === "matching_headings") {
+              const correctValue = q.answers?.[idx]?.value || "";
               if (studentAnswer === correctValue) score++;
+              return;
             }
+
+
+            // Normal answer lookup
+            const correctObj = (q.answers || []).find((a) => a.id === item.id);
+            const correctValue = norm(correctObj?.value);
+
+            // -----------------------------------
+            // EXACT MATCH TYPES (but now case-insensitive)
+            // -----------------------------------
+            if (EXACT_MATCH_TYPES.has(q.type)) {
+              if (studentNorm === correctValue) score++;
+              return;
+            }
+
+            // -----------------------------------
+            // TEXT MATCH TYPES (already normalized)
+            // -----------------------------------
+            if (TEXT_MATCH_TYPES.has(q.type)) {
+              if (studentNorm === correctValue) score++;
+              return;
+            }
+
+            // -----------------------------------
+            // FALLBACK (case-insensitive)
+            // -----------------------------------
+            if (studentNorm === correctValue) score++;
           });
         });
       });
     }
+
 
     const resultData = { score, total };
     setResult(resultData);
@@ -942,24 +976,19 @@ const StudentTestView = () => {
       )}
       {speakingSections.length > 0 && (
         <div>
-
           {speakingSections.length > 0 && (
             <div className="speaking-running-track">
               {(() => {
                 const section = speakingSections[0];
                 const q = section.questions[speakingStep];
-
                 if (!q) return <p>All questions completed.</p>;
-
                 return (
                   <div className="speaking-track-item">
                     <h2>Question {speakingStep + 1}</h2>
-
                     {/* Question audio */}
                     {q.ttsKey && (
                       <AudioPlayer s3Key={q.ttsKey} autoPlay={false} />
                     )}
-
                     {/* Recorder (hide if student already recorded) */}
                     {!q.studentAudioKey && !viewOnly && (
                       <AudioRecorder
@@ -968,7 +997,6 @@ const StudentTestView = () => {
                         questionIndex={speakingStep}
                         onUploadComplete={(key, clearPreview) => {
                           if (clearPreview) clearPreview();
-
                           setTest(prev => {
                             const updated = { ...prev };
                             updated.sections[0].questions[speakingStep].studentAudioKey = key;
@@ -1037,7 +1065,6 @@ const StudentTestView = () => {
       {savedResult?.isEvaluated?.resultReceived && savedResult?.teacherFeedback && (
         <div>
           <h3>Teacher Feedback</h3>
-
           {typeof savedResult.teacherFeedback === "string" ? (
             <p style={{ whiteSpace: "pre-wrap" }}>{savedResult.teacherFeedback}</p>
           ) : (
@@ -1051,7 +1078,6 @@ const StudentTestView = () => {
           )}
         </div>
       )}
-
       <div style={{ marginTop: "20px" }}>
         {savedResult?.feedback && Object.keys(savedResult.feedback).length > 0 && !savedResult?.isEvaluated?.requested && (
           <button
@@ -1089,13 +1115,8 @@ const StudentTestView = () => {
           </button>
         )}
       </div>
-
-
-
-
-
-      {/*Toggle Button for Reading Mode */}
-      {(readingSections.length > 0) && (
+      {/*Toggle Button for Reading & Listening test */}
+      {(readingSections.length > 0 || listeningSections.length > 0) && (
         <div className="toggle-button">
           <button
             onClick={() => setTwoViewMode(!twoViewMode)}
@@ -1106,7 +1127,6 @@ const StudentTestView = () => {
         </div>
       )}
 
-
       {/* === Two-View Mode (Split Screen) === */}
       {twoViewMode ? (
         <div className="two-view-layout">
@@ -1116,14 +1136,12 @@ const StudentTestView = () => {
               <div key={`passage-${secIdx}`} className="section-block">
                 <h3>{section.sectionTitle}</h3>
                 {section.passages?.map((passage, idx) => (
-
                   <div key={idx} className="passage-block">
                     <p>
                       {highlightText
                         ? (() => {
                           const plainText = passage.text.replace(/\s+/g, ' ').trim();
                           const highlight = highlightText.replace(/\s+/g, ' ').trim();
-
                           const parts = plainText.split(new RegExp(`(${highlight})`, 'gi')); // case-insensitive
                           return parts.map((part, i) =>
                             part.toLowerCase() === highlight.toLowerCase() ? (
@@ -1135,9 +1153,6 @@ const StudentTestView = () => {
                         })()
                         : passage.text}
                     </p>
-
-
-
                   </div>
                 ))}
               </div>
@@ -1174,7 +1189,6 @@ const StudentTestView = () => {
                 <div key={`${type}-${secIdx}`}>
                   <h2 style={{ textTransform: "capitalize" }}>{type} Section</h2>
                   <h3>{section.sectionTitle}</h3>
-
                   {type === "listening" && section.audioKey && <AudioPlayer s3Key={section.audioKey} />}
                   {showAnswers && section.transcript && (
                     <div className="transcript-container">
@@ -1186,7 +1200,6 @@ const StudentTestView = () => {
                       </p>
                     </div>
                   )}
-
                   {section.passages?.map((passage, idx) => (
                     <div key={idx}>
                       <h4>{passage.header}</h4>
@@ -1195,7 +1208,6 @@ const StudentTestView = () => {
                           ? (() => {
                             const plainText = passage.text.replace(/\s+/g, ' ').trim();
                             const highlight = highlightText.replace(/\s+/g, ' ').trim();
-
                             const parts = plainText.split(new RegExp(`(${highlight})`, 'gi')); // case-insensitive
                             return parts.map((part, i) =>
                               part.toLowerCase() === highlight.toLowerCase() ? (
@@ -1260,7 +1272,6 @@ const StudentTestView = () => {
         </>
       )}
       {/* Timer */}
-
       {!viewOnly && !isSubmitted && (
         <FloatingTimer
           durationMinutes={60}
@@ -1270,12 +1281,7 @@ const StudentTestView = () => {
           }}
         />
       )}
-
-
-
     </div>
   );
 };
-
-
 export default StudentTestView;
