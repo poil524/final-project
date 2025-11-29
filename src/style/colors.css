@@ -1,29 +1,29 @@
 :root {
-    /* Primary colors (deep navy for headings and key actions) */
-    --color-primary: #1F3B4D;         /* deep navy/teal */
-    --color-primary-text: #F7F7F7;    /* very light gray for text on dark primary */
-    --color-primary-hover: #0D5976;   /* muted teal hover for buttons/links */
+    --color-primary: #1E93AB;         
+    --color-primary-text: #F7F7F7;   
+    --color-primary-hover: rgb(23, 75, 86);   
 
-    /* Secondary colors (muted bluish-gray for less critical elements) */
-    --color-secondary: #E3E9F0;       /* light bluish-gray cards/panels */
-    --color-secondary-text: #1F3B4D;  /* dark navy text on secondary background */
-    --color-secondary-hover: #CBD6E3; /* subtle hover shade for cards */
+  
+    --color-secondary: #E3E9F0;       
+    --color-secondary-text: #1F3B4D;  
+    --color-secondary-hover: #CBD6E3; 
 
-    /* Accent / highlight color (deep teal/blue for interactive elements) */
-    --color-accent: #3B82F6;          /* medium professional blue */
-    --color-accent-text: #F7F7F7;     /* text on accent buttons */
-    --color-accent-hover: #1F3B4D;    /* darker hover accent */
+
+    --color-accent: #E62727;         
+    --color-accent-text: #F7F7F7;     
+    --color-accent-hover: rgb(138, 39, 39);    
 
     /* Backgrounds */
-    --color-bg: #F7F7F7;              /* main page background */
-    --color-bg-section-card: #E3E9F0; /* panels or cards */
-    --color-bg-question-card: #E3E9F055; /* slightly transparent question cards */
+    --color-bg: #F7F7F7;              
+    --color-bg-section-card: #F3F2EC; 
+    --color-bg-question-card: #DCDCDC; 
+    --color-bg-question-item-card: #e0f3f7;
 
     /* Borders */
-    --color-border: #CBD6E3;          /* soft border for cards/sections */
-    --color-border-hover: #3B82F6;    /* hover emphasis for borders */
+    --color-border: #CBD6E3;          
+    --color-border-hover: #1E93AB;   
 
     /* Danger / alerts */
-    --color-danger: #FBBF24;          /* muted gold/yellow for warnings */
-    --color-danger-hover: #F59E0B;    /* hover for alerts */
+    --color-danger: #FBBF24;         
+    --color-danger-hover: #F59E0B;   
 }

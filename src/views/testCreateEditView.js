@@ -11,6 +11,7 @@ import BlockingLoader from "../components/BlockingLoader";
 import { BiTrash } from "react-icons/bi";
 import { IoIosRemoveCircleOutline } from "react-icons/io";
 import { MdExpandLess } from "react-icons/md";
+import { MdModeEdit } from "react-icons/md";
 
 axios.defaults.withCredentials = true;
 
@@ -85,7 +86,6 @@ const TestCreateEditView = () => {
 
     const [collapsedSections, setCollapsedSections] = useState({});
     const [collapsedQuestions, setCollapsedQuestions] = useState({});
-
 
     // Helpers
     const sections = testData.sections || [];
@@ -424,7 +424,7 @@ const TestCreateEditView = () => {
                         >
                             {testData.name || "Untitled Test"}
                         </h1>
-                        <span className="editable-icon">✎</span>
+                        <span className="editable-icon"><MdModeEdit /></span>
                     </div>
                     {sections.map((section, secIdx) => (
                         <div className="section-card">
@@ -443,7 +443,8 @@ const TestCreateEditView = () => {
                                     >
                                         {section.sectionTitle}
                                     </h2>
-                                    <span className="editable-icon">✎</span>
+                                    <span className="editable-icon"><MdModeEdit /></span>
+
                                 </div>
 
                                 {/* RIGHT SIDE — BUTTONS */}
@@ -468,7 +469,19 @@ const TestCreateEditView = () => {
 
 
                             </div>
-
+                            <div
+                                style={{
+                                    marginTop: "4px",
+                                    fontWeight: "600",
+                                    opacity: 0.7
+                                }}
+                            >
+                                Total question items in this section:{" "}
+                                {section.questions?.reduce(
+                                    (sum, q) => sum + (q.questionItems?.length || 0),
+                                    0
+                                )}
+                            </div>
                             <br />
                             {!collapsedSections[secIdx] && (
                                 <div className="section-body">

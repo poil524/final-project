@@ -22,6 +22,12 @@ const generateTokenAndSetCookie = (user, res) => {
     return token;
 };
 
+// Helper function to validate password strength
+const isStrongPassword = (password) => {
+    // At least 8 characters, one uppercase, one lowercase, one number, one special character
+    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    return regex.test(password);
+};
 
 const createUser = asyncHandler(async (req, res) => {
     const { username, email, password } = req.body;
@@ -32,6 +38,13 @@ const createUser = asyncHandler(async (req, res) => {
         throw new Error("Please fill all the fields.");
     }
 
+        // Password strength validation
+    if (!isStrongPassword(password)) {
+        res.status(400);
+        throw new Error(
+            "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character."
+        );
+    }
     const existingUser = await User.findOne({ email });
     if (existingUser) {
         const token = generateTokenAndSetCookie(existingUser, res);

@@ -104,6 +104,9 @@ background-color: #a5b4fc;
 cursor: not-allowed;
 }
 
+.loginInput {
+    width: 92% !important;
+}
 .forgot-password {
 display: block;
 text-align: right;

@@ -54,7 +54,7 @@ h5 {
 }
 
 .editable {
-  color: #2a9d8f;
+  color: var(--color-primary);
   /* different color from normal headings */
   cursor: text;
   /* shows text cursor on hover */
@@ -65,15 +65,15 @@ h5 {
 }
 
 .editable:hover {
-  background-color: rgba(42, 157, 143, 0.1);
+  background-color: var(--color-primary-hover);
   /* subtle hover effect */
 }
 
 .editable-icon {
-  opacity: 0.6;
+  margin-top: 12px;
   cursor: text;
-  font-size: 0.8em;
-  transition: opacity 0.2s;
+  font-size: 18px;
+  color: var(--color-primary);
 }
 
 .editable:hover .editable-icon {
@@ -87,6 +87,7 @@ h5 {
   box-shadow: none;
   margin-bottom: 20px;
   padding: 20px;
+  border: var(--color-border), 1px, solid;
 }
 
 .section-header {
@@ -98,6 +99,7 @@ h5 {
 }
 
 .section-title-wrapper {
+  color: var(--color-accent);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -163,7 +165,7 @@ h5 {
 }
 
 .new-section-card:hover {
-  background: #ffecec;
+  background: var(--color-primary-hover);
 }
 
 textarea {
@@ -284,7 +286,7 @@ button:hover {
 
 .primary-button {
   width: 120px;
-  background-color: var(--color-primary);
+  background-color: var(--color-accent);
   color: var(--color-primary-text);
   border: none;
   padding: 10px 20px;
@@ -297,7 +299,7 @@ button:hover {
 }
 
 .primary-button:hover {
-  background-color: var(--color-primary-hover);
+  background-color: var(--color-accent-hover);
   font-weight: 1000;
   transform: translateY(-1px);
 }
@@ -489,7 +491,7 @@ hr {
   padding: 20px 30px 20px 30px;
   margin-bottom: 8px;
   margin-top: 8px;
-  background-color: #f9f9f9;
+  background-color: var(--color-bg-question-item-card);
 }
 
 .tfng-row {

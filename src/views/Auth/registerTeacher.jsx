@@ -59,6 +59,7 @@ const RegisterForm = () => {
                     <div className="login-field">
                         <label>Username</label>
                         <input
+                        className="loginInput"
                             type="text"
                             placeholder="Enter your username"
                             value={username}
@@ -70,6 +71,7 @@ const RegisterForm = () => {
                     <div className="login-field">
                         <label>Email</label>
                         <input
+                        className="loginInput"
                             type="email"
                             placeholder="Enter your email"
                             value={email}
@@ -81,6 +83,7 @@ const RegisterForm = () => {
                     <div className="login-field password-wrapper">
                         <label>Password</label>
                         <input
+                        className="loginInput"
                             type={showPassword ? "text" : "password"}
                             placeholder="Enter your password"
                             value={password}
@@ -92,6 +95,7 @@ const RegisterForm = () => {
                     <div className="login-field password-wrapper">
                         <label>Confirm Password</label>
                         <input
+                        className="loginInput"
                             type={showPassword ? "text" : "password"}
                             placeholder="Re-enter your password"
                             value={confirmPassword}

@@ -14,7 +14,7 @@ import './TestTakingView.css';
 import { GoArrowSwitch } from "react-icons/go";
 import EssayDisplay from "../components/EssayDisplay.jsx";
 import FloatingTimer from "../components/FloatingTimer.jsx";
-
+import BlockingLoader from "../components/BlockingLoader.jsx";
 
 const stripHTML = (str) => str.replace(/<[^>]+>/g, '');
 const QuestionBlock = ({
@@ -484,6 +484,11 @@ const StudentTestView = () => {
   const [evaluationReady, setEvaluationReady] = useState(false);
   const [savedResult, setSavedResult] = useState(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isEvaluating, setIsEvaluating] = useState(false);
+  const [fontSize, setFontSize] = useState(16);
+  const [textColor, setTextColor] = useState("#000000");
+  const [screenColor, setScreenColor] = useState("#ffffff");
+
 
   const location = useLocation();
   const passedViewOnly = location.state?.viewOnly || false;
@@ -663,8 +668,26 @@ const StudentTestView = () => {
     }));
   };
 
+  const getBand = (score) => {
+    if (score >= 39) return 9;
+    if (score >= 37) return 8.5;
+    if (score >= 35) return 8;
+    if (score >= 32) return 7.5;
+    if (score >= 30) return 7;
+    if (score >= 26) return 6.5;
+    if (score >= 23) return 6;
+    if (score >= 18) return 5.5;
+    if (score >= 16) return 5;
+    if (score >= 13) return 4.5;
+    if (score >= 10) return 4;
+    return 3;
+  };
+
   const handleSubmit = async (fromTimer = false) => {
     if (!fromTimer && !window.confirm("Are you sure you want to finish this test?")) return;
+
+    // Stop timer
+    setIsSubmitted(true);
 
     let score = 0;
     let total = 0;
@@ -751,7 +774,14 @@ const StudentTestView = () => {
     }
 
 
-    const resultData = { score, total };
+    //const resultData = { score, total };
+    let band = null;
+    if (test.type === "listening" || test.type === "reading") {
+      band = getBand(score);
+    }
+    const resultData = { score, total, band };
+    setResult(resultData);
+
     setResult(resultData);
 
     //Save to backend if user is a student
@@ -778,6 +808,8 @@ const StudentTestView = () => {
 
 
   const handleWritingSubmit = async () => {
+    setIsSubmitted(true);
+    setIsEvaluating(true);
     if (!test || !test.sections) return;
 
     const writingSections = test.type === "writing" ? test.sections : [];
@@ -823,16 +855,22 @@ const StudentTestView = () => {
         setEvaluationReady(true);
 
         console.log("Writing result saved successfully.");
+        setIsEvaluating(false);
+
       } else {
         console.warn("No token found, skipping result save.");
+        setIsEvaluating(false);
       }
     } catch (err) {
       console.error("Evaluation or saving failed:", err.response?.data || err);
       alert("Error evaluating or saving writing result");
+      setIsEvaluating(false);
     }
   };
 
   const handleSpeakingSubmit = async () => {
+    setIsSubmitted(true);
+    setIsEvaluating(true);
     if (!test || !test.sections) return;
 
     // Build payload for backend
@@ -886,11 +924,14 @@ const StudentTestView = () => {
 
       }
 
-      setEvaluationReady(true); // mark AI evaluation done
+      setEvaluationReady(true); // mark AI evaluation done, ready for teacher request
       console.log("Speaking evaluation completed successfully.");
+      setIsEvaluating(false); // hide modal
+
     } catch (err) {
       console.error("Speaking evaluation failed:", err.response?.data || err);
       alert("Error evaluating speaking test");
+      setIsEvaluating(false); // hide modal
     }
   };
 
@@ -905,14 +946,65 @@ const StudentTestView = () => {
   const speakingSections = test.type === "speaking" ? test.sections : [];
 
   return (
-    <div className={`test-taking-container ${twoViewMode ? "two-view-layout-active" : ""}`}>
+    <div style={{
+      fontSize: `${fontSize}px`,
+      color: textColor,
+      backgroundColor: screenColor,
+      transition: "0.25s ease all"
+    }}
+      className={`test-taking-container ${twoViewMode ? "two-view-layout-active" : ""}`}>
       <h1>{test.name}</h1>
+      <div className="accessibility-toolbox">
+        <label>
+          Font Size:
+          <input
+            type="range"
+            min="14"
+            max="30"
+            value={fontSize}
+            onChange={(e) => setFontSize(parseInt(e.target.value))}
+          />
+        </label>
+
+        <label>
+          Text Color:
+          <input
+            type="color"
+            value={textColor}
+            onChange={(e) => setTextColor(e.target.value)}
+          />
+        </label>
+
+        <label>
+          Screen Color:
+          <input
+            type="color"
+            value={screenColor}
+            onChange={(e) => setScreenColor(e.target.value)}
+          />
+        </label>
+        {/*Toggle Button for Reading & Listening test */}
+        {(readingSections.length > 0 || listeningSections.length > 0) && (
+          <div className="toggle-button">
+            <button
+              onClick={() => setTwoViewMode(!twoViewMode)}
+              title={twoViewMode ? "Switch to One View" : "Switch to Two View"}
+            >
+              <GoArrowSwitch size={20} />
+              <span style={{ fontFamily: "Times New Roman", color: "black", marginLeft: "10px" }}>
+                {twoViewMode ? "One View" : "Two View"}
+              </span>
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* === Writing Sections (Always Shown) === */}
       {writingSections.map((section, secIdx) => {
         const prevContent = answers[`writing_${secIdx}`] || "";
 
         // If there is an existing answer, show it using EssayDisplay
-        if (prevContent) {
+        if (isSubmitted && prevContent.trim()) {
           return (
             <div key={secIdx}>
               <h2>{section.sectionTitle}</h2>
@@ -932,23 +1024,19 @@ const StudentTestView = () => {
             <div className="requirement-card">
               <p><b>Requirement:</b> {section.requirement}</p>
             </div>
-
-            <div
-              ref={writingRefs.current[secIdx]}
+            <textarea
               className="writing-box"
-              contentEditable
-              suppressContentEditableWarning
-              onInput={(e) => handleWritingInput(secIdx, e.currentTarget.innerHTML)}
-              style={{
-                backgroundColor: "white",
-                cursor: "text",
-              }}
+              value={answers[`writing_${secIdx}`] || ""}
+              onChange={(e) => handleWritingInput(secIdx, e.target.value)}
             />
+
+           
           </div>
         );
       })}
       {!viewOnly && test.type === "writing" && !evaluationReady && writingSections.length > 0 && !result?.isSubmitted && (
-        <button onClick={handleWritingSubmit}>Submit Writing</button>
+        <button className="submit-button"
+        onClick={handleWritingSubmit}>Submit Writing</button>
       )}
       {test.type === "writing" && result && (
         <div style={{ marginTop: "20px" }}>
@@ -1023,7 +1111,8 @@ const StudentTestView = () => {
                     )}
                     {/* FINAL SUBMIT BUTTON */}
                     {!viewOnly && q.studentAudioKey && speakingStep === section.questions.length - 1 && (
-                      <button onClick={handleSpeakingSubmit}>
+                      <button className="submit-button"
+                      onClick={handleSpeakingSubmit}>
                         Submit Speaking
                       </button>
                     )}
@@ -1035,7 +1124,8 @@ const StudentTestView = () => {
         </div>
       )}
       {!viewOnly && test.type === "speaking" && !evaluationReady && speakingSections.length > 0 && !result?.isSubmitted && (
-        <button onClick={handleSpeakingSubmit}>Submit Speaking</button>
+        <button className="submit-button"
+        onClick={handleSpeakingSubmit}>Submit Speaking</button>
       )}
       {test.type === "speaking" && result && (
         <div style={{ marginTop: "20px" }}>
@@ -1115,17 +1205,7 @@ const StudentTestView = () => {
           </button>
         )}
       </div>
-      {/*Toggle Button for Reading & Listening test */}
-      {(readingSections.length > 0 || listeningSections.length > 0) && (
-        <div className="toggle-button">
-          <button
-            onClick={() => setTwoViewMode(!twoViewMode)}
-            title={twoViewMode ? "Switch to One View" : "Switch to Two View"}
-          >
-            <GoArrowSwitch size={20} />
-          </button>
-        </div>
-      )}
+
 
       {/* === Two-View Mode (Split Screen) === */}
       {twoViewMode ? (
@@ -1256,14 +1336,23 @@ const StudentTestView = () => {
         <>
           {/* Only show Submit button if test not submitted yet */}
           {!viewOnly && !result?.isSubmitted && (
-            <button onClick={handleSubmit}>Submit</button>
+            <button 
+            className="submit-button"
+            onClick={handleSubmit}>Submit</button>
           )}
           {/* After submission, show result + toggle button */}
           {result && (
             <div>
               <h3>
-                Result: {result.score} / {result.total}
+                Correct Answers: {result.score} / {result.total}
+
               </h3>
+              {result.band && (
+                <h3>
+                  Band: {result.band}
+                </h3>
+              )}
+
               <button type="button" className="hide-answer-button" onClick={() => setShowAnswers(!showAnswers)}>
                 {showAnswers ? "Hide Answers" : "View Answers"}
               </button>
@@ -1281,6 +1370,10 @@ const StudentTestView = () => {
           }}
         />
       )}
+      <BlockingLoader
+        visible={isEvaluating}
+        text="AI is evaluating your test. Please wait..."
+      />
     </div>
   );
 };

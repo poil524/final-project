@@ -7,7 +7,7 @@ const authenticate = asyncHandler(async (req, res, next) => {
 
     if (!token) {
         res.status(401);
-        throw new Error("Not authorized, no token.");
+        throw new Error("You must log in to use this feature.");
     }
 
     try {

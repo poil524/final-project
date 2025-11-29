@@ -4,6 +4,8 @@ import { AuthContext } from "../../context/authContext.js";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import "./Login.css";
+import { BiShow } from "react-icons/bi";
+import { BiHide } from "react-icons/bi";
 
 const LoginForm = () => {
     const { setUser } = useContext(AuthContext);
@@ -54,6 +56,7 @@ const LoginForm = () => {
                     <div className="login-field">
                         <label>Email</label>
                         <input
+                            className="loginInput"
                             type="email"
                             placeholder="Enter your email"
                             value={email}
@@ -65,6 +68,7 @@ const LoginForm = () => {
                     <div className="login-field password-wrapper">
                         <label>Password</label>
                         <input
+                            className="loginInput"
                             type={showPassword ? "text" : "password"}
                             placeholder="Enter your password"
                             value={password}
@@ -72,12 +76,21 @@ const LoginForm = () => {
                             required
                         />
                         <button
-                            type="button"
-                            className="password-toggle"
-                            onClick={() => setShowPassword((prev) => !prev)}
-                        >
-                            {showPassword ? "Hide" : "Show"}
-                        </button>
+    type="button"
+    className="password-toggle"
+    onClick={() => setShowPassword((prev) => !prev)}
+    style={{
+        padding: '0px',
+        marginTop: '15px',
+        marginRight: '15px', 
+        fontSize: '16px',     
+    }}
+    title={showPassword ? "Hide Password" : "Show Password"} // 
+>
+    {showPassword ? <BiShow /> : <BiHide />}
+</button>
+
+
                     </div>
 
                     <button type="submit" className="login-button" disabled={loading}>

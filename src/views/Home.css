@@ -69,7 +69,13 @@
     border-radius: 8px;
     margin-top: 20px;
     width: 180px;
+    background-color: var(--color-accent);
 }
+
+.btn-signup:hover {
+    background-color: var(--color-accent-hover);
+}
+
 
 .btn-primary {
     padding: 8px 14px;
