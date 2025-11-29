@@ -60,7 +60,7 @@ const Navigation = () => {
           >
             <Link className="site-nav_link" to="/tests">
               <span className="site-nav_label">
-                <IoLibraryOutline size={15}/>Exam Library
+                <IoLibraryOutline size={15}/>Tests Library
               </span>
             </Link>
 

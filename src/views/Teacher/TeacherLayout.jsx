@@ -23,7 +23,7 @@ export default function TeacherLayout() {
                 </button>
 
                 {!collapsed && <h1>Teacher</h1>}
-
+{/* Home Link */} <NavLink to="/" className="admin-nav-link"> {collapsed ? "H" : "Home"} </NavLink>
                 <NavLink to="/teacher/profile" className="admin-nav-link">
                     {collapsed ? "P" : "My Profile"}
                 </NavLink>

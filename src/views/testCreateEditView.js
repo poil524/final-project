@@ -2329,24 +2329,19 @@ const TestCreateEditView = () => {
                             type="button"
                             className="secondary-button"
                             title="Cancel create test. Your change will not be saved"
-                            onClick={async () => {
+                            onClick={() => {
                                 if (!id) {
                                     navigate("/tests");
                                     return;
                                 }
 
-                                const confirmed = window.confirm("Cancel test creation? This test will be deleted.");
+                                const confirmed = window.confirm("Cancel test creation? Your unsaved changes will be discarded.");
                                 if (!confirmed) return;
 
-                                try {
-                                    await axios.delete(`${BASE_URL}/api/tests/${id}`);
-                                } catch (err) {
-                                    console.error("Failed to delete test:", err);
-                                    alert("Failed to delete temporary test.");
-                                }
-
-                                navigate("/tests");
+                                // Reload the page instead of deleting the test
+                                window.location.reload();
                             }}
+
                         >
                             Cancel
                         </button>

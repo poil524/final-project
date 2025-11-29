@@ -3,6 +3,8 @@ import axios from "axios";
 import { AuthContext } from "../../context/authContext.js";
 import { useNavigate } from "react-router-dom";
 import "./Login.css"; // reuse same styling
+import { BiShow } from "react-icons/bi";
+import { BiHide } from "react-icons/bi";
 
 const RegisterForm = () => {
     const { setUser } = useContext(AuthContext);
@@ -33,7 +35,7 @@ const RegisterForm = () => {
                     username,
                     email,
                     password,
-                    isTeacher: true,
+                    isTeacher: false,
                     status: "pending"
                 },
                 { withCredentials: true }
@@ -59,7 +61,7 @@ const RegisterForm = () => {
                     <div className="login-field">
                         <label>Username</label>
                         <input
-                        className="loginInput"
+                            className="loginInput"
                             type="text"
                             placeholder="Enter your username"
                             value={username}
@@ -71,7 +73,7 @@ const RegisterForm = () => {
                     <div className="login-field">
                         <label>Email</label>
                         <input
-                        className="loginInput"
+                            className="loginInput"
                             type="email"
                             placeholder="Enter your email"
                             value={email}
@@ -83,7 +85,7 @@ const RegisterForm = () => {
                     <div className="login-field password-wrapper">
                         <label>Password</label>
                         <input
-                        className="loginInput"
+                            className="loginInput"
                             type={showPassword ? "text" : "password"}
                             placeholder="Enter your password"
                             value={password}
@@ -95,7 +97,7 @@ const RegisterForm = () => {
                     <div className="login-field password-wrapper">
                         <label>Confirm Password</label>
                         <input
-                        className="loginInput"
+                            className="loginInput"
                             type={showPassword ? "text" : "password"}
                             placeholder="Re-enter your password"
                             value={confirmPassword}
@@ -106,8 +108,15 @@ const RegisterForm = () => {
                             type="button"
                             className="password-toggle"
                             onClick={() => setShowPassword((prev) => !prev)}
+                            style={{
+                                padding: '0px',
+                                marginTop: '15px',
+                                marginRight: '15px',
+                                fontSize: '16px',
+                            }}
+                            title={showPassword ? "Hide Password" : "Show Password"} // 
                         >
-                            {showPassword ? "Hide" : "Show"}
+                            {showPassword ? <BiShow /> : <BiHide />}
                         </button>
                     </div>
 

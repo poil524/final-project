@@ -76,19 +76,19 @@ const LoginForm = () => {
                             required
                         />
                         <button
-    type="button"
-    className="password-toggle"
-    onClick={() => setShowPassword((prev) => !prev)}
-    style={{
-        padding: '0px',
-        marginTop: '15px',
-        marginRight: '15px', 
-        fontSize: '16px',     
-    }}
-    title={showPassword ? "Hide Password" : "Show Password"} // 
->
-    {showPassword ? <BiShow /> : <BiHide />}
-</button>
+                            type="button"
+                            className="password-toggle"
+                            onClick={() => setShowPassword((prev) => !prev)}
+                            style={{
+                                padding: '0px',
+                                marginTop: '15px',
+                                marginRight: '15px',
+                                fontSize: '16px',
+                            }}
+                            title={showPassword ? "Hide Password" : "Show Password"} // 
+                        >
+                            {showPassword ? <BiShow /> : <BiHide />}
+                        </button>
 
 
                     </div>

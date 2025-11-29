@@ -3,6 +3,8 @@ import axios from "axios";
 import { AuthContext } from "../../context/authContext.js";
 import { useNavigate } from "react-router-dom";
 import "./Login.css"; // reuse same styling
+import { BiShow } from "react-icons/bi";
+import { BiHide } from "react-icons/bi";
 
 const RegisterForm = () => {
     const { setUser } = useContext(AuthContext);
@@ -53,7 +55,7 @@ const RegisterForm = () => {
                     <div className="login-field">
                         <label>Username</label>
                         <input
-                        className="loginInput"
+                            className="loginInput"
                             type="text"
                             placeholder="Enter your username"
                             value={username}
@@ -65,7 +67,7 @@ const RegisterForm = () => {
                     <div className="login-field">
                         <label>Email</label>
                         <input
-                        className="loginInput"
+                            className="loginInput"
                             type="email"
                             placeholder="Enter your email"
                             value={email}
@@ -100,8 +102,15 @@ const RegisterForm = () => {
                             type="button"
                             className="password-toggle"
                             onClick={() => setShowPassword((prev) => !prev)}
+                            style={{
+                                padding: '0px',
+                                marginTop: '15px',
+                                marginRight: '15px',
+                                fontSize: '16px',
+                            }}
+                            title={showPassword ? "Hide Password" : "Show Password"} // 
                         >
-                            {showPassword ? "Hide" : "Show"}
+                            {showPassword ? <BiShow /> : <BiHide />}
                         </button>
                     </div>
 

@@ -94,7 +94,7 @@ const TestListView = () => {
             <h1>
                 {filterType
                     ? `${filterType.charAt(0).toUpperCase() + filterType.slice(1)} Tests`
-                    : "All Tests"}
+                    : "Tests Library"}
             </h1>
 
             {/* Filters */}

@@ -22,8 +22,9 @@ export default function AdminLayout() {
           {collapsed ? "☰" : "×"}
         </button>
 
+        
         {!collapsed && <h1>Admin</h1>}
-
+{/* Home Link */} <NavLink to="/" className="admin-nav-link"> {collapsed ? "H" : "Home"} </NavLink>
         {!collapsed && <p className="admin-nav-group-title">Users</p>}
         <NavLink to="/admin/users/students" className="admin-nav-link">
           {collapsed ? "S" : "Students"}
