@@ -46,7 +46,7 @@ const Navigation = () => {
             <li className="site-nav_item">
               <Link
                 className="site-nav_link"
-                to={user.isAdmin ? "/admin/tests/pending" : "/teacher"}
+                to={user.isAdmin ? "/admin/tests/pending" : "/teacher/requests/evaluations"}
               >
                 <span className="site-nav_label">Dashboard</span>
               </Link>

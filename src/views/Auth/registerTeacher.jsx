@@ -35,7 +35,7 @@ const RegisterForm = () => {
                     username,
                     email,
                     password,
-                    isTeacher: false,
+                    isTeacher: true,
                     status: "pending"
                 },
                 { withCredentials: true }

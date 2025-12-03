@@ -334,14 +334,14 @@ const completeEvaluation = asyncHandler(async (req, res) => {
     const evaluationId = req.params.id;
     const { feedback } = req.body;
 
-    // 1️⃣ Find the evaluation request
+    // Find the evaluation request
     const evaluation = await Evaluation.findById(evaluationId);
 
     if (!evaluation) return res.status(404).json({ error: "Evaluation not found" });
     if (!evaluation.assignedTeacher.equals(req.user._id))
         return res.status(403).json({ error: "Not authorized" });
 
-    // 2️⃣ Find the student and the specific test result
+    // Find the student and the specific test result
     const student = await User.findById(evaluation.student);
 
     if (!student) {
@@ -356,17 +356,17 @@ const completeEvaluation = asyncHandler(async (req, res) => {
         return res.status(404).json({ error: "Student test result not found" });
     }
 
-    // 3️⃣ Write teacher feedback into student result
+    // Write teacher feedback into student result
     testResult.teacherFeedback = feedback; // keep AI feedback untouched
 
 
-    // 4️⃣ Mark evaluation completed
+    // Mark evaluation completed
     testResult.isEvaluated = {
         requested: true,
         resultReceived: true,
     };
 
-    // 5️⃣ Save student and evaluation entry
+    // Save student and evaluation entry
     await student.save();
 
     evaluation.status = "completed";

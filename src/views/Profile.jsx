@@ -18,7 +18,6 @@ const Profile = () => {
         const res = await axios.get("http://localhost:5000/api/users/profile", {
           withCredentials: true,
         });
-
         const evaluationsByTest = {};
         if (res.data.evaluations) {
           res.data.evaluations.forEach((ev) => {

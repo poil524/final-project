@@ -51,7 +51,7 @@ export default function EvaluationDetail() {
                 answers: request.answers || request.testResult?.answers,
             });
             alert("Evaluation submitted successfully.");
-            navigate("/teacher/requests");
+            navigate("/teacher/requests/evaluations");
         } catch (err) {
             console.error("Submit error:", err);
             alert("Failed to submit evaluation.");
@@ -94,7 +94,7 @@ export default function EvaluationDetail() {
                     if (answer && typeof answer === "object" && answer.content) {
                         return (
                             <div key={key} style={{ marginBottom: "15px" }}>
-                                <strong>{key}:</strong>
+                                
                                 <EssayDisplay content={answer.content} />
                             </div>
                         );
@@ -104,7 +104,7 @@ export default function EvaluationDetail() {
                     if (answer && typeof answer === "object" && answer.questions && Array.isArray(answer.questions)) {
                         return (
                             <div key={key} style={{ marginBottom: "15px" }}>
-                                <strong>{key}:</strong>
+                                
                                 {answer.questions.map((q, idx) => (
                                     <div key={idx} style={{ marginTop: "10px", paddingLeft: "10px" }}>
                                         <p><b>Q{idx + 1}:</b> {q.requirement || q.text || "No question text"}</p>

@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import "../../views/TestListView.css";
 
 axios.defaults.withCredentials = true;
-
-const testTypes = ["listening", "reading", "writing", "speaking"];
 
 export default function TeacherMyTests() {
     const [tests, setTests] = useState([]);

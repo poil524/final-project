@@ -86,8 +86,6 @@ router.get("/", authenticate, async (req, res) => {
   }
 });
 
-
-
 // Get test by ID
 router.get("/:id", async (req, res) => {
   try {
@@ -708,7 +706,12 @@ router.put("/:id", authenticate, async (req, res) => {
 
     // Permission check
     if (!user.isAdmin) {
-      return res.status(403).json({ error: "Only admins can edit tests." });
+      if (!user.isTeacher) {
+        return res.status(403).json({ error: "Only admins or teachers can edit tests." });
+      }
+      if (test.createdBy.toString() !== user._id.toString()) {
+        return res.status(403).json({ error: "You can only edit tests you created." });
+      }
     }
 
     const oldSections = test.sections || [];

@@ -1080,12 +1080,7 @@ const StudentTestView = () => {
                       </button>
                     )}
                     {/* Final submit button */}
-                    {!viewOnly && q.studentAudioKey && speakingStep === section.questions.length - 1 && (
-                      <button className="submit-button"
-                        onClick={handleSpeakingSubmit}>
-                        Submit Speaking
-                      </button>
-                    )}
+                    
                   </div>
                 );
               })()}
