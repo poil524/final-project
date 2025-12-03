@@ -17,7 +17,7 @@ axios.defaults.withCredentials = true;
 
 
 const TestCreateEditView = () => {
-    const { id } = useParams(); // if test is exist, edit mode
+    const { id } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
     const [loading, setLoading] = useState(false);
@@ -89,13 +89,15 @@ const TestCreateEditView = () => {
 
     // Helpers
     const sections = testData.sections || [];
+
+    // Toggle collapse/expand section
     const toggleSection = (secIdx) => {
         setCollapsedSections(prev => ({
             ...prev,
             [secIdx]: !prev[secIdx]
         }));
     };
-
+    // Toggle collapse/expand question
     const toggleQuestion = (secIdx, qIdx) => {
         const key = `${secIdx}-${qIdx}`;
         setCollapsedQuestions(prev => ({
@@ -103,7 +105,6 @@ const TestCreateEditView = () => {
             [key]: !prev[key]
         }));
     };
-
 
     const addSection = () => {
         setTestData((prev) => {
@@ -191,8 +192,6 @@ const TestCreateEditView = () => {
             if (prev.type !== "speaking" && prev.type !== "writing") {
                 defaultReq = defaultRequirements["multiple_choice"] || "";
             }
-
-
             section.questions = [
                 ...(section.questions || []),
                 {
@@ -202,7 +201,6 @@ const TestCreateEditView = () => {
                     questionItems: [],
                 },
             ];
-
             sections[secIdx] = section;
             return { ...prev, sections };
         });
@@ -253,6 +251,7 @@ const TestCreateEditView = () => {
             return { ...prev, sections };
         });
     };
+    // Update section on changes
     const updateSection = (secIdx, updatedSection) => {
         setTestData((prev) => {
             const sections = [...(prev.sections || [])];
@@ -275,10 +274,8 @@ const TestCreateEditView = () => {
             const sections = [...prev.sections];
             const section = { ...sections[secIdx] };
             section.passages = section.passages.filter((_, i) => i !== passageIdx);
-
             // sync matching_headings questions if needed
             const updatedSection = syncMatchingHeadingsItems(section);
-
             sections[secIdx] = updatedSection;
             return { ...prev, sections };
         });
@@ -318,6 +315,7 @@ const TestCreateEditView = () => {
         diagram_completion:
             "Label the diagram. Write ONE WORD ONLY in boxes {START}-{END}."
     };
+    // Validate input
     const validateTest = (data) => {
         if (!data.name || !data.name.trim()) {
             return "Test name cannot be empty.";
@@ -344,12 +342,10 @@ const TestCreateEditView = () => {
                     return `Section ${s + 1} is missing an audio file.`;
                 }
             }
-
             // Writing / Speaking: requirement must exist
             if ((data.type === "writing" || data.type === "speaking") && !section.requirement.trim()) {
                 return `Section ${s + 1} requirement cannot be empty.`;
             }
-
             // Questions validation for Reading/Listening only
             if ((data.type === "reading" || data.type === "listening")) {
                 if (!section.questions || section.questions.length === 0) {
@@ -357,10 +353,9 @@ const TestCreateEditView = () => {
                 }
             }
         }
-
         return null;
     };
-
+    // On Submit button 
     const handleSubmit = async (e) => {
         e.preventDefault();
         const error = validateTest(testData);
@@ -371,9 +366,7 @@ const TestCreateEditView = () => {
         try {
             // Always update since test already exists
             await axios.put(`${BASE_URL}/api/tests/${id}`, testData);
-
             alert("Test updated successfully");
-
             if (testData.type === "speaking") {
                 try {
                     setIsTTSLoading(true);
@@ -392,24 +385,20 @@ const TestCreateEditView = () => {
                     setIsTTSLoading(false);
                 }
             }
-
+            // Return
             navigate(-1);
         } catch (err) {
             console.error("Error saving test:", err);
             alert("Error saving test");
         }
     };
-
+    // Stop user from accidentally refresh or navigate back
     useNavigationBlocker(true);
-
-
     if (loading) return <div>Loading...</div>;
-
 
     return (
         <>
             <BlockingLoader visible={isTTSLoading} text="Generating speaking audio..." />
-
             <div className="test-container">
                 <form onSubmit={handleSubmit}>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -429,8 +418,6 @@ const TestCreateEditView = () => {
                     {sections.map((section, secIdx) => (
                         <div className="section-card">
                             <div className="section-header">
-
-                                {/* LEFT SIDE — SECTION TITLE */}
                                 <div className="section-title-wrapper">
                                     <h2
                                         contentEditable
@@ -444,10 +431,7 @@ const TestCreateEditView = () => {
                                         {section.sectionTitle}
                                     </h2>
                                     <span className="editable-icon"><MdModeEdit /></span>
-
                                 </div>
-
-                                {/* RIGHT SIDE — BUTTONS */}
                                 <div className="section-actions">
                                     <button
                                         type="button"
@@ -457,7 +441,6 @@ const TestCreateEditView = () => {
                                     >
                                         <MdExpandLess className="collapse-icon" />
                                     </button>
-
                                     <button
                                         type="button"
                                         className="remove-button"
@@ -466,8 +449,6 @@ const TestCreateEditView = () => {
                                         <BiTrash size={18} />
                                     </button>
                                 </div>
-
-
                             </div>
                             <div
                                 style={{
@@ -508,25 +489,27 @@ const TestCreateEditView = () => {
                                                 type="file"
                                                 accept="image/*"
                                                 onChange={async (e) => {
+                                                    // Pull  the first selected file; stop if nothing was chosen
                                                     const file = e.target.files[0];
                                                     if (!file) return;
-
+                                                    // Prepare form data for the backend upload
                                                     const formData = new FormData();
-                                                    formData.append("image", file);
-                                                    formData.append("testId", testData._id);
+                                                    formData.append("image", file);// actual file being uploaded
+                                                    formData.append("testId", testData._id); // test identifier for backend link
 
                                                     try {
+                                                        // Send the image to the backend for upload
                                                         const res = await axios.post(
                                                             "http://localhost:5000/api/tests/upload-image",
                                                             formData,
                                                             { headers: { "Content-Type": "multipart/form-data" } }
                                                         );
-
+                                                        // Backend returns a key for the stored image; add it to the section
                                                         const key = res.data.key;
                                                         const updatedSection = { ...section, images: [...(section.images || []), key] };
                                                         updateSection(secIdx, updatedSection);
 
-                                                        // Optionally persist to DB
+                                                        // Push the updated test structure back to the database
                                                         await axios.put(`${BASE_URL}/api/tests/${testData._id}`, {
                                                             ...testData,
                                                             sections: testData.sections.map((s, i) => (i === secIdx ? updatedSection : s)),
@@ -590,11 +573,14 @@ const TestCreateEditView = () => {
                                                     type="file"
                                                     accept="audio/*"
                                                     onChange={async (e) => {
+                                                        // Pull  the first selected file; stop if nothing was chosen
                                                         const file = e.target.files[0];
                                                         if (!file) return;
+                                                        // Build the multipart form data for the upload request
                                                         const formData = new FormData();
                                                         formData.append("audio", file);
                                                         try {
+                                                            // Send audio file to the backend for storage
                                                             const res = await axios.post(
                                                                 "http://localhost:5000/api/tests/upload-audio",
                                                                 formData,
@@ -1219,6 +1205,7 @@ const TestCreateEditView = () => {
                                                                                             <Reorder.Item key={item.id} value={item}>
                                                                                                 <div className="tfng-card">
                                                                                                     <div className="tfng-row-right">
+                                                                                                        {/* Remove button */}
                                                                                                         <button
                                                                                                             type="button"
                                                                                                             className="option-remove-button"
@@ -1253,7 +1240,7 @@ const TestCreateEditView = () => {
                                                                                                         />
                                                                                                     </div>
 
-                                                                                                    {/* Row 2: Correct answer */}
+                                                                                                    {/* Correct answer */}
                                                                                                     <div className="tfng-row">
                                                                                                         <input
                                                                                                             type="text"
@@ -1276,7 +1263,7 @@ const TestCreateEditView = () => {
                                                                                                         />
                                                                                                     </div>
 
-                                                                                                    {/* Row 3: Answer comes from */}
+                                                                                                    {/* Answer comes from */}
                                                                                                     <div className="tfng-row">
                                                                                                         <input
                                                                                                             type="text"
@@ -1298,9 +1285,6 @@ const TestCreateEditView = () => {
                                                                                                             className="tfng-source"
                                                                                                         />
                                                                                                     </div>
-
-
-
                                                                                                 </div>
                                                                                             </Reorder.Item>
                                                                                         ))}
@@ -1397,6 +1381,7 @@ const TestCreateEditView = () => {
                                                                                                                     }}
                                                                                                                     className="tfng-option"
                                                                                                                 />
+                                                                                                                {/* Remove button */}
                                                                                                                 <button
                                                                                                                     type="button"
                                                                                                                     className="option-remove-button"
@@ -1483,6 +1468,7 @@ const TestCreateEditView = () => {
                                                                                             <Reorder.Item key={item.id} value={item}>
                                                                                                 <div className="tfng-card">
                                                                                                     <div className="tfng-row-right">
+                                                                                                        {/* Remove question button */}
                                                                                                         <button
                                                                                                             type="button"
                                                                                                             className="option-remove-button"
@@ -1500,6 +1486,7 @@ const TestCreateEditView = () => {
                                                                                                         </button>
                                                                                                     </div>
                                                                                                     <div className="tfng-row">
+                                                                                                        {/* Statement */}
                                                                                                         <input
                                                                                                             type="text"
                                                                                                             placeholder="Statement"
@@ -1514,6 +1501,7 @@ const TestCreateEditView = () => {
                                                                                                             }}
                                                                                                             className="tfng-statement"
                                                                                                         />
+                                                                                                        {/* Select T/F/NG */}
                                                                                                         <select
                                                                                                             value={q.answers?.find(a => a.id === item.id)?.value || ""}
                                                                                                             onChange={(e) => {

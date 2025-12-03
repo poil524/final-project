@@ -104,7 +104,6 @@ router.get("/:id", async (req, res) => {
 
 
 // AUDIO UPLOAD
-
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
@@ -236,7 +235,7 @@ router.get("/audio-url/:filename", async (req, res) => {
 
 const imageUpload = multer({ storage: multer.memoryStorage() });
 
-// IMAGE UPLOAD (unique key per test)
+// Image upload (unique key per test)
 router.post("/upload-image", imageUpload.single("image"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No image uploaded" });
@@ -284,9 +283,6 @@ router.get("/image-url/:filename", async (req, res) => {
     res.status(500).json({ error: "Failed to generate image URL" });
   }
 });
-
-
-
 
 // Delete test — only admin can delete
 router.delete("/:id", authenticate, async (req, res) => {
@@ -639,7 +635,7 @@ router.post("/request-evaluation", authenticate, async (req, res) => {
     return res.status(404).json({ error: "Test result not found for this testId" });
   }
 
-  // --- NEW: Add evaluation request flags ---
+  // Add evaluation request flags 
   testResult.isEvaluated = {
     requested: true,
     resultReceived: false
@@ -653,8 +649,7 @@ router.post("/request-evaluation", authenticate, async (req, res) => {
   return requestEvaluation(req, res);
 });
 
-// ADMIN TEST APPROVAL ROUTES
-
+// Admin test approval routes
 // Get pending tests (admin only)
 router.get("/admin/pending", authenticate, async (req, res) => {
   try {
@@ -730,22 +725,17 @@ router.put("/:id", authenticate, async (req, res) => {
       // Handle images (arrays)
       const oldImages = Array.isArray(old.images) ? old.images : (old.images ? [old.images] : []);
       const newImages = Array.isArray(fresh.images) ? fresh.images : (fresh.images ? [fresh.images] : []);
-
       // Find deleted images
       oldImages.forEach(img => {
         if (!newImages.includes(img)) keysToDelete.push(img);
       });
-
-
     });
-
     // Apply updates
     test.name = req.body.name;
     test.type = req.body.type;
     test.sections = newSections;
     test.markModified("sections");
     await test.save();
-
     // Cleanup S3
     for (const key of keysToDelete) {
       try {
@@ -754,13 +744,10 @@ router.put("/:id", authenticate, async (req, res) => {
         console.warn(`Failed to delete S3 object: ${key}`, err.message);
       }
     }
-
     res.json(test);
   } catch (err) {
     console.error("Updating test failed:", err);
     res.status(500).json({ error: "Failed to update test" });
   }
 });
-
-
 export default router;

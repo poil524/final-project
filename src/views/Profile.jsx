@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-//import { AuthContext } from "../context/authContext.js";
 import "./Profile.css";
 
 const Profile = () => {
-  //const { user } = useContext(AuthContext);
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState(null);
 
@@ -87,7 +85,6 @@ const Profile = () => {
                       new Date(a.takenAt || a.createdAt)
                   )
                   .map((t) => {
-                    //const teacherFeedback = evaluationsByTest[t._id];
                     const evalStatus =
                       t.isEvaluated || { requested: false, resultReceived: false };
 

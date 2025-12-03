@@ -10,7 +10,7 @@
 .admin-sidebar {
   width: 250px;
   transition: width 0.25s;
-  background: var(--color-primary); /* red-700 */
+  background: var(--color-primary); 
   color: var(--color-primary-text);
   padding: 24px 16px;
 }
@@ -38,7 +38,7 @@
 
 .admin-nav-group-title {
   font-size: 13px;
-  color: #9ca3af; /* gray-400 */
+  color: #9ca3af; 
   margin: 20px 0 6px;
 }
 
@@ -63,7 +63,7 @@
 .admin-main {
   flex: 1;
   background: #f3f4f6;
-  padding: 24px 32px; /* more space on right side */
+  padding: 24px 32px; 
   overflow-y: auto;
 }
 
@@ -83,7 +83,7 @@
 
 .admin-card-label {
   font-size: 13px;
-  color: #6b7280; /* gray-500 */
+  color: #6b7280; 
   margin-bottom: 4px;
 }
 

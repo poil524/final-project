@@ -55,7 +55,7 @@ box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 .tests-grid {
 display: grid;
 grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-gap: 25px; /* space between cards */
+gap: 25px; 
 margin-top: 20px;
 }
 

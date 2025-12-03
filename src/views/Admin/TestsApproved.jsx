@@ -47,7 +47,7 @@ export default function ApprovedTests() {
                             <td
                                 className="actions"
                                 onClick={(e) => {
-                                    e.stopPropagation();   // prevent navigation when clicking delete
+                                    e.stopPropagation();  
                                     deleteTest(t._id);
                                 }}
                             >

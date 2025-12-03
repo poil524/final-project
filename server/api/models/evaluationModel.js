@@ -7,8 +7,8 @@ const evaluationSchema = mongoose.Schema({
     assignedTeacher: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     status: { type: String, default: "pending" }, // pending, assigned, completed
     teacherFeedback: String,
-    requirement: mongoose.Schema.Types.Mixed, // can store string or object
-    answers: mongoose.Schema.Types.Mixed, // can store array or object
+    requirement: mongoose.Schema.Types.Mixed,
+    answers: mongoose.Schema.Types.Mixed, 
     assignedAt: Date,
     completedAt: Date
 }, { timestamps: true });

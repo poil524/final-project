@@ -90,7 +90,7 @@ export default function EvaluationDetail() {
                 Object.keys(answers).map((key) => {
                     const answer = answers[key];
 
-                    // ===== If essay / writing answer =====
+                    // If essay / writing answer
                     if (answer && typeof answer === "object" && answer.content) {
                         return (
                             <div key={key} style={{ marginBottom: "15px" }}>
@@ -100,7 +100,7 @@ export default function EvaluationDetail() {
                         );
                     }
 
-                    // ===== If speaking answer =====
+                    //If speaking answer 
                     if (answer && typeof answer === "object" && answer.questions && Array.isArray(answer.questions)) {
                         return (
                             <div key={key} style={{ marginBottom: "15px" }}>
@@ -119,7 +119,7 @@ export default function EvaluationDetail() {
                         );
                     }
 
-                    // ===== Otherwise render as plain text / JSON =====
+                    // Otherwise render as plain text / JSON 
                     return (
                         <div key={key} style={{ marginBottom: "15px" }}>
                             <strong>{key}:</strong> {typeof answer === "string" ? answer : JSON.stringify(answer)}

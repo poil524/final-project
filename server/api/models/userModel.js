@@ -9,8 +9,8 @@ const testResultSchema = new Schema({
     // store entire student answers
     answers: { type: Schema.Types.Mixed, default: {} },
 
-    score: { type: Number, default: null }, // TODO: remove this
-    total: { type: Number, default: null }, // TODO: remove this
+    score: { type: Number, default: null }, 
+    total: { type: Number, default: null }, 
     band: { type: Number, default: null },
     feedback: { type: Schema.Types.Mixed, default: {} },
     teacherFeedback: { type: Schema.Types.Mixed, default: null },

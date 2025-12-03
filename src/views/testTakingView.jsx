@@ -4,19 +4,19 @@ import { useParams } from "react-router-dom";
 import { useLocation } from "react-router-dom";
 
 import { useContext } from "react";
-import { AuthContext } from "../context/authContext.js"; // adjust path
+import { AuthContext } from "../context/authContext.js";
 
 import useNavigationBlocker from "../components/NavigationBlocker.jsx";
-import AudioPlayer from "../components/AudioPlayer";
-import Image from "../components/Image";
-import AudioRecorder from "../components/AudioRecorder";
+import AudioPlayer from "../components/AudioPlayer.js";
+import Image from "../components/Image.js";
+import AudioRecorder from "../components/AudioRecorder.js";
 import './TestTakingView.css';
 import { GoArrowSwitch } from "react-icons/go";
 import EssayDisplay from "../components/EssayDisplay.jsx";
 import FloatingTimer from "../components/FloatingTimer.jsx";
 import BlockingLoader from "../components/BlockingLoader.jsx";
 
-const stripHTML = (str) => str.replace(/<[^>]+>/g, '');
+const stripHTML = (str) => str.replace(/<[^>]+>/g, ''); // For highlight sourceText
 const QuestionBlock = ({
   question: q,
   section,
@@ -27,6 +27,7 @@ const QuestionBlock = ({
   showAnswers,
 }) => {
 
+  // Shuffle question item for matching sentence ending
   const endingOptions =
     q.shuffledEnds?.length > 0
       ? q.shuffledEnds.map((e) => (typeof e === "string" ? e : e.value))
@@ -42,11 +43,9 @@ const QuestionBlock = ({
   ) {
     generatedItems = (q.answers || []).map((ans, idx) => ({
       id: ans.id,
-      text: `[${idx + 1}]`, // same behavior
+      text: `[${idx + 1}]`,
     }));
   }
-
-
 
   const getCorrectAnswer = (itemId) => {
     const correctObj = (q.answers || []).find((a) => a.id === itemId);
@@ -75,7 +74,7 @@ const QuestionBlock = ({
       sourceText = getSourceText(itemId);
     }
 
-    // Normalize both for comparison
+    // Transform to lowercase
     const isCorrect =
       (studentAnswer || "").trim().toLowerCase() ===
       (correctAnswer || "").trim().toLowerCase();
@@ -96,7 +95,7 @@ const QuestionBlock = ({
         }}
       >
         {studentAnswer || <em>(No answer)</em>}
-        {!isCorrect && ` → Correct: ${correctAnswer}`}
+        {!isCorrect && `  Correct: ${correctAnswer}`}
       </span>
     );
   };
@@ -107,30 +106,32 @@ const QuestionBlock = ({
   const end = start + itemCount - 1;        // last index in this question group
   const letterMax = String.fromCharCode(64 + itemCount); // A, B, C, D...
 
+  // Generate requirement to match with question index
   const requirementText = (q.requirement || "")
     .replace("{START}", start)
     .replace("{END}", end)
     .replace("{LETTER_MAX}", letterMax);
 
-
   const renderSummaryText = () => {
     if (q.type !== "summary_completion") return null;
     if (!q.summary) return null;
 
+    // Break the summary into text chunks separated by [BLANK]
     const parts = q.summary.split(/\[BLANK\]/g);
 
     return (
       <p style={{ marginBottom: "15px", whiteSpace: "pre-wrap" }}>
+        {/* Walk through each text part + the blanks between them */}
         {parts.map((part, idx) => {
+          // Identify which generated item belongs to this blank
           const item = generatedItems[idx];
           if (!item) return part;
-
+          // Get the student’s answer for this blank (if they answered)
           const studentAnswer = answers[q._id]?.[item.id] || "";
-
           return (
             <React.Fragment key={idx}>
               {part}
-              {/* Add numbering here */}
+              {/* Add numbering */}
               <span style={{ marginRight: "4px" }}>{idx + 1}.</span>
               <span
                 style={{
@@ -149,34 +150,37 @@ const QuestionBlock = ({
       </p>
     );
   };
-
+  {/* Render the table for table completion question */ }
   const renderTableCompletion = () => {
     if (q.type !== "table_completion") return null;
-
+    // Keeps track of which blank we're on across all cells
     let blankIndex = 0;
-
     return (
       <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "12px" }}>
         <tbody>
+          {/* Loop through each row of the table data */}
           {(q.tableData || []).map((row, rIdx) => (
             <tr key={rIdx}>
               {row.map((cell, cIdx) => {
+                // Break the table into text chunks separated by [BLANK]
                 const parts = cell.split(/\[BLANK\]/g);
                 return (
                   <td key={cIdx} style={{ border: "1px solid #ccc", padding: "6px" }}>
+                    {/* Walk through each text part + the blanks between them */}
                     {parts.map((part, i) => {
+                      // Last part has no blank after it, just render the text
                       if (i === parts.length - 1) return part;
-
+                      // Identify which generated item belongs to this blank
                       const item = generatedItems[blankIndex];
                       const itemId = item?.id;
+                      // Get the student’s answer for this blank (if they answered)
                       const studentAnswer = answers[q._id]?.[itemId] || "";
-
+                      // Move to the next blank index
                       blankIndex++;
-
                       return (
                         <React.Fragment key={i}>
                           {part}
-                          {/* numbering + underline (like summary) */}
+                          {/* numbering + underline */}
                           <span style={{ marginRight: "4px" }}>{blankIndex}.</span>
                           <span
                             style={{
@@ -201,21 +205,14 @@ const QuestionBlock = ({
       </table>
     );
   };
-
-
-
   return (
     <div className="question-block">
-
       <h4>{requirementText}</h4>
-
-
       {renderSummaryText()}
       {renderTableCompletion()}
       {generatedItems.map((item) => {
         questionCounter.current++;
-
-        // === Show answers mode ===
+        // Show answers mode (after user submit test)
         if (showAnswers) {
           return (
             <div key={item.id} style={{ marginBottom: 8 }}>
@@ -225,7 +222,10 @@ const QuestionBlock = ({
             </div>
           );
         }
-        // === Normal input mode ===
+        // Normal input mode (before submit test)
+        // Render each question item according to its specific question type,
+        // displaying the right input and syncing
+        // student answers through handleAnswerChange.
         switch (q.type) {
           case "matching_paragraph_information":
             return (
@@ -269,8 +269,6 @@ const QuestionBlock = ({
               </div>
             );
           }
-
-
           case "matching_sentence_endings":
             const studentAns = answers[q._id]?.[item.id] || "";
             return (
@@ -291,7 +289,6 @@ const QuestionBlock = ({
                 </select>
               </div>
             );
-
           case "matching_features":
             const studentFeature = answers[q._id]?.[item.id] || "";
             return (
@@ -318,7 +315,6 @@ const QuestionBlock = ({
                 </select>
               </div>
             );
-
           case "multiple_choice":
             return (
               <div key={item.id}>
@@ -393,7 +389,6 @@ const QuestionBlock = ({
                 />
               </div>
             );
-
           case "diagram_completion":
             return (
               <div key={item.id} style={{ marginBottom: 8 }}>
@@ -408,8 +403,6 @@ const QuestionBlock = ({
                 />
               </div>
             );
-
-
           case "summary_completion":
             return (
               <div
@@ -418,7 +411,7 @@ const QuestionBlock = ({
                   marginBottom: 8,
                   display: "flex",
                   alignItems: "center",
-                  gap: "6px" // spacing between number and input
+                  gap: "6px"
                 }}
               >
                 <span>{questionCounter.current}.</span>
@@ -427,7 +420,7 @@ const QuestionBlock = ({
                   value={answers[q._id]?.[item.id] || ""}
                   placeholder="Enter answer"
                   onChange={(e) => handleAnswerChange(q._id, item.id, e.target.value)}
-                  style={{ flex: "0 0 200px" }} // optional: sets width
+                  style={{ flex: "0 0 200px" }} 
                 />
               </div>
             );
@@ -451,7 +444,6 @@ const QuestionBlock = ({
                 )}
               </div>
             );
-
           default:
             return (
               <div key={item.id}>
@@ -491,29 +483,24 @@ const StudentTestView = () => {
 
 
   const location = useLocation();
+  // Forces view-only for staff; otherwise uses passed value.
   const passedViewOnly = location.state?.viewOnly || false;
-
   const isTeacherOrAdmin = user?.isTeacher || user?.isAdmin;
-
-  // Final enforced mode:
   const viewOnly = isTeacherOrAdmin ? true : passedViewOnly;
-
 
   // Speaking "running track" progression
   const [speakingStep, setSpeakingStep] = useState(0);
-
 
   // If not submitted, warn user on return
   useNavigationBlocker(!viewOnly && !result?.isSubmitted);
 
   const writingRefs = useRef([]);
   const BASE_URL = "http://localhost:5000";
+  // Highlight where answer come from in transcript when hover on answer
   const highlightTranscript = (transcript, highlight) => {
     const plain = transcript.replace(/\s+/g, " ").trim();
     const h = highlight.replace(/\s+/g, " ").trim();
-
     const parts = plain.split(new RegExp(`(${h})`, "gi"));
-
     return parts.map((part, i) =>
       part.toLowerCase() === h.toLowerCase() ? (
         <span key={i} className="highlight-active">{part}</span>
@@ -530,7 +517,7 @@ const StudentTestView = () => {
 
     const fetchAll = async () => {
       try {
-        // fetch test and existing result in parallel
+        // fetch test and existing result 
         const [testRes, resultRes] = await Promise.allSettled([
           axios.get(`${BASE_URL}/api/tests/${testId}`, { withCredentials: true }),
           axios.get(`${BASE_URL}/api/tests/${testId}/get-result`, { withCredentials: true }),
@@ -730,43 +717,26 @@ const StudentTestView = () => {
             if (!studentAnswer) return;
 
             const studentNorm = norm(studentAnswer);
-
-            // -----------------------------------
-            // SPECIAL CASE: matching_headings
+            // Special case: matching_headings
             // index-based, ignore case
-            // -----------------------------------
             const type = (q.type || "").trim().toLowerCase();
-
             if (type === "matching_headings") {
               const correctValue = q.answers?.[idx]?.value || "";
               if (studentAnswer === correctValue) score++;
               return;
             }
-
-
             // Normal answer lookup
             const correctObj = (q.answers || []).find((a) => a.id === item.id);
             const correctValue = norm(correctObj?.value);
-
-            // -----------------------------------
-            // EXACT MATCH TYPES (but now case-insensitive)
-            // -----------------------------------
             if (EXACT_MATCH_TYPES.has(q.type)) {
               if (studentNorm === correctValue) score++;
               return;
             }
-
-            // -----------------------------------
-            // TEXT MATCH TYPES (already normalized)
-            // -----------------------------------
             if (TEXT_MATCH_TYPES.has(q.type)) {
               if (studentNorm === correctValue) score++;
               return;
             }
-
-            // -----------------------------------
-            // FALLBACK (case-insensitive)
-            // -----------------------------------
+            // Fallback (case-insensitive)
             if (studentNorm === correctValue) score++;
           });
         });
@@ -819,7 +789,7 @@ const StudentTestView = () => {
     }));
 
     try {
-      // 1️⃣ AI evaluation
+      // AI evaluation
       const aiRes = await axios.post(
         `${BASE_URL}/api/tests/evaluate-writing`,
         { sections: payload },
@@ -833,7 +803,7 @@ const StudentTestView = () => {
       const band = firstEval?.band || null;
       const feedback = firstEval?.feedback || {};
 
-      // 2️⃣ Save result to DB (only if logged in)
+      // Save result to DB (only if logged in)
       const token = localStorage.getItem("token");
       if (token) {
         const saveRes = await axios.post(
@@ -1030,13 +1000,13 @@ const StudentTestView = () => {
               onChange={(e) => handleWritingInput(secIdx, e.target.value)}
             />
 
-           
+
           </div>
         );
       })}
       {!viewOnly && test.type === "writing" && !evaluationReady && writingSections.length > 0 && !result?.isSubmitted && (
         <button className="submit-button"
-        onClick={handleWritingSubmit}>Submit Writing</button>
+          onClick={handleWritingSubmit}>Submit Writing</button>
       )}
       {test.type === "writing" && result && (
         <div style={{ marginTop: "20px" }}>
@@ -1097,22 +1067,22 @@ const StudentTestView = () => {
                     {q.studentAudioKey && (
                       <AudioPlayer s3Key={q.studentAudioKey} />
                     )}
-                    {/* Previous BUTTON (only when user has authorize to view) */}
+                    {/* Previous button (only when user has authorize to view) */}
                     {viewOnly && speakingStep > 0 && (
                       <button onClick={() => setSpeakingStep(speakingStep - 1)}>
                         Previous Question
                       </button>
                     )}
-                    {/* NEXT BUTTON (only when recording done or user has authorize to view) */}
+                    {/* Next button (only when recording done or user has authorize to view) */}
                     {(viewOnly || q.studentAudioKey) && speakingStep < section.questions.length - 1 && (
                       <button onClick={() => setSpeakingStep(speakingStep + 1)}>
                         Next Question
                       </button>
                     )}
-                    {/* FINAL SUBMIT BUTTON */}
+                    {/* Final submit button */}
                     {!viewOnly && q.studentAudioKey && speakingStep === section.questions.length - 1 && (
                       <button className="submit-button"
-                      onClick={handleSpeakingSubmit}>
+                        onClick={handleSpeakingSubmit}>
                         Submit Speaking
                       </button>
                     )}
@@ -1125,8 +1095,9 @@ const StudentTestView = () => {
       )}
       {!viewOnly && test.type === "speaking" && !evaluationReady && speakingSections.length > 0 && !result?.isSubmitted && (
         <button className="submit-button"
-        onClick={handleSpeakingSubmit}>Submit Speaking</button>
+          onClick={handleSpeakingSubmit}>Submit Speaking</button>
       )}
+      { /* Render AI evaluation for speaking */}
       {test.type === "speaking" && result && (
         <div style={{ marginTop: "20px" }}>
           <h3>Result (Evaluate by AI)</h3>
@@ -1151,7 +1122,7 @@ const StudentTestView = () => {
           )}
         </div>
       )}
-      {/* === Teacher Feedback Display === */}
+      {/* Teacher Feedback Display */}
       {savedResult?.isEvaluated?.resultReceived && savedResult?.teacherFeedback && (
         <div>
           <h3>Teacher Feedback</h3>
@@ -1205,9 +1176,7 @@ const StudentTestView = () => {
           </button>
         )}
       </div>
-
-
-      {/* === Two-View Mode (Split Screen) === */}
+      {/* Two-View Mode (Split Screen) */}
       {twoViewMode ? (
         <div className="two-view-layout">
           {/* Left: Passages */}
@@ -1218,6 +1187,7 @@ const StudentTestView = () => {
                 {section.passages?.map((passage, idx) => (
                   <div key={idx} className="passage-block">
                     <p>
+                      {/* Highlight where answer come from in reading paragraph when hover on answer */}
                       {highlightText
                         ? (() => {
                           const plainText = passage.text.replace(/\s+/g, ' ').trim();
@@ -1261,7 +1231,7 @@ const StudentTestView = () => {
           </div>
         </div>
       ) : (
-        /* === One-View Mode (Original Combined Layout) === */
+        /* One-View Mode */
         <>
           {[{ type: "reading", sections: readingSections }, { type: "listening", sections: listeningSections }].map(
             ({ type, sections }) =>
@@ -1284,6 +1254,7 @@ const StudentTestView = () => {
                     <div key={idx}>
                       <h4>{passage.header}</h4>
                       <p>
+                        {/* Highlight where answer come from in reading paragraph when hover on answer */}
                         {highlightText
                           ? (() => {
                             const plainText = passage.text.replace(/\s+/g, ' ').trim();
@@ -1331,14 +1302,14 @@ const StudentTestView = () => {
         </>
       )}
 
-      {/* === Result Display === */}
+      {/* Result Display */}
       {(readingSections.length > 0 || listeningSections.length > 0) && (
         <>
           {/* Only show Submit button if test not submitted yet */}
           {!viewOnly && !result?.isSubmitted && (
-            <button 
-            className="submit-button"
-            onClick={handleSubmit}>Submit</button>
+            <button
+              className="submit-button"
+              onClick={handleSubmit}>Submit</button>
           )}
           {/* After submission, show result + toggle button */}
           {result && (

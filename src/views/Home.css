@@ -128,11 +128,11 @@
 .skill-box:hover {
     border-color: var(--color-border-hover);
     transform: translateY(-3px);
-    font-weight: 800; /* make text bold on hover */
+    font-weight: 800; 
 }
 
 .skill-box-icon {
-    margin-bottom: 6px; /* closer to text */
+    margin-bottom: 6px; 
     color: var(--color-primary);
     height: 35px;
     width: 35px;
